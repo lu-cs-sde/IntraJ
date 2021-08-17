@@ -1,0 +1,82 @@
+/* Copyright (c) 2014, Erik Hogeman <Erik.Hogemn@gmail.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the Lund University nor the names of its
+ *       contributors may be used to endorse or promote products derived from
+ *       this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+aspect Variables {
+  InferredParameterDeclaration implements Variable;
+  syn boolean InferredParameterDeclaration.isParameter() = true;
+  syn boolean InferredParameterDeclaration.isClassVariable() = false;
+  syn boolean InferredParameterDeclaration.isInstanceVariable() = false;
+  syn boolean InferredParameterDeclaration.isConstructorParameter() = false;
+  syn boolean InferredParameterDeclaration.isExceptionHandlerParameter() = false;
+  syn boolean InferredParameterDeclaration.isMethodParameter() = false;
+  syn boolean InferredParameterDeclaration.isLocalVariable() = false;
+  syn boolean InferredParameterDeclaration.isField() = false;
+  syn boolean InferredParameterDeclaration.isFinal() = false;
+  syn boolean InferredParameterDeclaration.isVolatile() = false;
+  syn boolean InferredParameterDeclaration.isBlank() = true;
+  syn boolean InferredParameterDeclaration.isStatic() = false;
+  syn boolean InferredParameterDeclaration.isSynthetic() = false;
+
+  syn Modifiers InferredParameterDeclaration.getModifiers() = null;
+
+  syn boolean InferredParameterDeclaration.hasInit() = false;
+
+  syn boolean InferredParameterDeclaration.isConstant() = false;
+
+  syn boolean InferredParameterDeclaration.isPublic() = false;
+
+  syn boolean InferredParameterDeclaration.accessibleFrom(TypeDecl type) = false;
+
+  syn Expr InferredParameterDeclaration.getInit() {
+    throw new UnsupportedOperationException();
+  }
+
+  syn Constant InferredParameterDeclaration.constant() {
+    throw new UnsupportedOperationException();
+  }
+
+  syn Collection<TypeDecl> InferredParameterDeclaration.throwTypes() = null;
+
+
+  // TODO(joqvist): Is it correct that hostType() for
+  // non-InferredParameterDeclaration nodes should be the host type of the
+  // lambda expression rather than the implicit anonymous type declaration of
+  // the lambda? If we add the equation LambdaExpr.getChild().hostType() =
+  // anonymousDecl() then there is a circular dependency between the ParseName
+  // rewrite and LambdaExpr.anonymousDecl(), so in that case it seems like the
+  // anonymousDecl() NTA should be declared circular. However, the current
+  // implementation does not break any tests. Perhaps there is a test that
+  // breaks the current implementation. This needs more investigation.
+
+  syn TypeDecl InferredParameterDeclaration.hostType() = enclosingLambdaType();
+
+  inh TypeDecl InferredParameterDeclaration.enclosingLambdaType();
+
+  eq LambdaExpr.getChild().enclosingLambdaType() = anonymousDecl();
+
+  syn TypeDecl InferredParameterDeclaration.type() = inferredType();
+}

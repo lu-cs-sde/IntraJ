@@ -1,0 +1,299 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ *                    2014, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect GenericMethods {
+  eq ParMethodAccess.getTypeArgument().isRightChildOfDot() = false;
+
+  syn Collection<Problem> ParMethodAccess.typeProblems() {
+    if (!decl().hostType().isUnknown()) {
+      // JLS 15.12.2.1 specifically permits type arguments on non-generic method access.
+      if (decl() instanceof ParMethodDecl) {
+        ParMethodDecl m = (ParMethodDecl) decl();
+        if (!(m instanceof RawMethodDecl) && m.numTypeParameter() != getNumTypeArgument()) {
+          return Collections.singletonList(errorf("generic method %s requires %s type arguments",
+              m.signature(), m.numTypeParameter()));
+        }
+      }
+    }
+    return Collections.emptyList();
+  }
+
+  syn lazy ParMethodDecl GenericMethodDecl.rawMethodDecl() =
+      lookupParMethodDecl(Collections.<TypeDecl>emptyList());
+
+  syn lazy GenericMethodDecl ParMethodDecl.genericMethodDecl() = getGenericMethodDecl();
+
+  syn lazy GenericConstructorDecl ParConstructorDecl.genericConstructorDecl() =
+      getGenericConstructorDecl();
+
+  /**
+   * @return a specific parameterization of this generic method.
+   */
+  syn nta ParMethodDecl GenericMethodDecl.lookupParMethodDecl(Collection<TypeDecl> typeArguments) =
+      newParMethodDecl(typeArguments);
+
+  /**
+   * @return a specific parameterization of this generic method.
+   */
+  syn nta ParMethodDecl GenericMethodDeclErased.lookupParMethodDecl(
+      Collection<TypeDecl> typeArguments) =
+          newParMethodDecl(Collections.<TypeDecl>emptyList());
+
+  public ParMethodDecl GenericMethodDecl.newParMethodDecl(Collection<TypeDecl> typeArguments) {
+    Parameterization parameterization = new Parameterization(getTypeParameterList(),
+        typeArguments);
+    ParMethodDecl methodDecl = typeArguments.isEmpty() ? new RawMethodDecl() : new ParMethodDecl();
+
+    // Adding a link to GenericMethodDecl to be used during substitution
+    // instead of the not yet existing parent link.
+    methodDecl.setGenericMethodDecl(genericDecl());
+
+    List<Access> list = new List<Access>();
+    if (typeArguments.isEmpty()) {
+      GenericMethodDecl original = genericDecl();
+      for (int i = 0; i < original.getNumTypeParameter(); i++) {
+        list.add(original.getTypeParameter(i).erasure().createBoundAccess());
+      }
+    } else {
+      for (TypeDecl arg : typeArguments) {
+        list.add(arg.createBoundAccess());
+      }
+    }
+    methodDecl.setTypeArgumentList(list);
+    methodDecl.setModifiers(getModifiers().treeCopy());
+    methodDecl.setTypeAccess(getTypeAccess().treeCopy());
+    methodDecl.setID(getID());
+    methodDecl.setParameterList(getParameterList().treeCopy());
+    methodDecl.setExceptionList(getExceptionList().treeCopy());
+    methodDecl.setTypeParameterList(getTypeParameterList().treeCopy());
+    methodDecl.setParameterization(parameterization);
+    return methodDecl;
+  }
+
+  syn nta ParConstructorDecl GenericConstructorDecl.lookupParConstructorDecl(
+      Collection<TypeDecl> typeArguments) =
+          newParConstructorDecl(typeArguments);
+
+  syn nta ParConstructorDecl GenericConstructorDeclErased.lookupParConstructorDecl(
+      Collection<TypeDecl> typeArguments) =
+          newParConstructorDecl(Collections.<TypeDecl>emptyList());
+
+  public ParConstructorDecl GenericConstructorDecl.newParConstructorDecl(
+      Collection<TypeDecl> typeArguments) {
+    Parameterization parameterization = new Parameterization(getTypeParameterList(),
+        typeArguments);
+    ParConstructorDecl constructorDecl = typeArguments.isEmpty()
+        ? new RawConstructorDecl()
+        : new ParConstructorDecl();
+
+    // Adding a link to GenericConstructorDecl to be used during substitution
+    // instead of the not yet existing parent link.
+    constructorDecl.setGenericConstructorDecl(genericDecl());
+
+    List<Access> list = new List<Access>();
+    if (typeArguments.isEmpty()) {
+      GenericConstructorDecl original = genericDecl();
+      for (int i = 0; i < original.getNumTypeParameter(); i++) {
+        list.add(original.getTypeParameter(i).erasure().createBoundAccess());
+      }
+    } else {
+      for (TypeDecl arg : typeArguments) {
+        list.add(arg.createBoundAccess());
+      }
+    }
+    constructorDecl.setTypeArgumentList(list);
+    constructorDecl.setModifiers(getModifiers().treeCopy());
+    constructorDecl.setID(getID());
+    constructorDecl.setParameterList(getParameterList().treeCopy());
+    constructorDecl.setExceptionList(getExceptionList().treeCopy());
+    constructorDecl.setTypeParameterList(getTypeParameterList().treeCopy());
+    constructorDecl.setParameterization(parameterization);
+    return constructorDecl;
+  }
+}
+
+aspect TypeCheck {
+  /**
+   * Allows covariant return types.
+   * <a href="http://docs.oracle.com/javase/specs/jls/se7/html/jls-8.html#jls-8.4.5">JLSv7 8.4.5</a>
+   * @param other
+   * @return {@code true} if this method is return-type-substitutable for the
+   * other declaration
+   */
+  refine TypeHierarchyCheck eq MethodDecl.mayOverride(MethodDecl m) {
+    MethodDecl self = this;
+    if (self.isGeneric()) {
+      self = genericDecl().rawMethodDecl();
+    }
+    if (m.isGeneric()) {
+      m = m.genericDecl().rawMethodDecl();
+    }
+    TypeDecl typeA = self.type();
+    TypeDecl typeB = m.type();
+    if (typeA == typeB) {
+      return true;
+    }
+    if (typeA.isPrimitive() && typeB.isPrimitive()) {
+      return false;
+    }
+    return typeA.subtype(typeB) || typeA == typeB.erasure() || typeA.erasure() == typeB;
+  }
+
+  /**
+   * @param other
+   * @return {@code true} if the signature of this method is same as the
+   * the signature of the argument method, taking generics into consideration.
+   */
+  refine LookupMethod eq MethodDecl.sameSignature(MethodDecl other) {
+    if (!refined(other)) {
+      return false;
+    }
+    for (int i = 0; i < getNumParameter(); ++i) {
+      TypeDecl p1 = getParameter(i).type();
+      TypeDecl p2 = other.getParameter(i).type();
+      // JLSv7 $8.4.8.1 exception: if one parameter type is raw, then don't check type bounds
+      if (p1 != p2 && !p1.isRawType() && !p2.isRawType()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  refine TypeHierarchyCheck
+  protected void TypeDecl.checkAbstractMethodDecls(Collection<Problem> problems,
+      MethodDecl m1, MethodDecl m2) {
+    if (!m1.sameSignature(m2)) {
+      problems.add(errorf("method declarations %s and %s in interface %s are incompatible",
+          m1.fullSignature(), m2.fullSignature(), fullName()));
+    } else {
+      refined(problems, m1, m2);
+    }
+  }
+}
+
+aspect GenericMethodsNameAnalysis {
+
+  eq ParMethodAccess.getTypeArgument().nameType() = NameType.TYPE_NAME;
+  eq ParMethodAccess.getTypeArgument().lookupType(String name) =
+      unqualifiedScope().lookupType(name);
+  eq GenericMethodDecl.getTypeParameter().nameType() = NameType.TYPE_NAME;
+
+  inh SimpleSet<TypeDecl> GenericMethodDecl.lookupType(String name);
+
+  syn SimpleSet<TypeDecl> GenericMethodDecl.localLookupType(String name) {
+    for (int i = 0; i < getNumTypeParameter(); i++) {
+      if (original().getTypeParameter(i).name().equals(name)) {
+        return original().getTypeParameter(i);
+      }
+    }
+    return emptySet();
+  }
+
+  eq GenericMethodDecl.getChild().lookupType(String name) =
+      localLookupType(name).isEmpty() ? lookupType(name) : localLookupType(name);
+
+  eq ParConstructorAccess.getTypeArgument().nameType() = NameType.TYPE_NAME;
+  eq ParConstructorAccess.getTypeArgument().lookupType(String name) =
+      unqualifiedScope().lookupType(name);
+  eq ParSuperConstructorAccess.getTypeArgument().nameType() = NameType.TYPE_NAME;
+  eq ParSuperConstructorAccess.getTypeArgument().lookupType(String name) =
+      unqualifiedScope().lookupType(name);
+  eq GenericConstructorDecl.getTypeParameter().nameType() = NameType.TYPE_NAME;
+
+  inh SimpleSet<TypeDecl> GenericConstructorDecl.lookupType(String name);
+
+  syn SimpleSet<TypeDecl> GenericConstructorDecl.localLookupType(String name) {
+    for (int i = 0; i < getNumTypeParameter(); i++) {
+      if (original().getTypeParameter(i).name().equals(name)) {
+        return original().getTypeParameter(i);
+      }
+    }
+    return emptySet();
+  }
+
+  eq GenericConstructorDecl.getChild().lookupType(String name) =
+      localLookupType(name).isEmpty() ? lookupType(name) : localLookupType(name);
+
+  eq ParClassInstanceExpr.getTypeArgument().nameType() = NameType.TYPE_NAME;
+  eq ParClassInstanceExpr.getTypeArgument().lookupType(String name) =
+      unqualifiedScope().lookupType(name);
+}
+
+aspect GenericMethodsPrettyPrint {
+
+  public void ParMethodAccess.prettyPrint(PrettyPrinter out) {
+    out.print("<");
+    for (int i = 0; i < getNumTypeArgument(); i++) {
+      if (i != 0) {
+        out.print(", ");
+      }
+      out.print(getTypeArgument(i));
+    }
+    out.print(">");
+    super.prettyPrint(out);
+  }
+
+  public void ParConstructorAccess.prettyPrint(PrettyPrinter out) {
+    out.print("<");
+    for (int i = 0; i < getNumTypeArgument(); i++) {
+      if (i != 0) {
+        out.print(", ");
+      }
+      out.print(getTypeArgument(i));
+    }
+    out.print(">");
+    super.prettyPrint(out);
+  }
+
+  public void ParSuperConstructorAccess.prettyPrint(PrettyPrinter out) {
+    out.print("<");
+    for (int i = 0; i < getNumTypeArgument(); i++) {
+      if (i != 0) {
+        out.print(", ");
+      }
+      out.print(getTypeArgument(i));
+    }
+    out.print(">");
+    super.prettyPrint(out);
+  }
+
+  public void ParClassInstanceExpr.prettyPrint(PrettyPrinter out) {
+    out.print("<");
+    for (int i = 0; i < getNumTypeArgument(); i++) {
+      if (i != 0) {
+        out.print(", ");
+      }
+      out.print(getTypeArgument(i));
+    }
+    out.print(">");
+    super.prettyPrint(out);
+  }
+}

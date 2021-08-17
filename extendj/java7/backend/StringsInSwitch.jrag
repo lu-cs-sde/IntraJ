@@ -1,0 +1,225 @@
+/* Copyright (c) 2011-2017, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * This aspect adds the Project Coin/JSR 334 Strings in Switch language
+ * change to the ExtendJ backend.
+ *
+ * <p>The following features were modified:
+ * <ul>
+ * <li>code generation for switch statement</li>
+ * </ul>
+ */
+aspect StringsInSwitch {
+
+  syn boolean SwitchStmt.isSwitchWithString() = getExpr().type().isString();
+
+  // inherit equation for typeString
+  inh TypeDecl SwitchStmt.typeString();
+
+  /**
+   * We two extra locals for switch for switch with string!
+   */
+  eq SwitchStmt.getChild().localNum() =
+      localNum() + typeInt().variableSize() + typeString().variableSize();
+
+  /**
+   * Local index for the first switch variable.
+   */
+  syn int SwitchStmt.localNumA() = localNum();
+
+  /**
+   * Local index for the second switch variable.
+   */
+  syn int SwitchStmt.localNumB() = localNum() + typeInt().variableSize();
+
+  /**
+   * A group of several string case labels with the same hash code.
+   */
+  class StringLblGroup extends CaseLabel {
+    public java.util.List<StringLabel> subLabels = new LinkedList<StringLabel>();
+
+    public StringLblGroup(int hash, int label) {
+      super(hash, label);
+    }
+
+    public void addCase(StringLabel lbl) {
+      subLabels.add(lbl);
+    }
+  }
+
+  /**
+   * A string case label.
+   */
+  class StringLabel extends CaseLabel {
+    public final String string;
+    public final int hashCode;
+
+    public StringLabel(int index, ConstCase cc) {
+      super(index, cc.label());
+      string = cc.getValue().constant().stringValue();
+      hashCode = string.hashCode();
+    }
+  }
+
+  /**
+   * Utility method to compute offsets between labels.
+   */
+  syn int SwitchStmt.labelOffset(CodeGeneration gen, int lbl1, int lbl2) =
+      gen.addressOf(lbl1) - gen.addressOf(lbl2);
+
+  /**
+   * Two implicit switch statements are generated for String typed switch statements.
+   * The first switch will switch on the hash code of the switch expression.
+   * The first switch statement computes a value for a variable that selects
+   * a case in the second switch statement.
+   */
+  refine AutoBoxingCodegen public void SwitchStmt.createBCode(CodeGeneration gen) {
+    if (getExpr().type().isString()) {
+      // Add line number for start of statement.
+      super.createBCode(gen);
+
+      // Enumerate case labels with same hash value.
+      Map<Integer, StringLblGroup> groups = new HashMap<Integer, StringLblGroup>();
+
+      int index = 1;
+      for (Stmt stmt : getBlock().getStmts()) {
+        if (stmt instanceof ConstCase) {
+          ConstCase cc = (ConstCase) stmt;
+          StringLabel caseLbl = new StringLabel(index++, cc);
+          int key = caseLbl.hashCode;
+          StringLblGroup group = groups.get(key);
+          if (group == null) {
+            group = new StringLblGroup(key, gen.constantPool().newLabel());
+            groups.put(key, group);
+          }
+          group.addCase(caseLbl);
+        }
+      }
+
+      genFirstSwitch(gen, groups.values());
+
+      getBlock().createBCode(gen);
+
+      gen.addLabel(end_label());
+    } else {
+      refined(gen);
+    }
+  }
+
+  private void SwitchStmt.genFirstSwitch(
+      CodeGeneration gen,
+      Collection<StringLblGroup> groups) {
+
+    int defaultLbl = defaultLabel();
+    int index_b = localNumB();
+
+    // Store the value of the switch expr so that it is only evaluated once!
+    getExpr().createBCode(gen);
+    getExpr().emitCastTo(gen, typeString());
+
+    // Push the hash code for the switch instruction.
+    if (getExpr().isConstant()) {
+      // Statically computed hash code.
+      typeString().emitStoreLocal(gen, index_b);
+      int hashCode = getExpr().constant().stringValue().hashCode();
+      gen.ICONST(hashCode);
+    } else {
+      // Dynamically computed hash code.
+      gen.DUP(typeString());
+      typeString().emitStoreLocal(gen, index_b);
+      hashCodeMethod().emitInvokeMethod(gen,
+          lookupType("java.lang", "Object"));
+    }
+
+    // Emit switch instruction.
+    gen.SWITCH(groups, defaultLbl);
+
+    // Code generation for switch body
+    for (StringLblGroup group : groups) {
+      gen.addLabel(group.label);
+
+      // Possible hash miss. Check for equality.
+      Iterator<StringLabel> iter = group.subLabels.iterator();
+      while (iter.hasNext()) {
+        StringLabel lbl = iter.next();
+        int thenLbl;
+        if (iter.hasNext()) {
+          thenLbl = gen.constantPool().newLabel();
+        } else{
+          // Last conditional branches to default label.
+          thenLbl = defaultLbl;
+        }
+
+        typeString().emitLoadLocal(gen, index_b);
+        gen.LDC(lbl.string);
+        equalsMethod().emitInvokeMethod(gen,
+            lookupType("java.lang", "Object"));
+        gen.IFEQ(thenLbl);
+        gen.GOTO(lbl.label);
+
+        if (iter.hasNext()) {
+          gen.addLabel(thenLbl);
+        }
+      }
+    }
+  }
+
+  /**
+   * Generate invocation of method
+   * {@code java.lang.Object.hashCode()}.
+   */
+  private MethodDecl SwitchStmt.hashCodeMethod() {
+    TypeDecl objectType = lookupType("java.lang", "Object");
+    for (MethodDecl method :
+        (Collection<MethodDecl>) objectType.memberMethods("hashCode")) {
+      if (method.getNumParameter() == 0) {
+        return method;
+      }
+    }
+    throw new Error("Could not find java.lang.Object.hashCode()");
+  }
+
+  /**
+   * Generate invocation of method
+   * {@code java.lang.Object.equals(java.lang.Object)}.
+   */
+  private MethodDecl SwitchStmt.equalsMethod() {
+    TypeDecl objectType = lookupType("java.lang", "Object");
+    for (MethodDecl method :
+        (Collection<MethodDecl>) objectType.memberMethods("equals")) {
+      if (method.getNumParameter() == 1 &&
+          method.getParameter(0).getTypeAccess().type() == objectType) {
+        return method;
+      }
+    }
+    throw new Error("Could not find java.lang.Object.equals()");
+  }
+}

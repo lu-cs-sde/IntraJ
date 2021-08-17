@@ -1,0 +1,93 @@
+/* Copyright (c) 2014, Erik Hogeman <Erik.Hogemn@gmail.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the Lund University nor the names of its
+ *       contributors may be used to endorse or promote products derived from
+ *       this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+aspect LookupType {
+
+  /*
+  These refines are important for the lambda expressions, because the this
+  and super keywords for lambdas refer to the same thing that they do in outer
+  context, which means the anonymous classes declared by the lambda should NOT
+  be the result type for a this or super access. These refines makes sure to
+  bypass all hostTypes which are an anonymous lambda class until another hostType
+  is found.
+  */
+  refine GenericsTypeAnalysis
+  eq ThisAccess.decl() {
+    TypeDecl typeDecl;
+    if (isQualified()) {
+      typeDecl = qualifier().type();
+    } else {
+      typeDecl = hostType();
+      while (typeDecl instanceof LambdaAnonymousDecl) {
+        typeDecl = typeDecl.enclosingType();
+      }
+    }
+
+    if (typeDecl instanceof ParTypeDecl) {
+      typeDecl = ((ParTypeDecl) typeDecl).genericDecl();
+    }
+    return typeDecl;
+  }
+
+  refine GenericsTypeAnalysis
+  eq SuperAccess.decl() {
+    TypeDecl typeDecl;
+    if (isQualified()) {
+      typeDecl = qualifier().type();
+    } else {
+      typeDecl = hostType();
+      while (typeDecl instanceof LambdaAnonymousDecl) {
+        typeDecl = typeDecl.enclosingType();
+      }
+    }
+
+    if (typeDecl instanceof ParTypeDecl) {
+      typeDecl = ((ParTypeDecl) typeDecl).genericDecl();
+    }
+    return typeDecl;
+  }
+
+  refine TypeAnalysis
+  eq SuperAccess.type() {
+    TypeDecl typeDecl = decl();
+    if (typeDecl.isInterfaceDecl()) {
+      if (isQualified() && qualifier().type() == typeDecl) {
+        return typeDecl;
+      }
+    }
+    if (!typeDecl.isClassDecl()) {
+      return unknownType();
+    }
+    ClassDecl classDecl = (ClassDecl) typeDecl;
+    if (!classDecl.hasSuperclass()) {
+      return unknownType();
+    }
+    return classDecl.superclass();
+  }
+
+  eq LambdaExpr.getChild().superType() = targetInterface();
+}

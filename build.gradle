@@ -1,0 +1,118 @@
+plugins {
+  id 'java'
+  id 'org.jastadd' version '1.13.3'
+}
+
+defaultTasks 'jar'
+
+if (!file('extendj/jastadd_modules').exists()) {
+  throw new GradleException('ExtendJ seems to be missing. Please run "git submodule init", then "git submodule update".')
+}
+
+
+
+jastadd {
+  configureModuleBuild()
+
+  modules {
+    include("extendj/jastadd_modules") // Include core ExtendJ modules.
+
+    module "intraj", {
+      imports "java8 frontend" // ExtendJ dependency for intraj module.
+
+      jastadd {
+        basedir "src/jastadd/"
+        include "**/*.ast"
+        include "**/*.jadd"
+        include "**/*.jrag"
+      }
+    }
+  }
+
+  // Target module to build:
+  module = 'intraj'
+  jastaddOptions = [ "--rewrite=cnta",
+                     "--safeLazy",
+                     "--visitCheck=false",
+                     "--optimize-imports"]
+  astPackage = 'org.extendj.ast'
+  parser.name = 'JavaParser'
+  scanner.name = 'OriginalScanner'
+}
+
+sourceSets.main {
+  java {
+    srcDir 'extendj/src/frontend-main'
+    srcDir 'src/java'
+  }
+  resources {
+    srcDir 'extendj/src/res'
+    srcDir jastadd.buildInfoDir
+  }
+  repositories {
+    mavenLocal()
+    flatDir { dirs rootProject.file("tools") }
+  }
+  dependencies {
+    jastadd2 name: "jastadd-2.3.6-custom"
+  }
+}
+
+dependencies{
+    testCompile 'junit:junit:4.12'
+    compile 'junit:junit:4.12'
+}
+
+sourceSets.test{
+  java{
+    srcDir 'src/java/test/'
+  }
+}
+
+test {
+   useJUnit()
+
+  // testLogging.events 'passed', 'failed'
+
+  // testLogging.exceptionFormat = 'full'
+
+  dependsOn 'cleanTest'
+}
+
+// Use JavaCompiler if you need bytecode generation.
+jar {
+  manifest {
+    attributes(
+      'Main-Class': !project.hasProperty("className") ? 'org.extendj.IntraJ': project.getProperty("className").toString())
+  }
+}
+
+//jar.manifest.attributes 'Main-Class': 'org.extendj.JavaCompiler'
+jar.destinationDir = projectDir
+
+// Java -source and -target version.
+sourceCompatibility = targetCompatibility = '1.7'
+
+task sourceZip(type: Zip) {
+  description 'Builds a Zip file with the entire repisotory (including the ExtendJ submodule).'
+  destinationDir = projectDir
+  archiveName = "intraj-src.zip"
+
+  from (projectDir) {
+    exclude '**/.git'
+    exclude '**/.gitignore'
+    exclude '**/.gitattributes'
+    exclude '**/.gitmodules'
+    exclude 'build'
+    exclude 'bin'
+    exclude '.gradle'
+    exclude '.classpath'
+    exclude '.settings'
+    exclude '.project'
+    exclude '*.jar'
+    exclude '*.zip'
+    exclude '**/*.swp'
+  }
+
+  into 'intraj'
+}

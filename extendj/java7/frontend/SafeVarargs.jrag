@@ -1,0 +1,138 @@
+/* Copyright (c) 2011-2016, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect SafeVarargs {
+
+  /**
+   * @return true if the modifier list includes the SafeVarargs annotation
+   */
+  syn boolean TypeDecl.hasAnnotationSafeVarargs() = getModifiers().hasAnnotationSafeVarargs();
+
+  /**
+   * @return true if the modifier list includes the SafeVarargs annotation
+   */
+  syn boolean BodyDecl.hasAnnotationSafeVarargs() = false;
+
+  /**
+   * @see AST.Modifiers#hasAnnotationSafeVarargs() Modifiers.hasAnnotationSafeVarargs()
+   */
+  eq MemberTypeDecl.hasAnnotationSafeVarargs() = typeDecl().hasAnnotationSafeVarargs();
+
+  /**
+   * @see AST.Modifiers#hasAnnotationSafeVarargs() Modifiers.hasAnnotationSafeVarargs()
+   */
+  eq MethodDecl.hasAnnotationSafeVarargs() = getModifiers().hasAnnotationSafeVarargs();
+
+  /**
+   * @see AST.Modifiers#hasAnnotationSafeVarargs() Modifiers.hasAnnotationSafeVarargs()
+   */
+  eq ConstructorDecl.hasAnnotationSafeVarargs() = getModifiers().hasAnnotationSafeVarargs();
+
+  /**
+   * @see AST.Modifiers#hasAnnotationSafeVarargs() Modifiers.hasAnnotationSafeVarargs()
+   */
+  eq FieldDecl.hasAnnotationSafeVarargs() = getModifiers().hasAnnotationSafeVarargs();
+
+  /**
+   * @return true if the modifier list includes the SafeVarargs annotation
+   */
+  syn boolean Modifiers.hasAnnotationSafeVarargs() = hasAnnotation("java.lang", "SafeVarargs");
+
+  MethodAccess contributes each uncheckedWarnings() to CompilationUnit.problems();
+
+  syn Collection<Problem> MethodAccess.uncheckedWarnings() {
+    MethodDecl decl = decl();
+    if (decl.getNumParameter() == 0 || decl.getNumParameter() > getNumArg()) {
+      return Collections.emptyList();
+    }
+
+    ParameterDeclaration param = decl.getParameter(decl.getNumParameter()-1);
+    if (!withinSuppressWarnings("unchecked")
+        && !decl.hasAnnotationSafeVarargs()
+        && param.isVariableArity()
+        && !param.type().isReifiable()) {
+      return Collections.singletonList(
+          warning("unchecked array creation for variable arity parameter of " + decl().name()));
+    }
+    return Collections.emptyList();
+  }
+
+  /**
+   * We must report illegal uses of the SafeVarargs annotation.
+   * It is only allowed on variable arity method and constructor declarations.
+   */
+  BodyDecl contributes each safeVarargsProblems() to CompilationUnit.problems();
+
+  syn Collection<Problem> BodyDecl.safeVarargsProblems() {
+    if (hasAnnotationSafeVarargs()) {
+      return Collections.singleton(error(
+            "the @SafeVarargs annotation is only allowed on constructor or method declarations."));
+    } else {
+      return Collections.emptySet();
+    }
+  }
+
+  eq MethodDecl.safeVarargsProblems() {
+    if (hasAnnotationSafeVarargs()) {
+      if (!isVariableArity()) {
+        return Collections.singleton(errorf(
+              "illegal use of @SafeVarargs on non-varargs method %s().", name()));
+      } else if (!isFinal() && !isStatic()) {
+        return Collections.singleton(errorf(
+              "illegal use of @SafeVarargs on non-final and non-static method %s().", name()));
+      }
+    }
+    return Collections.emptySet();
+  }
+
+  eq ConstructorDecl.safeVarargsProblems() {
+    if (hasAnnotationSafeVarargs()) {
+      if (!isVariableArity()) {
+        return Collections.singleton(errorf(
+              "illegal use of @SafeVarargs on non-varargs constructor.", name()));
+      }
+    }
+    return Collections.emptySet();
+  }
+
+  /**
+   * Check if the method is missing a SafeVarargs annotation.
+   *
+   * <p>This adds a heap pollution warning if this is a varargs method without a
+   * @SafeVarargs annotation.
+   */
+  MethodDecl contributes
+      warning("possible heap pollution for variable arity parameter")
+      when !suppressWarnings("unchecked")
+          && !hasAnnotationSafeVarargs()
+          && isVariableArity()
+          && !getParameter(getNumParameter()-1).type().isReifiable()
+      to CompilationUnit.problems();
+}

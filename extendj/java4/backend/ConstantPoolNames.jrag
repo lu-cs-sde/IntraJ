@@ -1,0 +1,186 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ *                    2013, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect ConstantPoolNames {
+
+  /**
+   * For a top-level type the constant pool name of the type is the same as the
+   * canonical name but with dots replaced by solidus.
+   *
+   * <p>For nested types the constant pool name is based on the enclosing top-level
+   * types constant pool name followed by a dollar sign and a unique index and/or
+   * the type name.
+   *
+   * @return constant pool name of this type
+   */
+  syn lazy String TypeDecl.constantPoolName() {
+    String packageName = packageName();
+    if (!packageName.equals("")) {
+      packageName = packageName.replace('.', '/') + "/";
+    }
+    return packageName + uniqueName();
+  }
+
+  /**
+   * Computes a unique name for this type in the enclosing package.
+   *
+   * <p>For top-level types the unique name is just the type name.  For nested
+   * types it is the enclosing types unique name followed by a dollar sign and
+   * a unique index and/or the type name.
+   *
+   * @return a name for this type that is unique in the enclosing package
+   */
+  syn lazy String TypeDecl.uniqueName() {
+    if (!isNestedType()) {
+      return getID();
+    } else {
+      String prefix = enclosingType().uniqueName();
+      if (isAnonymous()) {
+        return prefix + "$" + uniqueIndex();
+      } else if (isLocalClass()) {
+        return prefix + "$" + uniqueIndex() + getID();
+      } else {
+        return prefix + "$" + getID();
+      }
+    }
+  }
+
+  syn lazy String ArrayDecl.constantPoolName() = typeDescriptor();
+
+  syn lazy String TypeDecl.typeDescriptor() {
+    throw new Error("Can not compute typeDescriptor for " + getClass().getName());
+  }
+
+  eq ClassDecl.typeDescriptor() = "L" + constantPoolName() + ";";
+
+  eq InterfaceDecl.typeDescriptor() = "L" + constantPoolName() + ";";
+
+  eq BooleanType.typeDescriptor() = "Z";
+
+  eq ByteType.typeDescriptor() = "B";
+
+  eq ShortType.typeDescriptor() = "S";
+
+  eq IntType.typeDescriptor() = "I";
+
+  eq LongType.typeDescriptor() = "J";
+
+  eq CharType.typeDescriptor() = "C";
+
+  eq FloatType.typeDescriptor() = "F";
+
+  eq DoubleType.typeDescriptor() = "D";
+
+  eq VoidType.typeDescriptor() = "V";
+
+  eq ArrayDecl.typeDescriptor() {
+    StringBuilder dim = new StringBuilder();
+    for (int i = 0; i < dimension(); i++) {
+      dim.append("[");
+    }
+    dim.append(elementType().typeDescriptor());
+    return dim.toString();
+  }
+
+  eq UnknownType.typeDescriptor() {
+    throw new Error("Trying to make a typeDescriptor() of Unknown");
+  }
+
+  syn lazy String MethodDecl.descName() {
+    StringBuilder b = new StringBuilder();
+    b.append("(");
+    for (int i=0; i<getNumParameter(); i++) {
+      b.append(getParameter(i).type().typeDescriptor());
+    }
+    b.append(")");
+    if (type().elementType().isUnknown()) {
+      System.err.println(getTypeAccess().dumpTree());
+      throw new Error("Error generating descName for " + signature()
+          + ", did not expect unknown return type");
+    }
+    b.append(type().typeDescriptor());
+    return b.toString();
+  }
+
+  syn lazy String ConstructorDecl.descName() {
+    StringBuilder b = new StringBuilder();
+    b.append("(");
+    // Add this$0 argument.
+    if (needsEnclosing()) {
+      b.append(enclosing().typeDescriptor());
+    }
+    if (needsSuperEnclosing()) {
+      b.append(superEnclosing().typeDescriptor());
+    }
+    // Add formal arguments.
+    for (ParameterDeclaration param : getParameterList()) {
+      b.append(param.type().typeDescriptor());
+    }
+    // Add enclosing variables.
+    for (Variable var : hostType().enclosingVariables()) {
+      b.append(var.type().typeDescriptor());
+    }
+    b.append(")V");
+    return b.toString();
+  }
+
+  /**
+   * Computes the path to the parent directory of the source file of this
+   * compilation unit.
+   *
+   * <p>If the parent directory of the source file could not be computed
+   * the path to the working directory is returned.
+   *
+   * @return The path to the parent directory of the source file for this
+   * compilation unit, or "." if the path could not be computed.
+   */
+  syn lazy String CompilationUnit.destinationPath() {
+    String parentPath = new File(pathName()).getParent();
+    if (parentPath == null) {
+      return ".";
+    } else {
+      return parentPath;
+    }
+  }
+
+  /**
+   * @return The path to the classfiles that should be generated for this type.
+   */
+  syn lazy String TypeDecl.destinationPath() {
+    if (program().options().hasValueForOption("-d")) {
+      return program().options().getValueForOption("-d") + File.separator
+          + constantPoolName() + ".class";
+    } else {
+      return compilationUnit().destinationPath() + File.separator
+          + uniqueName() + ".class";
+    }
+  }
+}

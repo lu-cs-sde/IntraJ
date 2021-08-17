@@ -1,0 +1,776 @@
+/* Copyright (c) 2021, Idriss Riouak <idriss.riouak@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+import org.extendj.flow.utils.*;
+import org.extendj.flow.utils.IJEdge.FlowRelation;
+aspect SuppressWarning {
+  // Aspect to suppress the warning related to inherited attribute.
+  eq CompilationUnit.getChild().reachable() = true;
+  eq CompilationUnit.getChild().exit() {
+    // throw new RuntimeException("CompilationUnit.getChild().exit()");
+    return null;
+  }
+  eq CompilationUnit.getChild().entry() {
+    // throw new RuntimeException("CompilationUnit.getChild().entry()");
+    return null;
+  }
+  eq CompilationUnit.getChild().branchTarget(Stmt branch) = null;
+  eq CompilationUnit.getChild().enclosingFinally(Stmt branch) = null;
+  eq CompilationUnit.getChild().otherLocalClassDecls(String name) = null;
+  eq CompilationUnit.getChild().lookupPrev(int index) {
+    throw new RuntimeException("lookupPrev(int index)");
+  }
+  eq CompilationUnit.getChild().getIndex() {
+    throw new RuntimeException("getIndex()");
+  }
+  eq Program.getChild().nextNodes() { return new SmallSet<CFGNode>(); }
+  eq Program.getChild().nextNodesTT() { return new SmallSet<CFGNode>(); }
+  eq Program.getChild().nextNodesFF() { return new SmallSet<CFGNode>(); }
+}
+
+aspect PrintGraph {
+  syn int ASTNode.absIndex() circular[0] { return prevNode().absIndex() + 1; }
+  eq Program.absIndex() = 0;
+  inh ASTNode ASTNode.prevNode();
+  eq ASTNode.getChild(int i).prevNode() = prevNode(i);
+  syn ASTNode ASTNode.lastNode() = prevNode(getNumChild());
+  syn ASTNode ASTNode.prevNode(int i) =
+      i > 0 ? getChild(i - 1).lastNode() : this;
+  eq ClassDecl.instanceInitialization().prevNode() = this;
+  eq ClassDecl.staticInitialization().prevNode() =
+      instanceInitialization().lastNode();
+  eq ClassDecl.getChild(int i).prevNode() =
+      i > 0 ? getChild(i - 1).lastNode() : staticInitialization().lastNode();
+  eq InstanceInitialization.entry().prevNode() = this;
+  eq InstanceInitialization.exit().prevNode() = entry().lastNode();
+
+  eq MethodAccess.lastNode() { return getFinallyList().lastNode(); }
+
+  eq MethodAccess.getChild(int i).prevNode() {
+    return i > 0 ? getChild(i - 1).lastNode()
+                 : UncheckedExceptions().lastNode();
+  }
+  eq MethodAccess.getClose(int i).prevNode() {
+    if (i > 0) {
+      return getClose(i - 1).lastNode();
+    } else if (getNumChild() > 0) {
+      return getChild(getNumChild() - 1).lastNode();
+    } else {
+      return UncheckedExceptions().lastNode();
+    }
+  }
+  eq MethodAccess.getFinally(int i).prevNode() {
+    if (i > 0) {
+      return getFinally(i - 1).lastNode();
+    } else {
+      return getCloseList().lastNode();
+    }
+  }
+  eq MethodAccess.UncheckedExceptions().prevNode() { return this; }
+
+  eq EQExpr.lastNode() {
+    if (hasFact()) {
+      return assignTrue();
+    }
+    return getChild(getNumChild() - 1).lastNode();
+  }
+  eq EQExpr.getChild(int i).prevNode() {
+    return i > 0 ? getChild(i - 1).lastNode() : this;
+  }
+
+  eq EQExpr.assignTrue().prevNode() { return assignFalse(); }
+
+  eq EQExpr.assignFalse().prevNode() {
+    return getChild(getNumChild() - 1).lastNode();
+  }
+
+  eq NEExpr.lastNode() {
+    if (hasFact()) {
+      return assignTrue();
+    }
+    return getChild(getNumChild() - 1).lastNode();
+  }
+  eq NEExpr.getChild(int i).prevNode() {
+    return i > 0 ? getChild(i - 1).lastNode() : this;
+  }
+
+  eq NEExpr.assignTrue().prevNode() { return assignFalse(); }
+
+  eq NEExpr.assignFalse().prevNode() {
+    return getChild(getNumChild() - 1).lastNode();
+  }
+
+  eq TryStmt.lastNode() { return UncheckedExceptions().lastNode(); }
+  eq TryStmt.getChild(int i).prevNode() {
+    return i > 0 ? getChild(i - 1).lastNode() : this;
+  }
+  eq TryStmt.UncheckedExceptions().prevNode() {
+    return getNumChild() > 0 ? getChild(getNumChild() - 1).lastNode() : this;
+  }
+
+  eq ClassInstanceExpr.lastNode() { return getFinallyList().lastNode(); }
+
+  eq ClassInstanceExpr.getChild(int i).prevNode() {
+    return i > 0 ? getChild(i - 1).lastNode() : this;
+  }
+  eq ClassInstanceExpr.getClose(int i).prevNode() {
+    if (i > 0) {
+      return getClose(i - 1).lastNode();
+    } else if (getNumChild() > 0) {
+      return getChild(getNumChild() - 1).lastNode();
+    } else {
+      return this;
+    }
+  }
+  eq ClassInstanceExpr.getFinally(int i).prevNode() {
+    if (i > 0) {
+      return getFinally(i - 1).lastNode();
+    } else {
+      return getCloseList().lastNode();
+    }
+  }
+
+  eq MethodDecl.getChild(int i).prevNode() {
+    return i > 0 ? getChild(i - 1).lastNode() : entry();
+  }
+  eq MethodDecl.entry().prevNode() { return this; }
+
+  eq MethodDecl.exit().prevNode() { return getChild(getNumChild() - 1); }
+
+  eq ResourceDeclaration.getChild(int i).prevNode() {
+    return i > 0 ? getChild(i - 1).lastNode() : closeAccess().lastNode();
+  }
+  eq ResourceDeclaration.closeAccess().prevNode() = this;
+
+  eq NTACloseResource.lastNode() { return getFinallyList().lastNode(); }
+  eq NTACloseResource.getChild(int i).prevNode() {
+    return i > 0 ? getChild(i - 1).lastNode() : this;
+  }
+  eq NTACloseResource.getClose(int i).prevNode() {
+    if (i > 0) {
+      return getClose(i - 1).lastNode();
+    } else if (getNumChild() > 0) {
+      return getChild(getNumChild() - 1).lastNode();
+    } else {
+      return this;
+    }
+  }
+  eq NTACloseResource.getFinally(int i).prevNode() {
+    if (i > 0) {
+      return getFinally(i - 1).lastNode();
+    } else {
+      return getCloseList().lastNode();
+    }
+  }
+  eq ContinueStmt.getFinally().prevNode() {
+    if (getNumChild() == 0)
+      return this;
+    else
+      return getChild(getNumChild() - 1).lastNode();
+  }
+  eq ContinueStmt.lastNode() { return getCloseList().lastNode(); }
+
+  eq ContinueStmt.getChild(int index).prevNode() {
+    if (getNumChild() > 0) {
+      return getChild(getNumChild() - 1).lastNode();
+    } else {
+      return UncheckedExceptions().lastNode();
+    }
+  }
+
+  eq ContinueStmt.getClose(int index).prevNode() {
+    if (index > 0)
+      return getClose(index - 1).lastNode();
+    else if (hasFinally())
+      return getFinally().lastNode();
+    else if (getNumChild() > 0) {
+      return getChild(getNumChild() - 1).lastNode();
+    } else {
+      return UncheckedExceptions().lastNode();
+    }
+  }
+  eq ContinueStmt.UncheckedExceptions().prevNode() = this;
+
+  eq BreakStmt.getFinally().prevNode() {
+    if (getNumChild() == 0)
+      return UncheckedExceptions().lastNode();
+    else
+      return getChild(getNumChild() - 1).lastNode();
+  }
+  eq BreakStmt.lastNode() { return getCloseList().lastNode(); }
+
+  eq BreakStmt.getClose(int index).prevNode() {
+    if (index > 0)
+      return getClose(index - 1).lastNode();
+    else if (hasFinally())
+      return getFinally().lastNode();
+    else if (getNumChild() > 0) {
+      return getChild(getNumChild() - 1).lastNode();
+    } else {
+      return UncheckedExceptions().lastNode();
+    }
+  }
+  eq BreakStmt.UncheckedExceptions().prevNode() = this;
+
+  eq ThrowStmt.getClose(int index).prevNode() {
+    if (index > 0)
+      return getClose(index - 1).lastNode();
+    else if (hasFinally())
+      return getFinally().lastNode();
+    else if (getNumChild() > 0)
+      return getChild(getNumChild() - 1).lastNode();
+    else
+      return UncheckedExceptions().lastNode();
+  }
+
+  eq ThrowStmt.getFinally().prevNode() {
+    if (getNumChild() == 0)
+      return UncheckedExceptions().lastNode();
+    else
+      return getChild(getNumChild() - 1).lastNode();
+  }
+  eq ThrowStmt.UncheckedExceptions().prevNode() { return this; }
+
+  eq ThrowStmt.getChild(int index).prevNode() {
+    if (index > 0) {
+      return getChild(index - 1).lastNode();
+    } else {
+      return UncheckedExceptions().lastNode();
+    }
+  }
+
+  eq ThrowStmt.lastNode() { return getCloseList().lastNode(); }
+
+  eq ReturnStmt.getFinally().prevNode() {
+    if (getNumChild() == 0)
+      return UncheckedExceptions().lastNode();
+    else
+      return getChild(getNumChild() - 1).lastNode();
+  }
+
+  eq ReturnStmt.UncheckedExceptions().prevNode() { return this; }
+  eq ReturnStmt.lastNode() { return getCloseList().lastNode(); }
+
+  eq ReturnStmt.getClose(int index).prevNode() {
+    if (index > 0)
+      return getClose(index - 1).lastNode();
+    else if (hasFinally())
+      return getFinally().lastNode();
+    else if (getNumChild() > 0) {
+      return getChild(getNumChild() - 1).lastNode();
+    } else {
+      return UncheckedExceptions().lastNode();
+    }
+  }
+
+  eq ForStmt.implicitCondition().prevNode() =
+      getChild(getNumChild() - 1).lastNode();
+
+  syn Integer Program.getRank() = 0;
+  inh Integer ASTNode.getRank();
+  eq ASTNode.getChild().getRank() = getRank() + 1;
+  eq Program.getChild().getRank() = 1;
+
+public
+  void ASTNode.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (ASTNode astnode : astChildren()) {
+      astnode.graphLayout(graph);
+      graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
+    }
+  }
+
+public
+  void ForStmt.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (ASTNode astnode : astChildren()) {
+      astnode.graphLayout(graph);
+      graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
+    }
+    if (!hasCondition()) {
+      implicitCondition().graphLayout(graph);
+      graph.addEdge(this.CFGName(), implicitCondition().CFGName(),
+                    FlowRelation.NONE);
+    }
+  }
+
+public
+  void EQExpr.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (ASTNode astnode : astChildren()) {
+      astnode.graphLayout(graph);
+      graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
+    }
+
+    if (hasFact()) {
+      assignTrue().graphLayout(graph);
+      graph.addEdge(this.CFGName(), assignTrue().CFGName(), FlowRelation.NONE);
+      assignFalse().graphLayout(graph);
+      graph.addEdge(this.CFGName(), assignFalse().CFGName(), FlowRelation.NONE);
+    }
+  }
+
+public
+  void NEExpr.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (ASTNode astnode : astChildren()) {
+      astnode.graphLayout(graph);
+      graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
+    }
+
+    if (hasFact()) {
+      assignTrue().graphLayout(graph);
+      graph.addEdge(this.CFGName(), assignTrue().CFGName(), FlowRelation.NONE);
+      assignFalse().graphLayout(graph);
+      graph.addEdge(this.CFGName(), assignFalse().CFGName(), FlowRelation.NONE);
+    }
+  }
+
+public
+  void ClassDecl.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (ASTNode astnode : astChildren()) {
+      astnode.graphLayout(graph);
+      graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
+    }
+    instanceInitialization().graphLayout(graph);
+    staticInitialization().graphLayout(graph);
+    graph.addEdge(this.CFGName(), instanceInitialization().CFGName(),
+                  FlowRelation.NONE);
+    graph.addEdge(this.CFGName(), staticInitialization().CFGName(),
+                  FlowRelation.NONE);
+  }
+
+public
+  void InstanceInitialization.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    graph.addNode(entry());
+    graph.addEdge(CFGName(), entry().CFGName(), FlowRelation.NONE);
+    graph.addNode(exit());
+    graph.addEdge(CFGName(), exit().CFGName(), FlowRelation.NONE);
+  }
+
+public
+  void MethodDecl.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    graph.addNode(entry());
+    graph.addEdge(CFGName(), entry().CFGName(), FlowRelation.NONE);
+
+    for (int i = 0; i < getNumChild(); ++i) {
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+
+    graph.addNode(exit());
+    graph.addEdge(CFGName(), exit().CFGName(), FlowRelation.NONE);
+  }
+  // TODO: here I can use an interface for all the ASTNode who have a
+  // FinallyNode.
+public
+  void ReturnStmt.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (int i = 0; i < getNumChild(); ++i) {
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+    if (hasFinally()) {
+      getFinally().graphLayout(graph);
+      graph.addEdge(CFGName(), getFinally().CFGName(), FlowRelation.NONE);
+    }
+    getCloseList().graphLayout(graph);
+    graph.addEdge(CFGName(), getCloseList().CFGName(), FlowRelation.NONE);
+    UncheckedExceptions().graphLayout(graph);
+    graph.addEdge(CFGName(), UncheckedExceptions().CFGName(),
+                  FlowRelation.NONE);
+  }
+
+public
+  void ResourceDeclaration.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (int i = 0; i < getNumChild(); ++i) {
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+    closeAccess().graphLayout(graph);
+    graph.addEdge(CFGName(), closeAccess().CFGName(), FlowRelation.NONE);
+  }
+
+public
+  void MethodAccess.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (int i = 0; i < getNumChild(); ++i) {
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+    getCloseList().graphLayout(graph);
+    graph.addEdge(CFGName(), getCloseList().CFGName(), FlowRelation.NONE);
+    getFinallyList().graphLayout(graph);
+    graph.addEdge(CFGName(), getFinallyList().CFGName(), FlowRelation.NONE);
+    UncheckedExceptions().graphLayout(graph);
+    graph.addEdge(CFGName(), UncheckedExceptions().CFGName(),
+                  FlowRelation.NONE);
+  }
+
+public
+  void ClassInstanceExpr.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (int i = 0; i < getNumChild(); ++i) {
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+    getCloseList().graphLayout(graph);
+    graph.addEdge(CFGName(), getCloseList().CFGName(), FlowRelation.NONE);
+    getFinallyList().graphLayout(graph);
+    graph.addEdge(CFGName(), getFinallyList().CFGName(), FlowRelation.NONE);
+  }
+
+public
+  void NTACloseResource.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (int i = 0; i < getNumChild(); ++i) {
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+    getCloseList().graphLayout(graph);
+    graph.addEdge(CFGName(), getCloseList().CFGName(), FlowRelation.NONE);
+    getFinallyList().graphLayout(graph);
+    graph.addEdge(CFGName(), getFinallyList().CFGName(), FlowRelation.NONE);
+  }
+
+public
+  void ThrowStmt.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (int i = 0; i < getNumChild(); ++i) {
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+    if (hasFinally()) {
+      getFinally().graphLayout(graph);
+      graph.addEdge(CFGName(), getFinally().CFGName(), FlowRelation.NONE);
+    }
+    UncheckedExceptions().graphLayout(graph);
+    graph.addEdge(CFGName(), UncheckedExceptions().CFGName(),
+                  FlowRelation.NONE);
+    getCloseList().graphLayout(graph);
+    graph.addEdge(CFGName(), getCloseList().CFGName(), FlowRelation.NONE);
+  }
+public
+  void BreakStmt.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (int i = 0; i < getNumChild(); ++i) {
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+    if (hasFinally()) {
+      getFinally().graphLayout(graph);
+      graph.addEdge(CFGName(), getFinally().CFGName(), FlowRelation.NONE);
+    }
+    getCloseList().graphLayout(graph);
+    graph.addEdge(CFGName(), getCloseList().CFGName(), FlowRelation.NONE);
+    UncheckedExceptions().graphLayout(graph);
+    graph.addEdge(CFGName(), UncheckedExceptions().CFGName(),
+                  FlowRelation.NONE);
+  }
+public
+  void ContinueStmt.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (int i = 0; i < getNumChild(); ++i) {
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+    if (hasFinally()) {
+      getFinally().graphLayout(graph);
+      graph.addEdge(CFGName(), getFinally().CFGName(), FlowRelation.NONE);
+    }
+    getCloseList().graphLayout(graph);
+    graph.addEdge(CFGName(), getCloseList().CFGName(), FlowRelation.NONE);
+    UncheckedExceptions().graphLayout(graph);
+    graph.addEdge(CFGName(), UncheckedExceptions().CFGName(),
+                  FlowRelation.NONE);
+  }
+public
+  void TryStmt.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (int i = 0; i < getNumChild(); ++i) {
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+
+    UncheckedExceptions().graphLayout(graph);
+    graph.addEdge(CFGName(), UncheckedExceptions().CFGName(),
+                  FlowRelation.NONE);
+  }
+
+public
+  void ConstructorDecl.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    graph.addNode(entry());
+    graph.addEdge(CFGName(), entry().CFGName(), FlowRelation.NONE);
+
+    graph.addNode(implicit());
+    graph.addEdge(CFGName(), implicit().CFGName(), FlowRelation.NONE);
+
+    for (int i = 0; i < getNumChild(); ++i) {
+      if (getChild(i) == null)
+        continue;
+
+      getChild(i).graphLayout(graph);
+      graph.addEdge(CFGName(), getChild(i).CFGName(), FlowRelation.NONE);
+    }
+
+    graph.addNode(exit());
+    graph.addEdge(CFGName(), exit().CFGName(), FlowRelation.NONE);
+
+    getImplicitConstructorInvocation().graphLayout(graph);
+    graph.addEdge(CFGName(), getImplicitConstructorInvocation().CFGName(),
+                  FlowRelation.NONE);
+  }
+
+public
+  void Program.printGraph(IJGraph graph) {
+    LinkedHashSet<CFGNode> visited = new LinkedHashSet<>();
+    for (CFGRoot md : methods()) {
+      md.entry().printGraph(graph, visited);
+    }
+  }
+
+public
+  void CFGNode.printGraph(IJGraph graph, LinkedHashSet<CFGNode> visited) {
+    graph.getNode(this.CFGName()).setIsCFGNode(true);
+    visited.add(this);
+    for (CFGNode cfg : succ()) {
+      if (visited.contains(cfg))
+        continue;
+      visited.add(cfg);
+      graph.incNbrNodes();
+      graph.getNode(cfg.CFGName()).setIsCFGNode(true);
+      cfg.printGraph(graph, visited);
+    }
+    if (graph.drawSucc()) {
+      for (CFGNode cfg : succ()) {
+        graph.incNbrEdges();
+        graph.addEdge(this.CFGName(), cfg.CFGName(), FlowRelation.SUCC);
+      }
+      SmallSet ff = new SmallSet<CFGNode>();
+      ff.add(nextNodesFF());
+      SmallSet ft = new SmallSet<CFGNode>();
+      ft.add(nextNodesTT());
+      if (ft.intersect(ff).isEmpty()) {
+        for (CFGNode cfg : nextNodesTT())
+          graph.addLabelToEdge(this.CFGName() + cfg.CFGName(), "T");
+        for (CFGNode cfg : nextNodesFF())
+          graph.addLabelToEdge(this.CFGName() + cfg.CFGName(), "F");
+      }
+    }
+    if (graph.drawPred()) {
+      for (CFGNode cfg : pred()) {
+        try {
+          graph.addEdge(this.CFGName(), cfg.CFGName(), FlowRelation.PRED);
+        } catch (NullPointerException e) {
+          System.out.println("This.cfgname() = " + this.CFGName());
+          System.out.println("cfg.cfgname() = " + cfg.CFGName());
+          System.out.println("Pred() = " + this.pred());
+          throw new NullPointerException();
+        }
+      }
+    }
+    return;
+  }
+
+  syn Integer ASTNode.lineStart() = getLine(getStart());
+  syn Integer ASTNode.lineEnd() = getLine(getEnd());
+  syn Integer ASTNode.columnStart() = getColumn(getStart());
+  syn Integer ASTNode.columnEnd() = getColumn(getEnd());
+  syn String ASTNode.CFGName() =
+      getClass().getSimpleName() + "[" + absIndex() + "]";
+  syn String CFGNode.CFGName() =
+      getClass().getSimpleName() + "[" + absIndex() + "]";
+  eq InstanceInitialization.CFGName() =
+      getClass().getSimpleName() + "[" + absIndex() + "]";
+  eq Entry.CFGName() = getClass().getSimpleName() + "[" + absIndex() + "]";
+  eq Exit.CFGName() = getClass().getSimpleName() + "[" + absIndex() + "]";
+  inh String Entry.getID();
+  inh String Exit.getID();
+  eq MethodDecl.getChild().getID() = getID();
+  eq ConstructorDecl.getChild().getID() = getID();
+  eq CompilationUnit.getChild().getID() = "";
+
+  syn String ASTNode.CFGDump() = "";
+  eq ClassInstanceExpr.CFGDump() = "<" + getAccess().type().name() + ">";
+  eq EnumConstant.CFGDump() = "<" + getID() + ">";
+  eq VarAccess.CFGDump() = "< " + getID() + " >";
+  eq Literal.CFGDump() = "< " + getLITERAL() + " >";
+  eq Modifier.CFGDump() = "< " + getID() + " >";
+  eq TypeAccess.CFGDump() = "< " + getID() + " >";
+  eq MethodAccess.CFGDump() = "< " + getID() + " >";
+  eq MethodDecl.CFGDump() = "< " + getID() + " >";
+  eq VariableDeclarator.CFGDump() = "< " + getID() + " >";
+  eq ConstructorDecl.CFGDump() = "< " + getID() + " >";
+  eq ParameterDeclaration.CFGDump() = "< " + getID() + " >";
+  eq ClassDecl.CFGDump() = "< " + getID() + " >";
+  eq FieldDeclarator.CFGDump() = "< " + getID() + " >";
+  eq SuperConstructorAccess.CFGDump() = "< " + getID() + " >";
+  eq ConstCase.CFGDump() = "< " + getValue() + " >";
+  eq AddExpr.CFGDump() = "< " + "+" + " >";
+  eq SubExpr.CFGDump() = "< " + "-" + " >";
+  eq ModExpr.CFGDump() = "< " + "%" + " >";
+  eq DivExpr.CFGDump() = "< " + "/" + " >";
+  eq MulExpr.CFGDump() = "< " + "*" + " >";
+  eq NTACloseResource.CFGDump() =
+      "<" + getOrigin().getResourceName() + "." + getOrigin().name() + ">";
+  eq AssignExpr.CFGDump() = (getDest().varDecl() != null)
+                                ? "< " + getDest().varDecl().name() + " >"
+                                : "";
+  eq Unary.CFGDump() = (getOperand().varDecl() != null)
+                           ? "< " + getOperand().varDecl().name() + " >"
+                           : "";
+  eq Expr.CFGDump() = "";
+
+  inh String MethodAccess.getResourceName();
+  eq ResourceDeclaration.getChild().getResourceName() = getID();
+  eq CompilationUnit.getChild().getResourceName() = null;
+
+public
+  String ASTNode.genOrder(ArrayList<String> l) {
+    if (l.size() <= 1)
+      return "";
+    String res = "";
+    for (String s : l)
+      res += "\"" + s + "\" -> ";
+    res = res.substring(0, res.length() - 3);
+    res += "[style=invis]\n";
+    return res;
+  }
+
+  syn String ASTNode.nodeOrder() {
+    ArrayList<String> ord = new ArrayList<>();
+    for (int i = 0; i < getNumChild(); i++) {
+      ord.add(getChild(i).CFGName());
+    }
+    return genOrder(ord);
+  }
+
+  eq MethodDecl.nodeOrder() {
+    ArrayList<String> ord = new ArrayList<>();
+    ord.add(entry().CFGName());
+    for (int i = 0; i < getNumChild(); i++) {
+      ord.add(getChild(i).CFGName());
+    }
+    ord.add(exit().CFGName());
+    return genOrder(ord);
+  }
+
+  eq InstanceInitialization.nodeOrder() {
+    ArrayList<String> ord = new ArrayList<>();
+    ord.add(entry().CFGName());
+    ord.add(exit().CFGName());
+    return genOrder(ord);
+  }
+
+  eq ConstructorDecl.nodeOrder() {
+    ArrayList<String> ord = new ArrayList<>();
+    ord.add(entry().CFGName());
+    for (int i = 0; i < getNumChild(); i++) {
+      ord.add(getChild(i).CFGName());
+    }
+    ord.add(exit().CFGName());
+    return genOrder(ord);
+  }
+
+  eq ClassDecl.nodeOrder() {
+    ArrayList<String> ord = new ArrayList<>();
+    ord.add(staticInitialization().CFGName());
+    ord.add(instanceInitialization().CFGName());
+    for (int i = 0; i < getNumChild(); ++i) {
+      ord.add(getChild(i).CFGName());
+    }
+    return genOrder(ord);
+  }
+
+public
+  void CFGNode.printSuccSets(PrintStream outStream, SmallSet<CFGNode> nodes) {
+    if (nodes.contains(this))
+      return;
+    outStream.println("NodeName: " + CFGName() +
+                      " Successors: " + succ().toStringCFGNode());
+    nodes.add(this);
+    for (CFGNode n_child : succ()) {
+      n_child.printSuccSets(outStream, nodes);
+    }
+  }
+
+public
+  void CFGNode.printPredSets(PrintStream outStream, SmallSet<CFGNode> nodes) {
+    if (nodes.contains(this))
+      return;
+    outStream.println("NodeName: " + CFGName() +
+                      " Predecessor: " + pred().toStringCFGNode());
+    nodes.add(this);
+    for (CFGNode n_child : pred()) {
+      n_child.printPredSets(outStream, nodes);
+    }
+  }
+
+public
+  Integer CFGNode.numbCFGNode(SmallSet<CFGNode> node) {
+    Integer nNodes = 0;
+    if (node.contains(this))
+      return nNodes;
+    node.add(this);
+    nNodes++;
+    for (CFGNode n : succ()) {
+      nNodes += n.numbCFGNode(node);
+    }
+    return nNodes;
+  }
+
+public
+  Integer CFGRoot.numbCFGNode() {
+    return entry().numbCFGNode(new SmallSet<CFGNode>());
+  }
+
+public
+  Integer CFGNode.numbEdges(SmallSet<CFGNode> node) {
+    Integer nEdges = 0;
+    if (node.contains(this))
+      return nEdges;
+    node.add(this);
+    nEdges += succ().size();
+    for (CFGNode n : succ()) {
+      nEdges += n.numbEdges(node);
+    }
+    return nEdges;
+  }
+
+public
+  Integer CFGRoot.numbEdges() {
+    return entry().numbEdges(new SmallSet<CFGNode>());
+  }
+}

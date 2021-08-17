@@ -1,0 +1,231 @@
+<project name="ExtendJ" default="java7">
+	<property name="jj.root" location="${basedir}"/>
+	<property file="${jj.root}/build.properties"/>
+	<property name="bootstrap.jar" location="${basedir}/extendj.jar"/>
+
+<description>
+1. Generate ExtendJ for a target Java version:
+
+  $ ant java4
+        java5
+        java6
+        java7
+
+2. Build a jar file or documentation based on generated compiler:
+
+  $ ant jar
+        doc
+
+-- OR --
+
+Build a standard release:
+
+  $ ant release
+
+</description>
+
+	<target name="java4" description="generate Java SE2 1.4 compiler"
+		depends="update-version-string">
+		<ant antfile="${java4.dir}/build.xml" target="backend" inheritAll="false"/>
+	</target>
+
+	<target name="java4-frontend" description="generate Java SE2 1.4 compiler"
+		depends="update-version-string">
+		<ant antfile="${java4.dir}/build.xml" target="frontend" inheritAll="false"/>
+	</target>
+
+	<target name="java5" description="generate Java SE 5 compiler"
+		depends="update-version-string">
+		<ant antfile="${java5.dir}/build.xml" target="backend" inheritAll="false"/>
+	</target>
+
+	<target name="java5-frontend" description="generate Java SE 5 compiler"
+		depends="update-version-string">
+		<ant antfile="${java5.dir}/build.xml" target="frontend" inheritAll="false"/>
+	</target>
+
+	<target name="java6" description="generate Java SE 6 compiler"
+		depends="update-version-string">
+		<ant antfile="${java6.dir}/build.xml" target="backend" inheritAll="false"/>
+	</target>
+
+	<target name="java6-frontend" description="generate Java SE 6 compiler"
+		depends="update-version-string">
+		<ant antfile="${java6.dir}/build.xml" target="frontend" inheritAll="false"/>
+	</target>
+
+	<target name="java7" description="generate Java SE 7 compiler"
+		depends="update-version-string">
+		<ant antfile="${java7.dir}/build.xml" target="backend" inheritAll="false"/>
+	</target>
+
+	<target name="java7-frontend" description="generate Java SE 7 compiler"
+		depends="update-version-string">
+		<ant antfile="${java7.dir}/build.xml" target="frontend" inheritAll="false"/>
+	</target>
+
+	<target name="java8" description="generate Java SE 8 compiler"
+		depends="update-version-string">
+		<ant antfile="${java8.dir}/build.xml" target="backend" inheritAll="false"/>
+	</target>
+
+	<target name="java8-frontend" description="generate Java SE 8 compiler"
+		depends="update-version-string">
+		<ant antfile="${java8.dir}/build.xml" target="frontend" inheritAll="false"/>
+	</target>
+
+	<target name="clean"
+		description="remove all generated (java, class, etc.) files">
+		<delete dir="${gen.dir}"/>
+		<delete dir="${genres.dir}"/>
+		<delete dir="${tmp.dir}"/>
+		<delete dir="${bin.dir}"/>
+		<delete dir="${basedir}/doc"/>
+	</target>
+
+	<target name="release" if="version" description="build an ExtendJ release">
+		<echo message="Bumping version string and tagging release ${version}"/>
+		<propertyfile file="${res.dir}/Version.properties">
+			<entry key="version" value="${version}"/>
+		</propertyfile>
+		<exec executable="git">
+			<arg value="commit"/>
+			<arg value="-m"/>
+			<arg value="Release ${version}"/>
+			<arg value="${res.dir}/Version.properties"/>
+		</exec>
+		<exec executable="git">
+			<arg value="tag"/>
+			<arg value="-a"/>
+			<arg value="${version}"/>
+			<arg value="-m"/>
+			<arg value="Version ${version}"/>
+		</exec>
+		<antcall target="build-dist"/>
+	</target>
+
+	<target name="build-dist" description="build ExtendJ distribution files"
+		depends="update-version-string,clean">
+		<property file="${res.dir}/Version.properties" prefix="jj"/>
+		<echo message="Building source zip"/>
+		<zip destfile="extendj-${jj.version}.zip">
+			<zipfileset dir="." prefix="ExtendJ">
+				<include name="README.md"/>
+				<include name="LICENSE"/>
+				<include name="build.xml"/>
+				<include name="ChangeLog"/>
+				<include name="src/frontend/**/*"/>
+				<include name="src/backend/**/*"/>
+				<include name="${res.dir}/**/*"/>
+				<include name="${genres.dir}/**/*"/>
+				<include name="${java4.dir}/**/*"/>
+				<include name="${java5.dir}/**/*"/>
+				<include name="${java6.dir}/**/*"/>
+				<include name="${java7.dir}/**/*"/>
+			</zipfileset>
+		</zip>
+		<echo message="Building Java 7 compiler"/>
+		<antcall target="java7"/>
+		<antcall target="jar"/>
+	</target>
+
+	<target name="doc" description="generate ReRAG documentation">
+		<mkdir dir="${basedir}/doc"/>
+		<javadoc
+			destdir="${basedir}/doc"
+			docletpath="${tools.dir}/RagDoll.jar"
+			doclet="ragdoll.RagDollDoclet">
+			<classpath>
+				<pathelement location="${bin.dir}"/>
+			</classpath>
+			<arg value="-linksource"/>
+			<packageset dir="${gen.dir}" defaultexcludes="yes">
+				<include name="${ast.dir}"/>
+			</packageset>
+		</javadoc>
+	</target>
+
+	<target name="build" description="compile ExtendJ">
+		<mkdir dir="${bin.dir}"/>
+		<javac
+			source="${javac.source}"
+			target="${javac.target}"
+			encoding="utf-8"
+			destdir="${bin.dir}"
+			debug="${debug}"
+			nowarn="true"
+			includeantruntime="false">
+			<src path="${src.dir}/frontend"/>
+			<src path="${src.dir}/frontend-main"/>
+			<src path="${src.dir}/backend"/>
+			<src path="${src.dir}/backend-main"/>
+			<src path="${gen.dir}"/>
+		</javac>
+	</target>
+
+	<target name="jar" description="build extendj.jar">
+		<jar destfile="extendj.jar">
+			<manifest>
+				<attribute name="Main-Class" value="org.jastadd.extendj.JavaCompiler"/>
+			</manifest>
+			<fileset dir=".">
+				<include name="LICENSE"/>
+			</fileset>
+			<fileset dir="${bin.dir}">
+				<include name="**/*"/>
+			</fileset>
+		</jar>
+	</target>
+
+	<target name="bootstrap" description="bootstrap extendj.jar">
+		<delete dir="${bin.dir}"/>
+		<mkdir dir="${bin.dir}"/>
+		<copy todir="${bin.dir}" preservelastmodified="true">
+			<fileset dir="${res.dir}">
+				<include name="**/*"/>
+			</fileset>
+		</copy>
+		<fileset id="src.fileset" dir="${src.dir}">
+			<include name="frontend/**/*.java"/>
+			<include name="backend/**/*.java"/>
+		</fileset>
+		<fileset id="gen.fileset" dir="${gen.dir}">
+			<include name="**/*.java"/>
+		</fileset>
+		<pathconvert property="src.files" refid="src.fileset" pathsep="${line.separator}"/>
+		<pathconvert property="gen.files" refid="gen.fileset" pathsep="${line.separator}"/>
+		<echo message="${src.files}${line.separator}${gen.files}" file="fileset.tmp"/>
+		<java classname="org.jastadd.extendj.JavaCompiler">
+			<classpath>
+				<pathelement path="${bootstrap.jar}"/>
+				<pathelement path="${jj.root}/lib/ant-1.9.1.jar"/>
+			</classpath>
+			<arg value="-d"/>
+			<arg value="${bin.dir}"/>
+			<arg value="@fileset.tmp"/>
+		</java>
+		<delete file="fileset.tmp"/>
+		<antcall target="jar"/>
+	</target>
+
+	<target name="-get-current-version" unless="version">
+		<!-- Get a new version string using git describe if possible. -->
+		<echo message="Updating ExtendJ version string..."/>
+		<exec executable="git" outputproperty="version"
+			failifexecutionfails="false">
+			<arg value="describe"/>
+		</exec>
+		<!-- Ensure the version property is set. -->
+		<property file="${res.dir}/Version.properties"/>
+	</target>
+
+	<target name="update-version-string" depends="-get-current-version">
+		<!-- Store the new  version string in the generated version property file. -->
+		<echo message="version=${version}"/>
+		<mkdir dir="${genres.dir}"/>
+		<propertyfile file="${genres.dir}/Version.properties">
+			<entry key="version" value="${version}"/>
+		</propertyfile>
+	</target>
+
+</project>

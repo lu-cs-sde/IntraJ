@@ -1,0 +1,111 @@
+/* Copyright (c) 2011, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * This aspect adds the Project Coin/JSR 334 Strings in Switch language change
+ * to the ExtendJ frontend.
+ *
+ * <p>The following features were modified:
+ * <ul>
+ * <li>type checking of the switch expression</li>
+ * <li>duplicate checking of switch labels</li>
+ * </ul>
+ */
+aspect StringsInSwitch {
+  /**
+   * Overrides the type checking of the switch statement's expression.
+   *
+   * <p>In JSR 334 a switch statement may use an expression of type String.
+   */
+  refine Enums eq SwitchStmt.typeProblems() {
+    TypeDecl type = getExpr().type();
+    if ((!type.isIntegralType() || type.isLong()) && !type.isEnumDecl() && !type.isString()) {
+      return Collections.singletonList(
+          error("Switch expression must be of type char, byte, short, int, enum, or string"));
+    }
+    return Collections.emptyList();
+  }
+
+  /* Type checking for case labels need not be changed as it
+   * already tests if the case labels have expressions which are
+   * assignable to the switch expression
+   */
+
+  syn boolean Case.isDefaultCase() = false;
+  eq DefaultCase.isDefaultCase() = true;
+
+  /**
+   * This attribute overrides the default duplicate checking for
+   * switch case labels.
+   */
+  refine Enums eq ConstCase.constValue(Case c) {
+    if (isDefaultCase() || c.isDefaultCase()) {
+      return isDefaultCase() && c.isDefaultCase();
+    }
+
+    Expr myValue = getValue();
+    Expr otherValue = ((ConstCase) c).getValue();
+    TypeDecl myType = myValue.type();
+    TypeDecl otherType = otherValue.type();
+    if (myType.isString() || otherType.isString()) {
+      if (!myType.isString() || !otherType.isString()) {
+        return false;
+      }
+      if (!myValue.isConstant() || !otherValue.isConstant()) {
+        return false;
+      }
+      return myValue.constant().stringValue().equals(otherValue.constant().stringValue());
+    }
+
+    return refined(c);
+  }
+
+  /**
+   * Improve the type checking error messages given for case labels.
+   */
+  refine Enums eq ConstCase.typeProblems() {
+    Collection<Problem> problems = new LinkedList<Problem>();
+    boolean isEnumConstant = getValue().isEnumConstant();
+    TypeDecl switchType = switchType();
+    TypeDecl type = getValue().type();
+    if (switchType.isEnumDecl() && !isEnumConstant) {
+      problems.add(error("Unqualified enumeration constant required"));
+    }
+    if (!type.assignConversionTo(switchType, getValue())) {
+      problems.add(errorf("Case label has incompatible type %s, expected type compatible with %s",
+          switchType.name(), type.name()));
+    }
+    if (!getValue().isConstant() && !getValue().type().isUnknown() && !isEnumConstant) {
+      problems.add(error("Case label must have constant expression"));
+    }
+    return problems;
+  }
+
+}

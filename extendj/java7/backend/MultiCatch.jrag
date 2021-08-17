@@ -1,0 +1,97 @@
+/* Copyright (c) 2011-2017, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect MultiCatch {
+
+  /**
+   * The Multi-Catch clause has two or more exception table entries
+   * which all point to the same exception handler.
+   */
+  public void MultiCatch.exceptionTableEntries(CodeGeneration gen, int begin_lbl, int end_lbl) {
+    for (int i = 0; i < getParameter().getNumTypeAccess(); ++i) {
+      TypeDecl type = getParameter().getTypeAccess(i).type();
+      gen.addExceptionHandler(begin_lbl, end_lbl, label(), type);
+    }
+  }
+
+  public void MultiCatch.createBCode(CodeGeneration gen) {
+    gen.addLabel(label());
+    getParameter().type().emitStoreLocal(gen, localNum());
+    getBlock().createBCode(gen);
+  }
+
+  /**
+   * Local number used to store the exception parameter.
+   */
+  inh lazy int CatchParameterDeclaration.localNum();
+  inh lazy int MultiCatch.localNum();
+
+  eq MultiCatch.getBlock().localNum() = localNum() + getParameter().type().variableSize();
+  eq MultiCatch.getParameter().localNum() = localNum();
+
+  refine GenericsCodegen
+  public void VarAccess.createAssignLoadDest(CodeGeneration gen) {
+    Variable v = decl();
+    if (v instanceof CatchParameterDeclaration) {
+      if (v.isInstanceVariable()) {
+        gen.DUP();
+      }
+      CatchParameterDeclaration decl = (CatchParameterDeclaration) v;
+      decl.type().emitLoadLocal(gen, decl.localNum());
+    } else {
+      refined(gen);
+    }
+  }
+
+  public void CatchParameterDeclaration.emitLoadVariable(CodeGeneration gen, Access access) {
+    if (hostType() == access.hostType()) {
+      type().emitLoadLocal(gen, localNum());
+    } else {
+      access.emitLoadLocalInNestedClass(gen, this);
+    }
+  }
+
+  eq BasicTWR.getBlock().lookupVariable(String name) = localLookup(name);
+
+  syn lazy SimpleSet<Variable> BasicTWR.localLookup(String name) {
+    VariableDeclarator v = localVariableDeclaration(name);
+    if (v != null) {
+      return v;
+    }
+    return lookupVariable(name);
+  }
+
+  syn lazy VariableDeclarator BasicTWR.localVariableDeclaration(String name) =
+      getResource().declaresVariable(name) ? getResource() : null;
+
+  BasicTWR implements VariableScope;
+
+  inh lazy SimpleSet<Variable> BasicTWR.lookupVariable(String name);
+}

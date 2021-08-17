@@ -1,0 +1,154 @@
+digraph G {
+graph [splines=ortho, nodesep="1", ranksep="1"]
+node [shape=rect, fontname=Arial];
+{ rank = same; "Program[0]"}
+{ rank = same; "List[1]"}
+{ rank = same; "CompilationUnit[2]"}
+{ rank = same; "List[3]"; "List[4]"}
+{ rank = same; "ClassDecl[5]"}
+{ rank = same; "Modifiers[22]"; "Opt[25]"; "List[26]"; "List[27]"; "InstanceInitialization[6]"; "InstanceInitialization[14]"}
+{ rank = same; "List[23]"; "MethodDecl[28]"; "Entry[7]"; "Exit[8]"; "Entry[15]"; "Exit[16]"}
+{ rank = same; "Modifier[24]"; "Entry[29]"; "Modifiers[30]"; "PrimitiveTypeAccess[32]"; "List[33]"; "List[34]"; "Opt[35]"; "Exit[36]"}
+{ rank = same; "List[31]"; "Block[36]"}
+{ rank = same; "List[37]"}
+{ rank = same; "ForStmt[38]"}
+{ rank = same; "List[39]"; "Opt[40]"; "List[41]"; "Block[42]"; "ImplicitCondition[55]"}
+{ rank = same; "List[43]"}
+{ rank = same; "VarDeclStmt[44]"; "ContinueStmt[52]"}
+{ rank = same; "Modifiers[45]"; "PrimitiveTypeAccess[47]"; "List[48]"; "List[54]"; "UncheckedExceptions[53]"}
+{ rank = same; "List[46]"; "VariableDeclarator[49]"}
+{ rank = same; "List[50]"; "Opt[51]"}
+"Program[0]" [label="Program\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[1]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"CompilationUnit[2]" [label="CompilationUnit\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[3]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[4]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"ClassDecl[5]" [label="ClassDecl\n < Continue01 >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Modifiers[22]" [label="Modifiers\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[23]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Modifier[24]" [label="Modifier\n < public >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Opt[25]" [label="Opt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[26]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[27]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"MethodDecl[28]" [label="MethodDecl\n < m >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Entry[29]" [label="Entry\n ", fillcolor=white   style=filled  ]
+"Modifiers[30]" [label="Modifiers\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[31]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"PrimitiveTypeAccess[32]" [label="PrimitiveTypeAccess\n < void >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[33]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[34]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Opt[35]" [label="Opt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Block[36]" [label="Block\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[37]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"ForStmt[38]" [label="ForStmt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[39]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Opt[40]" [label="Opt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[41]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Block[42]" [label="Block\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[43]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"VarDeclStmt[44]" [label="VarDeclStmt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Modifiers[45]" [label="Modifiers\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[46]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"PrimitiveTypeAccess[47]" [label="PrimitiveTypeAccess\n < int >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[48]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"VariableDeclarator[49]" [label="VariableDeclarator\n < c >", fillcolor=white   style=filled  ]
+"List[50]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Opt[51]" [label="Opt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"ContinueStmt[52]" [label="ContinueStmt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[54]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"UncheckedExceptions[53]" [label="UncheckedExceptions\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"ImplicitCondition[55]" [label="ImplicitCondition\n < true >", fillcolor=white   style=filled  ]
+"Exit[36]" [label="Exit\n ", fillcolor=white   style=filled  ]
+"InstanceInitialization[6]" [label="InstanceInitialization\n < Instance >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Entry[7]" [label="Entry\n ", fillcolor=white   style=filled  ]
+"Exit[8]" [label="Exit\n ", fillcolor=white   style=filled  ]
+"InstanceInitialization[14]" [label="InstanceInitialization\n < Static >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Entry[15]" [label="Entry\n ", fillcolor=white   style=filled  ]
+"Exit[16]" [label="Exit\n ", fillcolor=white   style=filled  ]
+"CompilationUnit[2]" -> "List[3]" [style=dashed, color=gray]
+"List[23]" -> "Modifier[24]" [style=dashed, color=gray]
+"Modifiers[22]" -> "List[23]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "Modifiers[22]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "Opt[25]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "List[26]" [style=dashed, color=gray]
+"MethodDecl[28]" -> "Entry[29]" [style=dashed, color=gray]
+"Modifiers[30]" -> "List[31]" [style=dashed, color=gray]
+"MethodDecl[28]" -> "Modifiers[30]" [style=dashed, color=gray]
+"MethodDecl[28]" -> "PrimitiveTypeAccess[32]" [style=dashed, color=gray]
+"MethodDecl[28]" -> "List[33]" [style=dashed, color=gray]
+"MethodDecl[28]" -> "List[34]" [style=dashed, color=gray]
+"ForStmt[38]" -> "List[39]" [style=dashed, color=gray]
+"ForStmt[38]" -> "Opt[40]" [style=dashed, color=gray]
+"ForStmt[38]" -> "List[41]" [style=dashed, color=gray]
+"Modifiers[45]" -> "List[46]" [style=dashed, color=gray]
+"VarDeclStmt[44]" -> "Modifiers[45]" [style=dashed, color=gray]
+"VarDeclStmt[44]" -> "PrimitiveTypeAccess[47]" [style=dashed, color=gray]
+"VariableDeclarator[49]" -> "List[50]" [style=dashed, color=gray]
+"VariableDeclarator[49]" -> "Opt[51]" [style=dashed, color=gray]
+"List[48]" -> "VariableDeclarator[49]" [style=dashed, color=gray]
+"VarDeclStmt[44]" -> "List[48]" [style=dashed, color=gray]
+"List[43]" -> "VarDeclStmt[44]" [style=dashed, color=gray]
+"ContinueStmt[52]" -> "List[54]" [style=dashed, color=gray]
+"ContinueStmt[52]" -> "UncheckedExceptions[53]" [style=dashed, color=gray]
+"List[43]" -> "ContinueStmt[52]" [style=dashed, color=gray]
+"Block[42]" -> "List[43]" [style=dashed, color=gray]
+"ForStmt[38]" -> "Block[42]" [style=dashed, color=gray]
+"ForStmt[38]" -> "ImplicitCondition[55]" [style=dashed, color=gray]
+"List[37]" -> "ForStmt[38]" [style=dashed, color=gray]
+"Block[36]" -> "List[37]" [style=dashed, color=gray]
+"Opt[35]" -> "Block[36]" [style=dashed, color=gray]
+"MethodDecl[28]" -> "Opt[35]" [style=dashed, color=gray]
+"MethodDecl[28]" -> "Exit[36]" [style=dashed, color=gray]
+"List[27]" -> "MethodDecl[28]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "List[27]" [style=dashed, color=gray]
+"InstanceInitialization[6]" -> "Entry[7]" [style=dashed, color=gray]
+"InstanceInitialization[6]" -> "Exit[8]" [style=dashed, color=gray]
+"InstanceInitialization[14]" -> "Entry[15]" [style=dashed, color=gray]
+"InstanceInitialization[14]" -> "Exit[16]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "InstanceInitialization[6]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "InstanceInitialization[14]" [style=dashed, color=gray]
+"List[4]" -> "ClassDecl[5]" [style=dashed, color=gray]
+"CompilationUnit[2]" -> "List[4]" [style=dashed, color=gray]
+"List[1]" -> "CompilationUnit[2]" [style=dashed, color=gray]
+"Program[0]" -> "List[1]" [style=dashed, color=gray]
+"Exit[16]" -> "Entry[15]" [color=red, constraint=false]
+"Entry[15]" -> "Exit[16]" [color=blue, constraint=false, xlabel=" "] 
+"Exit[8]" -> "Entry[7]" [color=red, constraint=false]
+"Entry[7]" -> "Exit[8]" [color=blue, constraint=false, xlabel=" "] 
+"VariableDeclarator[49]" -> "ImplicitCondition[55]" [color=blue, constraint=false, xlabel=" "] 
+"VariableDeclarator[49]" -> "ImplicitCondition[55]" [color=red, constraint=false]
+"Exit[36]" -> "ImplicitCondition[55]" [color=red, constraint=false]
+"ImplicitCondition[55]" -> "VariableDeclarator[49]" [color=blue, constraint=false, xlabel="T "] 
+"ImplicitCondition[55]" -> "Exit[36]" [color=blue, constraint=false, xlabel="F "] 
+"ImplicitCondition[55]" -> "Entry[29]" [color=red, constraint=false]
+"ImplicitCondition[55]" -> "VariableDeclarator[49]" [color=red, constraint=false]
+"Entry[29]" -> "ImplicitCondition[55]" [color=blue, constraint=false, xlabel=" "] 
+"List[3]" -> "List[4]" [style=invis]
+"InstanceInitialization[14]" -> "InstanceInitialization[6]" -> "Modifiers[22]" -> "Opt[25]" -> "List[26]" -> "List[27]" [style=invis]
+"Entry[29]" -> "Modifiers[30]" -> "PrimitiveTypeAccess[32]" -> "List[33]" -> "List[34]" -> "Opt[35]" -> "Exit[36]" [style=invis]
+"List[39]" -> "Opt[40]" -> "List[41]" -> "Block[42]" [style=invis]
+"VarDeclStmt[44]" -> "ContinueStmt[52]" [style=invis]
+"Modifiers[45]" -> "PrimitiveTypeAccess[47]" -> "List[48]" [style=invis]
+"List[50]" -> "Opt[51]" [style=invis]
+"Entry[7]" -> "Exit[8]" [style=invis]
+"Entry[15]" -> "Exit[16]" [style=invis]
+
+subgraph cluster_legend {
+{node [style=filled, fillcolor=1, colorscheme="pastel13"]
+Nodes [label="Total Nr. Nodes
+47", fillcolor=1]
+Edges [label="Total Nr. Edges
+58", fillcolor=1]
+NodesCFG [label="CFG Nr. Nodes
+6", fillcolor=3]
+EdgesCFG [label="CFG Nr. Edges
+6", fillcolor=3]
+Nodes-> "Program[0]" -> NodesCFG  [style="invis"]
+Edges -> "Program[0]" ->EdgesCFG [style="invis"]}
+label = "Statistics of the framework: NEXTFramework"
+style="solid"
+ranksep=0.05
+nodesep=0.01
+labelloc = b
+len=2
+}}

@@ -1,0 +1,333 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect AnnotationsCodegen {
+  refine Attributes eq TypeDecl.attributes() {
+    Collection<Attribute> attributes = refined();
+    getModifiers().addRuntimeVisibleAnnotationsAttribute(attributes);
+    getModifiers().addRuntimeInvisibleAnnotationsAttribute(attributes);
+    return attributes;
+  }
+
+  refine Attributes eq FieldDeclarator.attributes() {
+    Collection<Attribute> attributes = refined();
+    getModifiers().addRuntimeVisibleAnnotationsAttribute(attributes);
+    getModifiers().addRuntimeInvisibleAnnotationsAttribute(attributes);
+    return attributes;
+  }
+
+  refine Attributes eq MethodDecl.attributes() {
+    Collection<Attribute> attributes = refined();
+    getModifiers().addRuntimeVisibleAnnotationsAttribute(attributes);
+    getModifiers().addRuntimeInvisibleAnnotationsAttribute(attributes);
+    addRuntimeVisibleParameterAnnotationsAttribute(attributes);
+    addRuntimeInvisibleParameterAnnotationsAttribute(attributes);
+    return attributes;
+  }
+
+  refine Attributes eq ConstructorDecl.attributes() {
+    Collection<Attribute> attributes = refined();
+    getModifiers().addRuntimeVisibleAnnotationsAttribute(attributes);
+    getModifiers().addRuntimeInvisibleAnnotationsAttribute(attributes);
+    return attributes;
+  }
+
+  // 4.8.15
+  public void Modifiers.addRuntimeVisibleAnnotationsAttribute(Collection<Attribute> attributes) {
+    ConstantPool cp = hostType().constantPool();
+    Collection<Annotation> annotations = runtimeVisibleAnnotations();
+    if (!annotations.isEmpty()) {
+      attributes.add(new AnnotationsAttribute(cp, annotations, "RuntimeVisibleAnnotations"));
+    }
+  }
+
+  // 4.8.16
+  public void Modifiers.addRuntimeInvisibleAnnotationsAttribute(Collection<Attribute> attributes) {
+    ConstantPool cp = hostType().constantPool();
+    Collection<Annotation> annotations = runtimeInvisibleAnnotations();
+    if (!annotations.isEmpty()) {
+      attributes.add(new AnnotationsAttribute(cp, annotations, "RuntimeInvisibleAnnotations"));
+    }
+  }
+
+  /**
+   * Container for bytecode annotations attributes.
+   *
+   * <p>This is used to generate the bytecode attributes RuntimeVisibleAnnotations,
+   * RuntimeInvisibleAnnotations, RuntimeVisibleParameterAnnotations, and
+   * RuntimeInvisibleParameterAnnotations.
+   */
+  public class AnnotationsAttribute extends Attribute {
+    public AnnotationsAttribute(ConstantPool cp, Collection<Annotation> annotations, String name) {
+      super(cp, name);
+      u2(annotations.size());
+      for (Annotation annotation : annotations) {
+        annotation.appendAsAttributeTo(this);
+      }
+    }
+  }
+
+  // 4.8.15
+  syn boolean Modifier.isRuntimeVisible() = false;
+
+  /**
+   * Note: this is not the inverse of isRuntimeInvisible()!
+   *
+   * @return {@code true} if this annotation has RUNTIME retention policy.
+   */
+  eq Annotation.isRuntimeVisible() {
+    Annotation a = decl().annotation(lookupType("java.lang.annotation", "Retention"));
+    if (a == null) {
+      return false;
+    }
+    ElementConstantValue value = (ElementConstantValue) a.getElementValuePair(0).getElementValue();
+    Variable v = value.getExpr().varDecl();
+    return v != null && v.name().equals("RUNTIME");
+  }
+
+  // 4.8.16
+  syn boolean Modifier.isRuntimeInvisible() = false;
+
+  /**
+   * Note: this is not the inverse of isRuntimeVisible()!
+   *
+   * @return {@code true} if this annotation has CLASS retention policy.
+   */
+  eq Annotation.isRuntimeInvisible() {
+    Annotation a = decl().annotation(lookupType("java.lang.annotation", "Retention"));
+    if (a == null) {
+      return true;
+    }
+    ElementConstantValue value = (ElementConstantValue) a.getElementValuePair(0).getElementValue();
+    Variable v = value.getExpr().varDecl();
+    return v != null && v.name().equals("CLASS");
+  }
+
+  // 4.8.17
+  public void MethodDecl.addRuntimeVisibleParameterAnnotationsAttribute(
+      Collection<Attribute> attributes) {
+    boolean foundVisibleAnnotations = false;
+    Collection<Collection<Annotation>> annotations =
+        new ArrayList<Collection<Annotation>>(getNumParameter());
+    for (int i = 0; i < getNumParameter(); i++) {
+      Collection<Annotation> a = getParameter(i).getModifiers().runtimeVisibleAnnotations();
+      if (!a.isEmpty()) {
+        foundVisibleAnnotations = true;
+      }
+      annotations.add(a);
+    }
+    if (foundVisibleAnnotations) {
+      attributes.add(new ParameterAnnotationsAttribute(hostType().constantPool(), annotations,
+          "RuntimeVisibleParameterAnnotations"));
+    }
+  }
+
+  public Collection<Annotation> Modifiers.runtimeVisibleAnnotations() {
+    Collection<Annotation> annotations = new ArrayList<Annotation>();
+    for (int i = 0; i < getNumModifier(); i++) {
+      if (getModifier(i).isRuntimeVisible()) {
+        annotations.add((Annotation) getModifier(i));
+      }
+    }
+    return annotations;
+  }
+
+  // 4.8.18
+  public void MethodDecl.addRuntimeInvisibleParameterAnnotationsAttribute(
+      Collection<Attribute> attributes) {
+    boolean foundInvisibleAnnotations = false;
+    Collection<Collection<Annotation>> annotations =
+        new ArrayList<Collection<Annotation>>(getNumParameter());
+    for (int i = 0; i < getNumParameter(); i++) {
+      Collection<Annotation> a = getParameter(i).getModifiers().runtimeInvisibleAnnotations();
+      if (!a.isEmpty()) {
+        foundInvisibleAnnotations = true;
+      }
+      annotations.add(a);
+    }
+    if (foundInvisibleAnnotations) {
+      attributes.add(new ParameterAnnotationsAttribute(hostType().constantPool(), annotations,
+          "RuntimeInvisibleParameterAnnotations"));
+    }
+  }
+
+  public Collection<Annotation> Modifiers.runtimeInvisibleAnnotations() {
+    Collection<Annotation> annotations = new ArrayList<Annotation>();
+    for (int i = 0; i < getNumModifier(); i++) {
+      if (getModifier(i).isRuntimeInvisible()) {
+        annotations.add((Annotation) getModifier(i));
+      }
+    }
+    return annotations;
+  }
+
+  public class ParameterAnnotationsAttribute extends Attribute {
+    public ParameterAnnotationsAttribute(ConstantPool cp,
+        Collection<Collection<Annotation>> annotations, String name) {
+      super(cp, name);
+      u1(annotations.size());
+      for (Collection<Annotation> c : annotations) {
+        u2(c.size());
+        for (Annotation a : c) {
+          a.appendAsAttributeTo(this);
+        }
+      }
+    }
+  }
+
+  // Add ACC_ANNOTATION flag to generated class file.
+  public static final int Modifiers.ACC_ANNOTATION = 0x2000;
+  eq AnnotationDecl.flags() = super.flags() | Modifiers.ACC_ANNOTATION;
+
+  eq AnnotationMethodDecl.attributes() {
+    Collection<Attribute> attributes = super.attributes();
+    // 4.8.19
+    if (hasDefaultValue()) {
+      Attribute attribute = new Attribute(hostType().constantPool(), "AnnotationDefault");
+      getDefaultValue().appendAsAttributeTo(attribute);
+      attributes.add(attribute);
+    }
+    return attributes;
+  }
+
+  // 4.8.15
+  public void Annotation.appendAsAttributeTo(Attribute buf) {
+    ConstantPool cp = hostType().constantPool();
+    String typeDescriptor = decl().typeDescriptor();
+    int type_index = cp.addUtf8(typeDescriptor);
+    buf.u2(type_index);
+    buf.u2(getNumElementValuePair());
+    for (int i = 0; i < getNumElementValuePair(); i++) {
+      int name_index = cp.addUtf8(getElementValuePair(i).getName());
+      buf.u2(name_index);
+      getElementValuePair(i).getElementValue().appendAsAttributeTo(buf);
+    }
+  }
+
+  /**
+   * Add an annotation parameter constant to the constant pool.
+   * @see AST.TypeDecl#addConstant(ConstantPool, Constant) TypeDecl.addConstant(ConstantPool, Constant)
+   */
+  public int TypeDecl.addAnnotConstant(ConstantPool p, Constant c)     {
+    if (isString()) {
+      return p.addUtf8(c.stringValue());
+    }
+    throw new Error("Not supported");
+  }
+
+  public int BooleanType.addAnnotConstant(ConstantPool p, Constant c)  {
+    return addConstant(p, c);
+  }
+
+  public int IntegralType.addAnnotConstant(ConstantPool p, Constant c) {
+    return addConstant(p, c);
+  }
+
+  public int LongType.addAnnotConstant(ConstantPool p, Constant c) {
+    return addConstant(p, c);
+  }
+
+  public int FloatType.addAnnotConstant(ConstantPool p, Constant c) {
+    return addConstant(p, c);
+  }
+
+  public int DoubleType.addAnnotConstant(ConstantPool p, Constant c) {
+    return addConstant(p, c);
+  }
+
+  // 4.8.15.1
+  public void ElementValue.appendAsAttributeTo(Attribute buf) {
+    throw new Error(getClass().getName() + " does not support appendAsAttributeTo(Attribute buf)");
+  }
+
+  /**
+   * Finds the host type declaration of a class access.
+   *
+   * <p>Call this attribute only on expressions that return {@code true} for
+   * isClassAccess or it may throw an error!
+   *
+   * @return the TypeDecl corresponding to the accesssed class.
+   */
+  syn TypeDecl Expr.classAccess() {
+    throw new Error("Class access can only be computed for class access expressions");
+  }
+
+  eq Dot.classAccess() {
+    if (getRight() instanceof ClassAccess) {
+      return getLeft().classAccess();
+    } else {
+      return getRight().classAccess();
+    }
+  }
+
+  eq TypeAccess.classAccess() = type();
+
+  public void ElementConstantValue.appendAsAttributeTo(Attribute buf) {
+    if (getExpr().isConstant() && !getExpr().type().isEnumDecl()) {
+      TypeDecl targetType = declType();
+      char tag = targetType.isString() ? 's' : targetType.typeDescriptor().charAt(0);
+      int const_value_index = targetType.addAnnotConstant(hostType().constantPool(),
+          getExpr().constant());
+      buf.u1(tag);
+      buf.u2(const_value_index);
+    } else if (getExpr().isClassAccess()) {
+      int const_class_index = hostType().constantPool()
+          .addUtf8(getExpr().classAccess().typeDescriptor());
+      buf.u1('c');
+      buf.u2(const_class_index);
+    } else {
+      Variable v = getExpr().varDecl();
+      if (v == null) {
+        throw new Error("Expected Enumeration constant");
+      }
+
+      int type_name_index = hostType().constantPool().addUtf8(v.type().typeDescriptor());
+      int const_name_index = hostType().constantPool().addUtf8(v.name());
+      buf.u1('e');
+      buf.u2(type_name_index);
+      buf.u2(const_name_index);
+    }
+  }
+
+  public void ElementAnnotationValue.appendAsAttributeTo(Attribute buf) {
+    buf.u1('@');
+    getAnnotation().appendAsAttributeTo(buf);
+  }
+
+  public void ElementArrayValue.appendAsAttributeTo(Attribute buf) {
+    buf.u1('[');
+    buf.u2(getNumElementValue());
+    for (int i = 0; i < getNumElementValue(); i++) {
+      getElementValue(i).appendAsAttributeTo(buf);
+    }
+  }
+
+  inh TypeDecl ElementValue.hostType();
+}

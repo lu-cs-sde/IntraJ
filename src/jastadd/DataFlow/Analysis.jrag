@@ -1,0 +1,145 @@
+/* Copyright (c) 2021, Idriss Riouak <idriss.riouak@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect Analysis {
+  /**
+   * Analysis identifier.
+   */
+public
+  enum Analysis {
+    DAA,
+    NPA
+  }
+
+  coll TreeSet<WarningMsg>
+      CompilationUnit.DAA()[new TreeSet<WarningMsg>()] with add root
+          CompilationUnit;
+
+  coll Set<WarningMsg> CompilationUnit.NPA()[new TreeSet<WarningMsg>()] with add
+      root CompilationUnit;
+
+  coll Set<CFGRoot> Program.methods()[new LinkedHashSet<>()] with add;
+  MethodDecl contributes this to Program.methods();
+  ClassDecl contributes nta staticInitialization() to Program.methods();
+  ClassDecl contributes nta instanceInitialization() to Program.methods();
+  ConstructorDecl contributes this to Program.methods();
+
+  coll Set<CFGRoot> CompilationUnit.methods()[new LinkedHashSet<>()] with add
+      root CompilationUnit;
+  MethodDecl contributes this to CompilationUnit.methods();
+  ClassDecl contributes nta staticInitialization() to CompilationUnit.methods();
+  ClassDecl contributes nta instanceInitialization()
+      to CompilationUnit.methods();
+  ConstructorDecl contributes this to CompilationUnit.methods();
+
+  /**This class contains all the information related to a specific warning:
+   * Location: file path.
+   * Analysis: analysis identifier.
+   * LineStart, ColumnStart, LineEnd, ColumnEnd: are source code location.
+   * errMsg: contains a description of the error message.
+   */
+
+public
+  class WarningMsg implements Comparable<WarningMsg> {
+    final Integer lineStart, columnStart, lineEnd, columnEnd;
+    final String errMsg;
+    final Analysis analysis;
+    final String loc;
+
+  public
+    WarningMsg(String loc, Analysis analysis, Integer lineStart,
+               Integer columnStart, Integer lineEnd, Integer columnEnd,
+               String errMsg) {
+      this.analysis = analysis;
+      this.lineStart = lineStart;
+      this.lineEnd = lineEnd;
+      this.errMsg = errMsg;
+      this.loc = loc;
+      this.columnEnd = columnEnd;
+      this.columnStart = columnStart;
+    }
+
+  public
+    void print(PrintStream out) {
+      Utils.printWarning(out,
+                         analysis.name() + " - " + loc + ":" + lineStart + "," +
+                             columnStart,
+                         errMsg);
+    }
+
+  public
+    int compareTo(WarningMsg other) {
+      if (lineStart.equals(other.lineStart)) {
+        if (columnStart != null) {
+          if (columnStart.equals(other.columnStart))
+            return errMsg.compareTo(other.errMsg);
+          else {
+            if (columnStart != null && other.columnStart != null)
+              return Integer.compare(columnStart, other.columnStart);
+            else {
+              if (columnStart == null) {
+                return -1;
+              } else {
+                return 1;
+              }
+            }
+          }
+        } else {
+          return Integer.compare(columnEnd, other.columnEnd);
+        }
+      } else {
+        return Integer.compare(lineStart, other.lineStart);
+      }
+    }
+
+  public
+    Analysis getAnalysisType() { return analysis; }
+
+  } // End of class WarningMsg
+
+  protected WarningMsg ASTNode.warning(String loc, String msg,
+                                       Analysis analysis) {
+    return new WarningMsg(loc, analysis, lineStart(), columnStart() - 1,
+                          lineEnd(), columnEnd(), msg);
+  }
+
+  inh Boolean UnaryIncDec.exprAsStmt();
+  eq ExprStmt.getChild().exprAsStmt() = (getExpr() instanceof UnaryIncDec);
+  eq CompilationUnit.getChild().exprAsStmt() = false;
+
+  inh CompilationUnit VariableDeclarator.getCompilationUnit();
+  inh CompilationUnit AssignExpr.getCompilationUnit();
+  inh CompilationUnit VarAccess.getCompilationUnit();
+  inh CompilationUnit PostfixExpr.getCompilationUnit();
+  inh CompilationUnit PreDecExpr.getCompilationUnit();
+  inh CompilationUnit Stmt.getCompilationUnit();
+  inh CompilationUnit PreIncExpr.getCompilationUnit();
+  eq CompilationUnit.getChild().getCompilationUnit() = this;
+}

@@ -1,0 +1,136 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ *                    2016, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect Java2Rewrites {
+  int TypeDecl.uniqueIndexCounter = 1;
+
+  syn lazy int TypeDecl.uniqueIndex() = topLevelType().uniqueIndexCounter++;
+
+  syn lazy String TypeDecl.jvmName() {
+    throw new Error("Jvm name only supported for reference types and not " + getClass().getName());
+  }
+
+  eq ReferenceType.jvmName() {
+    if (!isNestedType()) {
+      return fullName();
+    } else if (isAnonymous() || isLocalClass()) {
+      return enclosingType().jvmName() + "$" + uniqueIndex() + name();
+    } else {
+      return enclosingType().jvmName() + "$" + name();
+    }
+  }
+
+  eq ArrayDecl.jvmName() {
+    StringBuilder dim = new StringBuilder();
+    for (int i = 0; i < dimension(); i++) {
+      dim.append("[");
+    }
+    if (elementType().isReferenceType()) {
+      dim.append("L")
+          .append(elementType().jvmName())
+          .append(";");
+    } else {
+      dim.append(elementType().jvmName());
+    }
+    return dim.toString();
+  }
+
+  eq ByteType.jvmName() = "B";
+  eq CharType.jvmName() = "C";
+  eq ShortType.jvmName() = "S";
+  eq IntType.jvmName() = "I";
+  eq LongType.jvmName() = "J";
+  eq FloatType.jvmName() = "F";
+  eq DoubleType.jvmName() = "D";
+  eq BooleanType.jvmName() = "Z";
+
+  syn String TypeDecl.primitiveClassName() {
+    throw new Error("primitiveClassName not supported for "
+        + name() + " of type " + getClass().getName());
+  }
+
+  eq ByteType.primitiveClassName() = "Byte";
+  eq CharType.primitiveClassName() = "Character";
+  eq ShortType.primitiveClassName() = "Short";
+  eq IntType.primitiveClassName() = "Integer";
+  eq LongType.primitiveClassName() = "Long";
+  eq FloatType.primitiveClassName() = "Float";
+  eq DoubleType.primitiveClassName() = "Double";
+  eq BooleanType.primitiveClassName() = "Boolean";
+  eq VoidType.primitiveClassName() = "Void";
+
+  /** @return {@code true} if this type uses an assert statement. */
+  syn lazy boolean TypeDecl.hasAssertStatement() {
+    for (ASTNode child : astChildren()) {
+      if (child.hasAssertStatementRecursive()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  syn boolean ASTNode.hasAssertStatementRecursive() {
+    for (ASTNode child : astChildren()) {
+      if (child.hasAssertStatementRecursive()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  eq TypeDecl.hasAssertStatementRecursive() = false;
+
+  eq AssertStmt.hasAssertStatementRecursive() = true;
+
+  syn FieldDeclarator TypeDecl.assertionsDisabled() =
+      assertionsDisabledField().getDeclarator(0);
+
+  syn nta FieldDecl TypeDecl.assertionsDisabledField() {
+    Access desiredAssertionStatus =
+        topLevelType()
+        .createQualifiedAccess()
+        .qualifiesAccess(new ClassAccess()
+            .qualifiesAccess(new MethodAccess(
+                "desiredAssertionStatus",
+                new List<Expr>())));
+    FieldDeclarator assertionDisabled = new FieldDeclarator(
+        "$assertiosDisabled",
+        new List<Dims>(),
+        new Opt<Expr>(new LogNotExpr(desiredAssertionStatus)));
+    return new FieldDecl(
+        new Modifiers(new List<Modifier>(
+            new Modifier("static"),
+            new Modifier("final"),
+            new Modifier("synthetic"))),
+        new PrimitiveTypeAccess("boolean"),
+        new List<FieldDeclarator>(assertionDisabled));
+  }
+}

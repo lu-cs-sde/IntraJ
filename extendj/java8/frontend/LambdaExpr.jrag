@@ -1,0 +1,172 @@
+/* Copyright (c) 2014, Erik Hogeman <Erik.Hogemn@gmail.com>
+ *               2017, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the Lund University nor the names of its
+ *       contributors may be used to endorse or promote products derived from
+ *       this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+aspect LambdaExpr {
+
+  public void LambdaExpr.collectBranches(Collection<Stmt> c) {
+    // Don't add branches inside the lambda.
+  }
+
+  eq LambdaAnonymousDecl.unqualifiedLookupMethod(String name) {
+    if (getParent().getParent().getParent() instanceof MethodReference) {
+      return ((MethodReference) getParent().getParent().getParent()).lookupMethod(name);
+    } else if (getParent().getParent().getParent() instanceof ConstructorReference) {
+      return ((ConstructorReference) getParent().getParent().getParent()).lookupMethod(name);
+    } else {
+      return enclosingLambda().lookupMethod(name);
+    }
+  }
+
+  syn lazy int LambdaExpr.arity() = numParameters();
+
+  syn lazy int LambdaParameters.numParameters();
+  syn lazy int LambdaExpr.numParameters() = getLambdaParameters().numParameters();
+
+  eq InferredLambdaParameters.numParameters() = getNumParameter();
+  eq DeclaredLambdaParameters.numParameters() = getNumParameter();
+
+  syn lazy boolean LambdaParameters.congruentTo(FunctionDescriptor fd);
+
+  // 15.27.3
+  eq InferredLambdaParameters.congruentTo(FunctionDescriptor fd) {
+    if (fd.method.hasValue()) {
+      return numParameters() == fd.method.get().getNumParameter();
+    } else {
+      return false;
+    }
+  }
+
+  // 15.27.3
+  eq DeclaredLambdaParameters.congruentTo(FunctionDescriptor fd) {
+    if (fd.method.hasValue()) {
+      MethodDecl targetMethod = fd.method.get();
+      if (numParameters() != targetMethod.getNumParameter()) {
+        return false;
+      }
+      for (int i = 0; i < numParameters(); i++) {
+        // Lambdas can't declare type variables so that doesn't need to be taken into account.
+        if (getParameter(i).type() != targetMethod.getParameter(i).type() &&
+            getParameter(i).type() != targetMethod.getParameter(i).type().erasure()) {
+          return false;
+        }
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  syn lazy boolean LambdaExpr.isImplicit() =
+      getLambdaParameters() instanceof InferredLambdaParameters;
+
+  syn lazy boolean LambdaExpr.isExplicit() = !isImplicit();
+
+  syn lazy boolean LambdaBody.congruentTo(FunctionDescriptor fd);
+
+  // 15.27.3
+  eq ExprLambdaBody.congruentTo(FunctionDescriptor fd) {
+    if (fd.method.hasValue()) {
+      if (fd.method.get().type().isVoid()) {
+        return getExpr().stmtCompatible();
+      } else {
+        return getExpr().assignConversionTo(fd.method.get().type());
+      }
+    } else {
+      return false;
+    }
+  }
+
+  // 15.27.3
+  eq BlockLambdaBody.congruentTo(FunctionDescriptor fd) {
+    if (fd.method.hasValue()) {
+      TypeDecl methodType = fd.method.get().type();
+      if (methodType.isVoid()) {
+        return voidCompatible();
+      } else {
+        if (!valueCompatible()) {
+          return false;
+        }
+        for (ReturnStmt returnStmt : lambdaReturns()) {
+          if (!returnStmt.getResult().assignConversionTo(methodType)) {
+            return false;
+          }
+        }
+        return true;
+      }
+    } else {
+      return false;
+    }
+  }
+
+  // 15.27.3
+  /**
+   * BEWARE! READ THIS BEFORE USING THIS ATTRIBUTE!
+   *
+   * The congruency check will currently not infer different types for eventual
+   * inferred parameters, but the target type function descriptor will always
+   * be used for inference. Thus this check will NOT work for arbitrary
+   * function descriptors if there are inferred parameters in the lambda.
+   * Currently, there is no use for this to work anyway because a lambda with
+   * inferred parameters will never be pertinent to applicability and thus not
+   * need to be congruency checked, but in case there is need for arbitary
+   * congruency checks that handle inferrence differently depending on the
+   * function descriptor input to this method, then this check must be altered!
+   */
+  syn lazy boolean LambdaExpr.congruentTo(FunctionDescriptor fd) =
+      !fd.isGeneric() && getLambdaParameters().congruentTo(fd) && getLambdaBody().congruentTo(fd);
+}
+
+aspect StmtCompatible {
+  syn lazy boolean Expr.stmtCompatible() = false;
+  syn lazy boolean ConstructorAccess.stmtCompatible() = true;
+  syn lazy boolean ClassInstanceExpr.stmtCompatible() = true;
+  syn lazy boolean AssignExpr.stmtCompatible() = true;
+  syn lazy boolean PostIncExpr.stmtCompatible() = true;
+  syn lazy boolean PostDecExpr.stmtCompatible() = true;
+  syn lazy boolean PreIncExpr.stmtCompatible() = true;
+  syn lazy boolean PreDecExpr.stmtCompatible() = true;
+  syn lazy boolean MethodAccess.stmtCompatible() = true;
+  syn lazy boolean Dot.stmtCompatible() = getRight().stmtCompatible();
+}
+
+aspect ExceptionHandling {
+  eq LambdaExpr.getLambdaBody().handlesException(TypeDecl exceptionType) {
+    InterfaceDecl iDecl = targetInterface();
+    if (iDecl == null) {
+      return false;
+    } else if (!iDecl.isFunctional()) {
+      return false;
+    }
+    for (TypeDecl exception : iDecl.functionDescriptor().throwsList) {
+      if (exceptionType.strictSubtype(exception)) {
+        return true;
+      }
+    }
+    return false;
+  }
+}

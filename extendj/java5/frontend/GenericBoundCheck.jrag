@@ -1,0 +1,105 @@
+/* Copyright (c) 2015-2016, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * Attributes for checking if a type argument is within the bounds of a given
+ * type variable.
+ */
+aspect GenericBoundCheck {
+  /**
+   * @param bound the bounded type variable
+   * @return {@code true} if this type is within the bounds of the parameter type
+   */
+  syn boolean TypeDecl.withinBounds(TypeDecl bound) = bound.boundOf(this);
+
+  eq ArrayDecl.withinBounds(TypeDecl bound) = bound.boundOfArray(this);
+
+  eq UnknownType.withinBounds(TypeDecl bound) = false;
+
+  eq WildcardType.withinBounds(TypeDecl bound) = true;
+
+  eq WildcardExtendsType.withinBounds(TypeDecl bound) = bound.boundOf(extendsType());
+
+  eq WildcardSuperType.withinBounds(TypeDecl bound) = bound.boundOf(superType());
+
+  /**
+   * Check if a given type is within the bound of this type, given a specific
+   * parameterization of this type.
+   *
+   * See JLS SE7 $4.5
+   *
+   * @param argument argument type
+   * @return {@code true} if the argument type is in the bound of this type
+   */
+  syn boolean TypeDecl.boundOf(TypeDecl argument) = !isPrimitive() && argument.subtype(this);
+
+  eq TypeVariable.boundOf(TypeDecl argument) {
+    for (Access bound : getBoundList()) {
+      if (!argument.subtype(bound.type())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  syn boolean TypeDecl.boundOfWildcard(WildcardType type) = false;
+
+  eq TypeVariable.boundOfWildcard(WildcardType type) = true;
+
+  syn boolean TypeDecl.boundOfWildcardExtends(WildcardExtendsType type) = false;
+
+  eq TypeVariable.boundOfWildcardExtends(WildcardExtendsType type) =
+      type.extendsType().subtype(this);
+
+  syn boolean TypeDecl.boundOfWildcardSuper(WildcardSuperType type) = false;
+
+  eq TypeVariable.boundOfWildcardSuper(WildcardSuperType type) =
+      type.superType().subtype(this);
+
+  syn boolean TypeDecl.boundOfArray(ArrayDecl type) = this == typeObject();
+
+  eq WildcardType.boundOfArray(ArrayDecl type) = true;
+
+  eq WildcardSuperType.boundOfArray(ArrayDecl type) = true;
+
+  eq WildcardExtendsType.boundOfArray(ArrayDecl type) = getAccess().type().boundOfArray(type);
+
+  eq TypeVariable.boundOfArray(ArrayDecl type) {
+    // An array type is within the bounds of a type variable if the
+    // type variable has a single type bound that is an array type bound,
+    // or if there are no type bounds for the type variable.
+    if (getNumBound() == 1) {
+      return firstBound().type().boundOfArray(type);
+    }
+    return getNumBound() == 0;
+  }
+
+  eq ArrayDecl.boundOfArray(ArrayDecl type) = type.componentType().withinBounds(componentType());
+}

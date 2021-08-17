@@ -1,0 +1,516 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ *               2013-2015, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+import java.util.*;
+import java.io.*;
+
+aspect ConstantPool {
+  syn lazy ConstantPool TypeDecl.constantPool() = new ConstantPool(this);
+
+  public class ConstantPool {
+    public TypeDecl typeDecl;
+    public ConstantPool(TypeDecl typeDecl) {
+      this.typeDecl = typeDecl;
+    }
+
+    public static final byte CONSTANT_Class = 7;
+    public static final byte CONSTANT_Fieldref = 9;
+    public static final byte CONSTANT_Methodref = 10;
+    public static final byte CONSTANT_InterfaceMethodref = 11;
+    public static final byte CONSTANT_String = 8;
+    public static final byte CONSTANT_Integer = 3;
+    public static final byte CONSTANT_Float = 4;
+    public static final byte CONSTANT_Long = 5;
+    public static final byte CONSTANT_Double = 6;
+    public static final byte CONSTANT_NameAndType = 12;
+    public static final byte CONSTANT_Utf8 = 1;
+
+    private int posCounter = 1;
+
+    private ArrayList<CPInfo> list = new ArrayList<CPInfo>();
+
+    private int labelCounter = 1;
+    private Map<String, CPInfo> classConstants = new HashMap<String, CPInfo>();
+    private Map<String, CPInfo> fieldrefConstants = new HashMap<String, CPInfo>();
+    private Map<String, CPInfo> methodrefConstants = new HashMap<String, CPInfo>();
+    private Map<String, CPInfo> interfaceMethodrefConstants = new HashMap<String, CPInfo>();
+    private Map<String, CPInfo> nameAndTypeConstants = new HashMap<String, CPInfo>();
+    private Map<String, CPInfo> utf8Constants = new HashMap<String, CPInfo>();
+    private Map<String, CPInfo> stringConstants = new HashMap<String, CPInfo>();
+    private Map<Integer, CPInfo> intConstants = new HashMap<Integer, CPInfo>();
+    private Map<Long, CPInfo> longConstants = new HashMap<Long, CPInfo>();
+    private Map<Float, CPInfo> floatConstants = new HashMap<Float, CPInfo>();
+    private Map<Double, CPInfo> doubleConstants = new HashMap<Double, CPInfo>();
+
+    private void addCPInfo(CPInfo info) {
+      info.pos = posCounter;
+      posCounter += info.size();
+      if (posCounter > 0xFFFF) {
+        throw new Error("Too many constants in class!");
+      }
+      list.add(info);
+    }
+
+    // For debugging purposes.
+    public int numElements() {
+      return list.size();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder s = new StringBuilder();
+      for (CPInfo info : list) {
+        s.append(info.toString());
+        s.append("\n");
+      }
+      return s.toString();
+    }
+
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeChar(posCounter);
+      for (CPInfo info : list) {
+        info.emit(out);
+      }
+    }
+
+    public int newLabel() {
+      return labelCounter++;
+    }
+
+    public int addClass(String name) {
+      if (!classConstants.containsKey(name)) {
+        CPInfo info = new ConstantClass(addUtf8(name.replace('.', '/')));
+        addCPInfo(info);
+        classConstants.put(name, info);
+        String s = info.toString();
+        return info.pos;
+      }
+      CPInfo info = classConstants.get(name);
+      return info.pos;
+    }
+
+    public int addFieldref(String classname, String name, TypeDecl type) {
+      String typeDesc = type.typeDescriptor();
+      String key = classname + name + typeDesc;
+      if (!fieldrefConstants.containsKey(key)) {
+        CPInfo info = new ConstantFieldref(addClass(classname), addNameAndType(name, typeDesc));
+        addCPInfo(info);
+        fieldrefConstants.put(key, info);
+        String s = info.toString();
+        return info.pos;
+      }
+      CPInfo info = fieldrefConstants.get(key);
+      return info.pos;
+    }
+
+    public int addMethodref(String classname, String name, String desc) {
+      String key = classname + name + desc;
+      if (!methodrefConstants.containsKey(key)) {
+        CPInfo info = new ConstantMethodref(addClass(classname), addNameAndType(name, desc));
+        addCPInfo(info);
+        methodrefConstants.put(key, info);
+        String s = info.toString();
+        return info.pos;
+      }
+      CPInfo info = methodrefConstants.get(key);
+      return info.pos;
+    }
+
+    public int addInterfaceMethodref(String classname, String name, String desc) {
+      String key = classname + name + desc;
+      if (!interfaceMethodrefConstants.containsKey(key)) {
+        CPInfo info = new ConstantInterfaceMethodref(addClass(classname),
+            addNameAndType(name, desc));
+        addCPInfo(info);
+        interfaceMethodrefConstants.put(key, info);
+        String s = info.toString();
+        return info.pos;
+      }
+      CPInfo info = interfaceMethodrefConstants.get(key);
+      return info.pos;
+    }
+
+    public int addNameAndType(String name, String type) {
+      String key = name + type;
+      if (!nameAndTypeConstants.containsKey(key)) {
+        CPInfo info = new ConstantNameAndType(addUtf8(name), addUtf8(type));
+        addCPInfo(info);
+        nameAndTypeConstants.put(key, info);
+        String s = info.toString();
+        return info.pos;
+      }
+      CPInfo info = nameAndTypeConstants.get(key);
+      return info.pos;
+    }
+
+    public int addUtf8(String name) {
+      if (!utf8Constants.containsKey(name)) {
+        CPInfo info = new ConstantUtf8(name);
+        addCPInfo(info);
+        utf8Constants.put(name, info);
+        String s = info.toString();
+        return info.pos;
+      }
+      CPInfo info = utf8Constants.get(name);
+      return info.pos;
+    }
+
+    /**
+     * Add value to constant pool.
+     * @return index of value in constant pool
+     */
+    public int addConstant(String val) {
+      if (!stringConstants.containsKey(val)) {
+        CPInfo info = new ConstantString(addUtf8(val));
+        addCPInfo(info);
+        stringConstants.put(val, info);
+        String s = info.toString();
+        return info.pos;
+      }
+      CPInfo info = stringConstants.get(val);
+      return info.pos;
+    }
+
+    /**
+     * Add value to constant pool.
+     * @return index of value in constant pool
+     */
+    public int addConstant(int val) {
+      Integer key = Integer.valueOf(val);
+      if (!intConstants.containsKey(key)) {
+        CPInfo info = new ConstantInteger(val);
+        addCPInfo(info);
+        intConstants.put(key, info);
+        return info.pos;
+      }
+      CPInfo info = intConstants.get(key);
+      return info.pos;
+    }
+
+    /**
+     * Add value to constant pool.
+     * @return index of value in constant pool
+     */
+    public int addConstant(float val) {
+      Float key = Float.valueOf(val);
+      if (!floatConstants.containsKey(key)) {
+        CPInfo info = new ConstantFloat(val);
+        addCPInfo(info);
+        floatConstants.put(key, info);
+        return info.pos;
+      }
+      CPInfo info = floatConstants.get(key);
+      return info.pos;
+    }
+
+    /**
+     * Add value to constant pool.
+     * @return index of value in constant pool
+     */
+    public int addConstant(long val) {
+      Long key = Long.valueOf(val);
+      if (!longConstants.containsKey(key)) {
+        CPInfo info = new ConstantLong(val);
+        addCPInfo(info);
+        longConstants.put(key, info);
+        return info.pos;
+      }
+      CPInfo info = longConstants.get(key);
+      return info.pos;
+    }
+
+    /**
+     * Add value to constant pool.
+     * @return index of value in constant pool
+     */
+    public int addConstant(double val) {
+      Double key = Double.valueOf(val);
+      if (!doubleConstants.containsKey(key)) {
+        CPInfo info = new ConstantDouble(val);
+        addCPInfo(info);
+        doubleConstants.put(key, info);
+        return info.pos;
+      }
+      CPInfo info = doubleConstants.get(key);
+      return info.pos;
+    }
+  }
+
+  public class CPInfo {
+    public int pos;
+
+    public void emit(DataOutputStream out) throws IOException {
+    }
+
+    /** @return the size of this constant info entry. */
+    public int size() {
+      return  1;
+    }
+  }
+
+  public class ConstantClass extends CPInfo {
+    private int name;
+
+    public ConstantClass(int name) {
+      this.name = name;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_Class);
+      out.writeChar(name);
+    }
+
+    @Override
+    public String toString() {
+      return pos + " ConstantClass: tag " + ConstantPool.CONSTANT_Class + ", name_index: " + name;
+    }
+  }
+
+  public class ConstantFieldref extends CPInfo {
+    private int classname;
+    private int nameandtype;
+
+    public ConstantFieldref(int classname, int nameandtype) {
+      this.classname = classname;
+      this.nameandtype = nameandtype;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_Fieldref);
+      out.writeChar(classname);
+      out.writeChar(nameandtype);
+    }
+
+    @Override
+    public String toString() {
+      return pos + " ConstantFieldref: tag " + ConstantPool.CONSTANT_Fieldref
+          + ", class_index: " + classname + ", name_and_type_index: " + nameandtype;
+    }
+  }
+
+  public class ConstantMethodref extends CPInfo {
+    private int classname;
+    private int nameandtype;
+
+    public ConstantMethodref(int classname, int nameandtype) {
+      this.classname = classname;
+      this.nameandtype = nameandtype;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_Methodref);
+      out.writeChar(classname);
+      out.writeChar(nameandtype);
+    }
+
+    @Override
+    public String toString() {
+      return pos + " ConstantMethodref: tag " + ConstantPool.CONSTANT_Methodref
+          + ", class_index: " + classname + ", name_and_type_index: " + nameandtype;
+    }
+  }
+
+  public class ConstantInterfaceMethodref extends CPInfo {
+    private int classname;
+    private int nameandtype;
+
+    public ConstantInterfaceMethodref(int classname, int nameandtype) {
+      this.classname = classname;
+      this.nameandtype = nameandtype;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_InterfaceMethodref);
+      out.writeChar(classname);
+      out.writeChar(nameandtype);
+    }
+
+    @Override
+    public String toString() {
+      return pos + " ConstantInterfaceMethodref: tag " + ConstantPool.CONSTANT_InterfaceMethodref
+          + ", class_index: " + classname + ", name_and_type_index: " + nameandtype;
+    }
+  }
+
+  public class ConstantNameAndType extends CPInfo {
+    private int name;
+    private int type;
+
+    public ConstantNameAndType(int name, int type) {
+      this.name = name;
+      this.type = type;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_NameAndType);
+      out.writeChar(name);
+      out.writeChar(type);
+    }
+
+    @Override
+    public String toString() {
+      return pos + " NameAndType: tag " + ConstantPool.CONSTANT_NameAndType + ", name_index: "
+          + name + ", descriptor_index: " + type;
+    }
+  }
+
+  public class ConstantUtf8 extends CPInfo {
+    private String name;
+
+    public ConstantUtf8(String name) {
+      this.name = name;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_Utf8);
+      out.writeUTF(name);
+    }
+
+    @Override
+    public String toString() {
+      return pos + " ConstantUtf8: tag " + ConstantPool.CONSTANT_Utf8 + ", length: "
+          + name.length() + ", bytes: " + name;
+    }
+  }
+
+  public class ConstantString extends CPInfo {
+    private int name;
+
+    public ConstantString(int name) {
+      this.name = name;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_String);
+      out.writeChar(name);
+    }
+
+    @Override
+    public String toString() {
+      return pos + " ConstantString: tag " + ConstantPool.CONSTANT_String
+          + ", string_index: " + name;
+    }
+  }
+
+  public class ConstantInteger extends CPInfo {
+    private int val;
+
+    public ConstantInteger(int val) {
+      this.val = val;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_Integer);
+      out.writeInt(val);
+    }
+
+    @Override
+    public String toString() {
+      return pos + " ConstantInteger: tag " + ConstantPool.CONSTANT_Integer + ", bytes: " + val;
+    }
+  }
+
+  public class ConstantFloat extends CPInfo {
+    private float val;
+
+    public ConstantFloat(float val) {
+      this.val = val;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_Float);
+      out.writeFloat(val);
+    }
+
+    @Override
+    public String toString() {
+      return pos + " ConstantFloat: tag " + ConstantPool.CONSTANT_Float + ", bytes: " + val;
+    }
+  }
+
+  public class ConstantLong extends CPInfo {
+    private long val;
+
+    public ConstantLong(long val) {
+      this.val = val;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_Long);
+      out.writeLong(val);
+    }
+
+    @Override
+    public int size() {
+      return 2;
+    }
+
+    @Override
+    public String toString() {
+      return pos + " ConstantLong: tag " + ConstantPool.CONSTANT_Long + ", bytes: " + val;
+    }
+  }
+
+  public class ConstantDouble extends CPInfo {
+    private double val;
+
+    public ConstantDouble(double val) {
+      this.val = val;
+    }
+
+    @Override
+    public void emit(DataOutputStream out) throws IOException {
+      out.writeByte(ConstantPool.CONSTANT_Double);
+      out.writeDouble(val);
+    }
+
+    @Override
+    public int size() {
+      return 2;
+    }
+
+    @Override
+    public String toString() {
+      return pos + " ConstantDouble: tag " + ConstantPool.CONSTANT_Double + ", bytes: " + val;
+    }
+  }
+
+}

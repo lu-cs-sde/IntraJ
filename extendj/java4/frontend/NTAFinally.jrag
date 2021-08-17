@@ -1,0 +1,249 @@
+/* Copyright (c) 2013, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect NTAFinally {
+  /** @return a copy of the block as an NTAFinallyBlock. */
+protected
+  static NTAFinallyBlock ASTNode.ntaFinallyBlock(FinallyHost origin,
+                                                 Stmt branch, Block block) {
+    NTAFinallyBlock ntaBlock = new NTAFinallyBlock(origin);
+    ntaBlock.addStmt((Block)block.treeCopy());
+    if (block.canCompleteNormally()) {
+      FinallyHost enclosing = block.enclosingFinally(branch);
+      if (enclosing != null) {
+        ntaBlock.addStmt(
+            ntaFinallyBlock(enclosing, branch, enclosing.getFinallyBlock()));
+      }
+    }
+    return ntaBlock;
+  }
+
+protected
+  static NTAFinallyBlock ASTNode.ntaFinallyBlock(
+      FinallyHost origin, Stmt branch, Block block, TypeDecl type) {
+    Boolean canHandle = false;
+    if (origin instanceof TryStmt)
+      for (CatchClause cat : ((TryStmt)origin).getCatchClauses()) {
+        if (canHandle = cat.handles(type))
+          break;
+      }
+    NTAFinallyBlock ntaBlock = new NTAFinallyBlock(origin);
+    if (!canHandle) {
+      ntaBlock.addStmt((Block)block.treeCopyNoTransform());
+    } else {
+      return ntaBlock;
+    }
+
+    if (block.canCompleteNormally()) {
+      FinallyHost enclosing = block.enclosingFinally(branch);
+      if (enclosing != null) {
+        ntaBlock.addStmt(ntaFinallyBlock(enclosing, branch,
+                                         enclosing.getFinallyBlock(), type));
+      }
+    }
+    return ntaBlock;
+  }
+
+  syn lazy Opt<Block> BreakStmt.getFinallyOpt() { return branchFinallyOpt(); }
+
+  syn lazy Opt<Block> ContinueStmt.getFinallyOpt() {
+    return branchFinallyOpt();
+  }
+
+  syn lazy Opt<Block> ReturnStmt.getFinallyOpt() { return branchFinallyOpt(); }
+
+  syn lazy Opt<Block> ThrowStmt.getFinallyOpt() {
+    return branchFinallyOpt(getExpr().type());
+  }
+  inh TryStmt CFGNode.getEnclosingTry();
+  inh TryStmt ContinueStmt.getEnclosingTry();
+  inh TryStmt BreakStmt.getEnclosingTry();
+  inh TryStmt FinallyHost.getEnclosingTry();
+  eq TryStmt.UncheckedExceptions().getEnclosingTry() = this;
+  eq TryWithResources.getResource().getEnclosingTry() = this;
+  eq TryWithResources.CatchClause().getEnclosingTry() = getEnclosingTry();
+  eq TryWithResources.getFinally().getEnclosingTry() = getEnclosingTry();
+  // eq TryStmt.getChild().getEnclosingTry() = getEnclosingTry();
+
+  eq TryStmt.getBlock().getEnclosingTry() = this;
+  eq TryStmt.CatchClause().getEnclosingTry() = getEnclosingTry();
+  eq TryStmt.getFinally().getEnclosingTry() = getEnclosingTry();
+  eq NTAFinallyBlock.getChild().getEnclosingTry() = null;
+  eq CompilationUnit.getChild().getEnclosingTry() = null;
+
+  inh TryStmt CFGNode.getActualTry();
+  eq TryStmt.CatchClause().getActualTry() = this;
+  eq CompilationUnit.getChild().getActualTry() = null;
+
+protected
+  static NTAFinallyBlock ASTNode.ntaFinallyBlockMethods(TryStmt origin,
+                                                        TypeDecl type) {
+    if (origin == null)
+      return null;
+    TryStmt enclosingTry = origin.getEnclosingTry();
+    Stmt finallyBlock = origin.getFinally();
+    for (CatchClause cat : origin.getCatchClauses()) {
+      if (cat.handles(type))
+        return null;
+    }
+    NTAFinallyBlock ntaBlock = new NTAFinallyBlock((FinallyHost)origin, type);
+    if (finallyBlock != null) {
+      ntaBlock.addStmt((Block)finallyBlock.treeCopyNoTransform());
+      if (finallyBlock.canCompleteNormally()) {
+        NTAFinallyBlock blk = ntaFinallyBlockMethods(enclosingTry, type);
+        if (blk != null)
+          ntaBlock.addStmt(blk);
+        return ntaBlock;
+      }
+    }
+    if (finallyBlock == null) {
+      if (enclosingTry != null) {
+        return ntaFinallyBlockMethods(enclosingTry, type);
+      }
+    }
+    return null;
+  }
+
+  syn nta List<Block> MethodAccess.getFinallyList() {
+    List<Block> res = new List();
+    TryStmt enclosingTry = getEnclosingTry();
+  outer:
+    for (Access a : decl().getExceptions()) {
+      Block blk = null;
+      boolean canHandle = false;
+      if (enclosingTry == null)
+        continue;
+      for (CatchClause cat : enclosingTry.getCatchClauses()) {
+        if (cat.handles(a.type())) {
+          // res.add(new NTAFinallyBlock((FinallyHost)enclosingTry, a.type()));
+          // continue outer;
+        }
+      }
+      blk = ntaFinallyBlockMethods(enclosingTry, a.type());
+      if (blk != null)
+        res.add(blk);
+      // else
+      //   res.add(new NTAFinallyBlock((FinallyHost)enclosingTry, a.type()));
+    }
+    return res;
+  }
+
+  syn nta List<Block> ClassInstanceExpr.getFinallyList() {
+    List<Block> res = new List();
+    TryStmt enclosingTry = getEnclosingTry();
+  outer:
+    for (Access a : decl().getExceptions()) {
+      Block blk = null;
+      boolean canHandle = false;
+      if (enclosingTry == null)
+        continue;
+      for (CatchClause cat : enclosingTry.getCatchClauses()) {
+        if (cat.handles(a.type())) {
+          res.add(new NTAFinallyBlock((FinallyHost)enclosingTry, a.type()));
+          continue outer;
+        }
+      }
+      blk = ntaFinallyBlockMethods(enclosingTry, a.type());
+      if (blk != null)
+        res.add(blk);
+      else
+        continue; // res.add(new NTAFinallyBlock((FinallyHost)enclosingTry,
+                  // a.type()));
+    }
+    return res;
+  }
+
+  /** Copy of the finally block for catch-all exception handling. */
+  syn lazy Block TryStmt.getExceptionHandler() {
+    if (hasNonEmptyFinally()) {
+      NTAFinallyBlock ntaBlock = new NTAFinallyBlock(this);
+      ntaBlock.addStmt((Block)getFinally().treeCopyNoTransform());
+      return ntaBlock;
+    } else {
+      // return null; //
+      return new NTAFinallyBlock();
+    }
+  }
+
+  /**
+   * @return An Opt node containing the finally and monitor exit blocks
+   * from the list of enclosing try-statements and synchronized blocks.
+   */
+public
+  Opt<Block> Stmt.branchFinallyOpt() {
+    FinallyHost enclosing = enclosingFinally(this);
+    if (enclosing != null) {
+      return new Opt<Block>(
+          ntaFinallyBlock(enclosing, this, enclosing.getFinallyBlock()));
+    } else {
+      return new Opt<Block>();
+    }
+  }
+
+public
+  Opt<Block> UncheckedExceptions.branchFinallyOpt() {
+    FinallyHost enclosing = enclosingFinally(this);
+    if (enclosing != null) {
+      return new Opt<Block>(
+          ntaFinallyBlock(enclosing, this, enclosing.getFinallyBlock()));
+    } else {
+      return new Opt<Block>();
+    }
+  }
+
+public
+  Opt<Block> Stmt.branchFinallyOpt(TypeDecl type) {
+    FinallyHost enclosing = enclosingFinally(this);
+    if (enclosing != null) {
+      return new Opt<Block>(
+          ntaFinallyBlock(enclosing, this, enclosing.getFinallyBlock(), type));
+    } else {
+      return new Opt<Block>();
+    }
+  }
+
+private
+  FinallyHost NTAFinallyBlock.origin;
+private
+  TypeDecl NTAFinallyBlock.type;
+
+  syn FinallyHost NTAFinallyBlock.getOrigin() = origin;
+  syn TypeDecl NTAFinallyBlock.type() = type;
+
+public
+  NTAFinallyBlock.NTAFinallyBlock(FinallyHost finallyHost) {
+    this.origin = finallyHost;
+  }
+public
+  NTAFinallyBlock.NTAFinallyBlock(FinallyHost finallyHost, TypeDecl type) {
+    this.origin = finallyHost;
+    this.type = type;
+  }
+}

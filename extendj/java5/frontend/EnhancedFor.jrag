@@ -1,0 +1,226 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ *                    2016, Jesper Öqvist <joqvist@google.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+import java.util.Collection;
+import java.util.ArrayList;
+
+aspect EnhancedFor {
+
+  // Branch propagation.
+  eq EnhancedForStmt.getChild().branchTarget(Stmt branch) =
+      branch.canBranchTo(this) ? this : branchTarget(branch);
+
+  eq EnhancedForStmt.potentialTargetOf(Stmt branch) = branch.canBranchTo(this);
+
+  EnhancedForStmt contributes each typeProblems() to CompilationUnit.problems();
+
+  syn Collection<Problem> EnhancedForStmt.typeProblems() {
+    Collection<Problem> problems = new LinkedList<Problem>();
+    TypeDecl exprType = getExpr().type();
+    if (!exprType.isArrayDecl() && !exprType.isIterable()) {
+      problems.add(errorf(
+          "type %s of expression in foreach is neither array type nor java.lang.Iterable",
+          exprType.name()));
+    } else if (exprType.isArrayDecl()
+        && !exprType.componentType()
+            .assignConversionTo(getTypeAccess().type(), null)) {
+      problems.add(errorf("parameter of type %s can not be assigned an element of type %s",
+          getTypeAccess().type().typeName(), exprType.componentType().typeName()));
+    } else if (exprType.isIterable() && !exprType.isUnknown()) {
+      TypeDecl componentType = exprType.iterableElementType();
+      if (!componentType.assignConversionTo(getTypeAccess().type(), null)) {
+        problems.add(errorf("parameter of type %s can not be assigned an element of type %s",
+            getTypeAccess().type().typeName(), componentType.typeName()));
+      }
+    }
+    return problems;
+  }
+
+  /**
+   * True if type is java.lang.Iterable or subtype
+   * As long as we use the 1.4 API we check for java.util.Collection instead.
+   */
+  syn lazy boolean TypeDecl.isIterable() = subtype(lookupType("java.lang", "Iterable"));
+
+  /**
+   * Computes the element type of a type implementing java.lang.Iterable.
+   * Returns UnknownType if this type does not implement java.lang.Iterable.
+   */
+  syn lazy TypeDecl TypeDecl.iterableElementType() {
+    if (isType("java.lang", "Iterable")) {
+      return firstTypeArgument();
+    } else {
+      return unknownType();
+    }
+  }
+
+  eq TypeVariable.iterableElementType() {
+    for (Access bound : getBoundList()) {
+      TypeDecl boundType = bound.type();
+      if (boundType.subtype(lookupType("java.lang", "Iterable"))) {
+        return boundType.iterableElementType();
+      }
+    }
+    return unknownType();
+  }
+
+  eq InterfaceDecl.iterableElementType() {
+    TypeDecl type = super.iterableElementType();
+    if (!type.isUnknown()) {
+      return type;
+    } else {
+      for (Access iface : getSuperInterfaceList()) {
+        type = iface.type().iterableElementType();
+        if (!type.isUnknown()) {
+          break;
+        }
+      }
+      return type;
+    }
+  }
+
+  eq ClassDecl.iterableElementType() {
+    TypeDecl type = unknownType();
+    for (Access iface : getImplementsList()) {
+      type = iface.type().iterableElementType();
+      if (!type.isUnknown()) {
+        break;
+      }
+    }
+    if (type.isUnknown() && hasSuperclass()) {
+      return superclass().iterableElementType();
+    } else {
+      return type;
+    }
+  }
+
+  /**
+   * Returns the first type argument of this type, if it is parameterized, otherwise returns
+   * java.lang.Object.
+   */
+  syn lazy TypeDecl TypeDecl.firstTypeArgument() = typeObject();
+
+  eq ParTypeDecl.firstTypeArgument() = getParameterization().args.get(0);
+
+  eq RawClassDecl.firstTypeArgument() = typeObject();
+
+  eq RawInterfaceDecl.firstTypeArgument() = typeObject();
+
+  // Variable lookup.
+  inh SimpleSet<Variable> EnhancedForStmt.lookupVariable(String name);
+  eq EnhancedForStmt.getExpr().lookupVariable(String name) = localLookupVariable(name);
+  eq EnhancedForStmt.getStmt().lookupVariable(String name) = localLookupVariable(name);
+
+  eq EnhancedForStmt.getTypeAccess().nameType() = NameType.TYPE_NAME;
+
+  EnhancedForStmt implements VariableScope;
+  eq EnhancedForStmt.getVariableDecl().outerScope() = this;
+  eq EnhancedForStmt.getExpr().outerScope() = this;
+  eq EnhancedForStmt.getStmt().outerScope() = this;
+
+  syn SimpleSet<Variable> EnhancedForStmt.localLookupVariable(String name) {
+    if (getVariableDecl().name().equals(name)) {
+      return getVariableDecl();
+    }
+    return lookupVariable(name);
+  }
+
+  // Pretty printing.
+  public void EnhancedForStmt.prettyPrint(PrettyPrinter out) {
+    out.print("for (");
+    out.print(getModifiers());
+    out.print(getTypeAccess());
+    out.print(" " + getVariableDecl().name());
+    out.print(" : ");
+    out.print(getExpr());
+    out.print(") ");
+    if (getStmt() instanceof Block) {
+      out.print(getStmt());
+    } else {
+      out.print("{");
+      out.println();
+      out.indent(1);
+      out.print(getStmt());
+      out.println();
+      out.print("}");
+    }
+  }
+
+  eq EnhancedForStmt.getModifiers().mayBeFinal() = true;
+
+
+  // Some attributes for the parameter.
+  eq EnhancedForStmt.getVariableDecl().isMethodParameter() = false;
+  eq EnhancedForStmt.getVariableDecl().isConstructorParameter() = false;
+  eq EnhancedForStmt.getVariableDecl().isExceptionHandlerParameter() = false;
+
+  eq EnhancedForStmt.getVariableDecl().declarationModifiers() = getModifiers();
+
+  eq EnhancedForStmt.getVariableDecl().declarationType() = getTypeAccess();
+
+  // Unreachable Statements
+  eq EnhancedForStmt.canCompleteNormally() = reachable();
+  eq EnhancedForStmt.getStmt().reachable() = reachable();
+
+  // Definite Assignment.
+  eq EnhancedForStmt.assignedAfter(Variable v) {
+    if (!getExpr().assignedAfter(v)) {
+      return false;
+    }
+    return true;
+  }
+
+  eq EnhancedForStmt.getExpr().assignedBefore(Variable v) =
+      v == getVariableDecl() || assignedBefore(v);
+
+  eq EnhancedForStmt.getStmt().assignedBefore(Variable v) = getExpr().assignedAfter(v);
+
+  eq EnhancedForStmt.unassignedAfter(Variable v) {
+    if (!getExpr().unassignedAfter(v)) {
+      return false;
+    }
+    for (BreakStmt stmt : targetBreaks()) {
+      if (!stmt.unassignedAfterReachedFinallyBlocks(v)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  eq EnhancedForStmt.getExpr().unassignedBefore(Variable v) =
+      v != getVariableDecl() && unassignedBefore(v);
+
+  eq EnhancedForStmt.getStmt().unassignedBefore(Variable v) = getExpr().unassignedAfter(v);
+
+  eq EnhancedForStmt.getStmt().insideLoop() = true;
+
+  eq EnhancedForStmt.continueLabel() = true;
+}

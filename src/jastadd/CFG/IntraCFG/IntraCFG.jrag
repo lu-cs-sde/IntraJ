@@ -1,0 +1,90 @@
+/* Copyright (c) 2021, Idriss Riouak <idriss.riouak@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect IntraCFG {
+public
+  interface CFGSupport {}
+
+public
+  interface CFGNode extends CFGSupport {}
+
+public
+  interface CFGRoot {}
+
+  Entry implements CFGNode;
+  Exit implements CFGNode;
+
+  syn SmallSet<CFGNode> CFGSupport.firstNodes() = SmallSet.<CFGNode>empty();
+  eq CFGNode.firstNodes() = SmallSet.<CFGNode>singleton(this);
+  syn SmallSet<CFGNode> CFGNode.succ()  = nextNodes();
+  inh SmallSet<CFGNode> CFGSupport.nextNodes();
+  inh SmallSet<CFGNode> CFGSupport.nextNodesTT();
+  inh SmallSet<CFGNode> CFGSupport.nextNodesFF();
+
+  // Defining Entry and Exit point for each CFGRoot
+  syn nta Entry CFGRoot.entry() = new Entry();
+  syn nta Exit CFGRoot.exit() = new Exit();
+
+  // Forwarding the exit() and entry() attribute to each CFGSupport node.
+  eq CFGRoot.getChild().exit() = exit();
+  eq CFGRoot.getChild().entry() = entry();
+
+  inh Exit CFGNode.exit();
+  inh Entry CFGNode.entry();
+
+  // Default values for the
+  eq CFGRoot.getChild().nextNodes() = SmallSet.<CFGNode>empty();
+  eq CFGRoot.getChild().nextNodesTT() = SmallSet.<CFGNode>empty();
+  eq CFGRoot.getChild().nextNodesFF() = SmallSet.<CFGNode>empty();
+
+  // Predecessor relation
+  syn SmallSet<CFGNode> CFGNode.pred() {
+    SmallSet<CFGNode> res = SmallSet.<CFGNode>empty().mutable();
+    for (CFGNode pred : predColl()) {
+      if (pred.isCFGNode())
+        res.add(pred);
+    }
+    return res;
+  }
+
+  syn boolean CFGNode.isCFGNode() circular[false] {
+    if (predColl().isEmpty())
+      return false;
+    for (CFGNode pred : predColl()) {
+      if (pred.isCFGNode())
+        return true;
+    }
+    return false;
+  }
+  eq Entry.isCFGNode() = true;
+
+  coll SmallSet<CFGNode> CFGNode.predColl()[new SmallSet<CFGNode>()];
+  CFGNode contributes this to CFGNode.predColl() for each succ();
+}

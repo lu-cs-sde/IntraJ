@@ -1,0 +1,3 @@
+[submodule "src/jastadd/CFG/IntraCFG"]
+	path = src/jastadd/CFG/IntraCFG
+	url = https://github.com/lu-cs-sde/IntraCFG.git

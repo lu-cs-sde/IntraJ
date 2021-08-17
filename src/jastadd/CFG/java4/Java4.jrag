@@ -1,0 +1,567 @@
+/* Copyright (c) 2021, Idriss Riouak <idriss.riouak@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect CFGJava4 {
+  Literal implements CFGNode;
+  Access implements CFGNode;
+  VariableDeclarator implements CFGNode;
+  FieldDeclarator implements CFGNode;
+  ReturnStmt implements CFGNode;
+  InstanceOfExpr implements CFGNode;
+  ClassInstanceExpr implements CFGNode;
+  AssignExpr implements CFGNode;
+  Case implements CFGNode;
+  LocalClassDeclStmt implements CFGNode;
+  ThrowStmt implements CFGNode;
+  CatchClause implements CFGNode;
+  AssertStmt implements CFGNode;
+  ParseName implements CFGNode;
+  UncheckedExceptions implements CFGNode;
+  Variable implements CFGNode;
+  ParameterDeclaration implements CFGNode;
+  MemberInterfaceDecl implements CFGNode;
+
+  MethodDecl implements CFGRoot;
+  ConstructorDecl implements CFGRoot;
+
+  Stmt implements CFGSupport;
+  Expr implements CFGSupport;
+  BodyDecl implements CFGSupport;
+
+  RelationalExpr implements BinExprCFG;
+  BitwiseExpr implements BinExprCFG;
+  ShiftExpr implements BinExprCFG;
+  ArithmeticExpr implements BinExprCFG;
+
+public
+  interface BinExprCFG extends CFGNode {}
+  Unary implements CFGNode;
+
+  syn SmallSet<CFGNode> CFGSupport.jointTrueFalse() {
+    SmallSet<CFGNode> res = new SmallSet<CFGNode>();
+    res.add(nextNodesTT());
+    res.add(nextNodesFF());
+    return res;
+  }
+
+  /*************************** FIELD ************************************/
+  eq FieldDecl.firstNodes() =
+      ((getNumDeclarator() == 0) ? nextNodes() : getDeclarator(0).firstNodes());
+  eq FieldDecl.getDeclarator(int index).nextNodes() =
+      getDeclarator(index).jointTrueFalse();
+  eq FieldDecl.getDeclarator(int index).nextNodesFF() =
+      ((getNumDeclarator() - 1 == index)
+           ? nextNodes()
+           : getDeclarator(index + 1).firstNodes());
+  eq FieldDecl.getDeclarator(int index).nextNodesTT() =
+      ((getNumDeclarator() - 1 == index)
+           ? nextNodes()
+           : getDeclarator(index + 1).firstNodes());
+  eq FieldDeclarator.firstNodes() =
+      hasInit() ? getInit().firstNodes() : SmallSet.<CFGNode>singleton(this);
+  eq FieldDeclarator.getInit().nextNodes() = SmallSet.<CFGNode>singleton(this);
+  eq FieldDeclarator.getInit().nextNodesTT() =
+      SmallSet.<CFGNode>singleton(this);
+  eq FieldDeclarator.getInit().nextNodesFF() =
+      SmallSet.<CFGNode>singleton(this);
+
+  eq MemberClassDecl.firstNodes() = nextNodes();
+
+  /************************** BINARY EXPRESSION  *******************************
+   * The flow is from left to right flowing thru 'op' node.
+   */
+  eq BinExprCFG.firstNodes() = getLeftOperand().firstNodes();
+  eq BinExprCFG.getLeftOperand().nextNodes() = getRightOperand().firstNodes();
+  eq BinExprCFG.getRightOperand().nextNodes() =
+      SmallSet.<CFGNode>singleton(this);
+
+  /************************* SHORT-CIRCUIT-EVALUATION *************************/
+  eq AndLogicalExpr.firstNodes() = getLeftOperand().firstNodes();
+  eq AndLogicalExpr.getLeftOperand().nextNodesTT() =
+      getRightOperand().firstNodes();
+  eq AndLogicalExpr.getLeftOperand().nextNodesFF() = nextNodesFF();
+
+  eq OrLogicalExpr.firstNodes() = getLeftOperand().firstNodes();
+  eq OrLogicalExpr.getLeftOperand().nextNodesTT() = nextNodesTT();
+  eq OrLogicalExpr.getLeftOperand().nextNodesFF() =
+      getRightOperand().firstNodes();
+
+  eq LogicalExpr.getLeftOperand().nextNodes() {
+    SmallSet<CFGNode> res =
+        new SmallSet<CFGNode>().union(getLeftOperand().nextNodesTT());
+    res.add(getLeftOperand().nextNodesFF());
+    return res;
+  }
+
+  eq LogicalExpr.getRightOperand().nextNodesTT() = nextNodesTT();
+  eq LogicalExpr.getRightOperand().nextNodesFF() = nextNodesFF();
+  eq LogicalExpr.getRightOperand().nextNodes() =
+      getRightOperand().jointTrueFalse();
+  /************************** ACCESS-EVALUATION *******************************/
+
+  eq Dot.firstNodes() {
+    if (getLeft().isVarAccess() && (getRight().isVarAccess() && isAssign())) {
+      return getLeft().firstNodes();
+    } else if ((getLeft().isVarAccess()) && (isAssign())) {
+      return getRight().firstNodes();
+    } else {
+      return getLeft().firstNodes();
+    }
+  }
+  eq Dot.getLeft().nextNodes() = (isAssign() && (getRight().isVarAccess()))
+                                     ? nextNodes()
+                                     : getRight().firstNodes();
+  eq Dot.getRight().nextNodes() = nextNodes();
+
+  inh Boolean Dot.isAssign();
+  eq AssignExpr.getDest().isAssign() = true;
+  eq UnaryIncDec.getChild().isAssign() = true;
+  eq ArrayAccess.getExpr().isAssign() = false;
+  eq CompilationUnit.getChild().isAssign() = false;
+
+  eq ArrayAccess.firstNodes() = getExpr().firstNodes();
+  eq ArrayAccess.getExpr().nextNodes() = SmallSet.<CFGNode>singleton(this);
+
+  eq MethodAccess.firstNodes() {
+    return (getNumArg() == 0) ? SmallSet.<CFGNode>singleton(this)
+                              : getArg(0).firstNodes();
+  }
+  eq MethodAccess.getArg(int i).nextNodes() =
+      (getNumArg() - 1 == i) ? SmallSet.<CFGNode>singleton(this)
+                             : getArg(i + 1).firstNodes();
+
+  eq MethodAccess.getArg(int index).nextNodesTT() =
+      (getNumArg() - 1 == index) ? SmallSet.<CFGNode>singleton(this)
+                                 : getArg(index + 1).firstNodes();
+  eq MethodAccess.getArg(int index).nextNodesFF() =
+      (getNumArg() - 1 == index) ? SmallSet.<CFGNode>singleton(this)
+                                 : getArg(index + 1).firstNodes();
+
+  eq ConstructorAccess.firstNodes() = (getNumArg() == 0)
+                                          ? SmallSet.<CFGNode>singleton(this)
+                                          : getArg(0).firstNodes();
+  eq ConstructorAccess.getArg(int i).nextNodes() =
+      (getNumArg() - 1 == i) ? SmallSet.<CFGNode>singleton(this)
+                             : getArg(i + 1).firstNodes();
+
+  /************************** BRACKET EXPRESSION *******************************
+   * Forwards the flow to the internal expression.
+   */
+  eq ParExpr.firstNodes() = getExpr().firstNodes();
+
+  /****************************** Unary ****************************************
+   * Forwards the flow to the internal expression.
+   */
+  eq Unary.getOperand().nextNodes() = SmallSet.<CFGNode>singleton(this);
+  eq Unary.firstNodes() = getOperand().firstNodes();
+
+  eq UnaryIncDec.firstNodes() = getOperand().isVarAccess()
+                                    ? SmallSet.<CFGNode>singleton(this)
+                                    : getOperand().firstNodes();
+  eq UnaryIncDec.getOperand().nextNodes() =
+      getOperand().isVarAccess() ? SmallSet.<CFGNode>empty()
+                                 : SmallSet.<CFGNode>singleton(this);
+
+  /************************** CAST EXPRESSION **********************************
+   * Forwards the flow to the internal expression.
+   */
+  eq CastExpr.firstNodes() = getExpr().firstNodes();
+
+  /************************ INSTANCEOF EXPRESSION ******************************
+   * The flow is TypeAccess -> Expr -> Parent.nextNodes()
+   */
+  eq InstanceOfExpr.firstNodes() = getExpr().firstNodes();
+  eq InstanceOfExpr.getExpr().nextNodes() = getTypeAccess().firstNodes();
+  eq InstanceOfExpr.getTypeAccess().nextNodes() =
+      SmallSet.<CFGNode>singleton(this);
+
+  /*************************** ASSIGN EXPRESSION ******************************/
+  eq AssignExpr.firstNodes() = getDest().isVarAccess()
+                                   ? getSource().firstNodes()
+                                   : getDest().firstNodes();
+  eq AssignExpr.getDest().nextNodes() = getSource().firstNodes();
+  eq AssignExpr.getSource().nextNodes() = SmallSet.<CFGNode>singleton(this);
+  eq AssignExpr.getChild().nextNodesTT() = SmallSet.<CFGNode>singleton(this);
+  eq AssignExpr.getChild().nextNodesFF() = SmallSet.<CFGNode>singleton(this);
+
+  /***************************** CLASS INSTANCE EXRP***************************/
+  eq ClassInstanceExpr.firstNodes() = (getNumArg() != 0)
+                                          ? getArg(0).firstNodes()
+                                          : SmallSet.<CFGNode>singleton(this);
+  eq ClassInstanceExpr.getArg(int index).nextNodes() =
+      (getNumArg() - 1 == index) ? SmallSet.<CFGNode>singleton(this)
+                                 : getArg(index + 1).firstNodes();
+
+  /************************** ARRAY INITIALISATION ****************************/
+  eq ArrayInit.firstNodes() =
+      (getNumInit() == 0) ? nextNodes() : getInit(0).firstNodes();
+  eq ArrayInit.getInit(int index).nextNodes() =
+      ((getNumInit() - 1) == index) ? nextNodes()
+                                    : getInit(index + 1).firstNodes();
+  eq ArrayInit.getInit(int index).nextNodesTT() =
+      ((getNumInit() - 1) == index) ? nextNodes()
+                                    : getInit(index + 1).firstNodes();
+  eq ArrayInit.getInit(int index).nextNodesFF() =
+      ((getNumInit() - 1) == index) ? nextNodes()
+                                    : getInit(index + 1).firstNodes();
+  /************************** CONDITIONAL EXPRESSION ***************************
+   *Short-Circuited evaluation
+   */
+  eq ConditionalExpr.firstNodes() = getCondition().firstNodes();
+  eq ConditionalExpr.getCondition().nextNodesTT() = getTrueExpr().firstNodes();
+  eq ConditionalExpr.getCondition().nextNodesFF() = getFalseExpr().firstNodes();
+  eq ConditionalExpr.getCondition().nextNodes() =
+      getCondition().jointTrueFalse();
+  eq ConditionalExpr.getTrueExpr().nextNodesTT() = nextNodes();
+  eq ConditionalExpr.getTrueExpr().nextNodesFF() = nextNodes();
+  eq ConditionalExpr.getTrueExpr().nextNodes() = getTrueExpr().jointTrueFalse();
+  eq ConditionalExpr.getFalseExpr().nextNodesTT() = nextNodes();
+  eq ConditionalExpr.getFalseExpr().nextNodesFF() = nextNodes();
+  eq ConditionalExpr.getFalseExpr().nextNodes() =
+      getFalseExpr().jointTrueFalse();
+
+  /************************** ARRAYCREATION EXPR*******************************/
+
+  eq ArrayTypeWithSizeAccess.getExpr().nextNodes() = nextNodes();
+  eq ArrayCreationExpr.firstNodes() = getTypeAccess().firstNodes();
+  eq ArrayCreationExpr.getTypeAccess().nextNodes() =
+      hasArrayInit() ? getArrayInit().firstNodes() : nextNodes();
+  eq ArrayTypeWithSizeAccess.firstNodes() =
+      (!getAccess().isArrayTypeWithAccess()) ? getExpr().firstNodes()
+                                             : getAccess().firstNodes();
+  eq ArrayTypeWithSizeAccess.getAccess().nextNodes() = getExpr().firstNodes();
+
+  eq ArrayTypeAccess.firstNodes() =
+      (getAccess().isArrayTypeWithAccess())
+          ? (((ArrayTypeWithSizeAccess)getAccess()).getExpr().firstNodes())
+          : nextNodes();
+
+  /******************************** STMTs *************************************/
+
+  /***************************** IFSTMT ****************************************
+   * Evalaute the condition and the forwarding the flow considering
+   * FollowingTrue() and nextNodesFF() attributes.
+   */
+  eq IfStmt.firstNodes() = getCondition().firstNodes();
+  eq IfStmt.getCondition().nextNodesTT() = getThen().firstNodes();
+  eq IfStmt.getCondition().nextNodesFF() =
+      hasElse() ? getElse().firstNodes() : nextNodes();
+  eq IfStmt.getCondition().nextNodes() = getCondition().jointTrueFalse();
+
+  eq Block.firstNodes() =
+      (getNumStmt() == 0) ? nextNodes() : getStmt(0).firstNodes();
+
+  /**************************** Expression Stmt *******************************
+   * Forwards the flow to the internal expression.
+   */
+  eq ExprStmt.firstNodes() = getExpr().firstNodes();
+
+  /************************** WhileStmt ****************************************
+   * Evaluate the condition and then forwading the flow considering the
+   * FollowingTrue() and FollowingFalse() attributes.
+   */
+  eq WhileStmt.firstNodes() = getCondition().firstNodes();
+  eq WhileStmt.getStmt().nextNodes() = getCondition().firstNodes();
+  eq WhileStmt.getCondition().nextNodesTT() = getStmt().firstNodes();
+  eq WhileStmt.getCondition().nextNodesFF() = nextNodes();
+  eq WhileStmt.getCondition().nextNodes() = getCondition().jointTrueFalse();
+
+  /************************** DoStmt ******************************************/
+  eq DoStmt.firstNodes() = getStmt().firstNodes();
+  eq DoStmt.getStmt().nextNodes() = getCondition().firstNodes();
+  eq DoStmt.getCondition().nextNodesTT() = getStmt().firstNodes();
+  eq DoStmt.getCondition().nextNodesFF() = nextNodes();
+  eq DoStmt.getCondition().nextNodes() = getCondition().jointTrueFalse();
+
+  /**************************** ForStmt ***************************************/
+  syn nta BooleanLiteral ForStmt.implicitCondition() =
+      new ImplicitCondition("true");
+  eq ForStmt.firstNodes() =
+      (getNumInitStmt() != 0
+           ? getInitStmt(0).firstNodes()
+           : (hasCondition() ? getCondition().firstNodes()
+                             : implicitCondition().firstNodes()));
+
+  eq ForStmt.getInitStmt(int index).nextNodes() {
+    if (getNumInitStmt() - 1 == (index)) {
+      return (hasCondition() ? getCondition().firstNodes()
+                             : implicitCondition().firstNodes());
+    } else {
+      return getInitStmt(index + 1).firstNodes();
+    }
+  }
+
+  eq ForStmt.getUpdateStmt(int index).nextNodes() {
+    if (getNumUpdateStmt() - 1 == index) {
+      return (hasCondition() ? getCondition().firstNodes()
+                             : implicitCondition().firstNodes());
+    } else {
+      return getUpdateStmt(index + 1).firstNodes();
+    }
+  }
+  eq ForStmt.getCondition().nextNodesTT() = getStmt().firstNodes();
+  eq ForStmt.getCondition().nextNodesFF() = nextNodes();
+  eq ForStmt.getCondition().nextNodes() = getCondition().jointTrueFalse();
+
+  eq ForStmt.implicitCondition().nextNodesTT() = getStmt().firstNodes();
+  eq ForStmt.implicitCondition().nextNodesFF() = nextNodes();
+  eq ForStmt.implicitCondition().nextNodes() =
+      !hasCondition() ? implicitCondition().jointTrueFalse()
+                      : SmallSet.<CFGNode>empty();
+
+  eq ForStmt.getStmt().nextNodes() =
+      (getNumUpdateStmt() != 0)
+          ? getUpdateStmt(0).firstNodes()
+          : (hasCondition() ? getCondition().firstNodes()
+                            : implicitCondition().firstNodes());
+
+  /**************** VarDeclStmt and VariableDeclarator ***********************
+   * If has a RHS the flow is LHS -> RHS -> Parent.nextNodes()
+   * If doesn't have the RHS the flow is LHS -> Parent.follwing()
+   */
+  eq VarDeclStmt.firstNodes() =
+      (getNumDeclarator() == 0) ? nextNodes() : getDeclarator(0).firstNodes();
+  eq VarDeclStmt.getChild().nextNodes() = SmallSet.<CFGNode>empty();
+  eq VarDeclStmt.getDeclarator(int index).nextNodes() =
+      (getNumDeclarator() - 1 == index) ? nextNodes()
+                                        : getDeclarator(index + 1).firstNodes();
+
+  eq VariableDeclarator.firstNodes() =
+      hasInit() ? getInit().firstNodes() : SmallSet.<CFGNode>singleton(this);
+  eq VariableDeclarator.getInit().nextNodes() = getInit().jointTrueFalse();
+  eq VariableDeclarator.getInit().nextNodesFF() =
+      SmallSet.<CFGNode>singleton(this);
+  eq VariableDeclarator.getInit().nextNodesTT() =
+      SmallSet.<CFGNode>singleton(this);
+
+  /**************************** ReturnStmt*************************************
+   * If the return statements is provided with an expression then the flow
+   * is
+   * Expr -> Return -> Return.exit()
+   * If doesn't have an expression then the flow is: Return ->
+   * Return.exit()
+   */
+
+  eq ReturnStmt.getFinally().nextNodes() {
+    SmallSet<CFGNode> res = new SmallSet<CFGNode>();
+    res.add(SmallSet.<CFGNode>singleton(this));
+    res.add(exceptionLookup(lookupType("java.lang", "RuntimeException")));
+    return res;
+  }
+
+  eq ReturnStmt.getResult().nextNodesFF() = SmallSet.<CFGNode>singleton(this);
+  eq ReturnStmt.getResult().nextNodesTT() = SmallSet.<CFGNode>singleton(this);
+  eq ReturnStmt.succ() = SmallSet.<CFGNode>singleton(exit());
+
+  /**************************** BreakStmt *************************************/
+  eq LabeledStmt.firstNodes() = getStmt().firstNodes();
+
+  eq BreakStmt.getFinally().nextNodes() {
+    SmallSet<CFGNode> res = new SmallSet<CFGNode>();
+    res.add(hasLabel() ? lookupLabel(getLabel()).nextNodes()
+                       : targetStmt().nextNodes());
+    res.add(exceptionLookup(lookupType("java.lang", "RuntimeException")));
+    return res;
+  }
+
+  /************************** ContinueStmt ************************************/
+  syn SmallSet<CFGNode> Stmt.nextContinue() {
+    throw new RuntimeException("NEXTContinue called by" + this);
+  }
+  eq LabeledStmt.nextContinue() = getStmt().nextContinue();
+  eq WhileStmt.nextContinue() = getCondition().firstNodes();
+  eq ForStmt.nextContinue() {
+    if (getNumUpdateStmt() != 0)
+      return getUpdateStmt(0).firstNodes();
+    else
+      return hasCondition() ? getCondition().firstNodes()
+                            : implicitCondition().firstNodes();
+  }
+  eq DoStmt.nextContinue() = getCondition().firstNodes();
+
+  eq ContinueStmt.getFinally().nextNodes() {
+    SmallSet<CFGNode> res = new SmallSet<CFGNode>();
+    res.add(targetStmt().nextContinue());
+    for (CatchClause cc : getEnclosingTry().getCatchClauses()) {
+      if (cc.handles(lookupType("java.lang", "RuntimeException"))) {
+        return res;
+      }
+    }
+    res.add(getEnclosingTry().exceptionLookup(
+        lookupType("java.lang", "RuntimeException")));
+    return res;
+  }
+
+  /***************************** SwitchStmt ************************************
+   * CFG according with Java specification
+   * https://docs.oracle.com/javase/specs/jls/se7/html/jls-14.html#jls-14.11
+   */
+  eq SwitchStmt.firstNodes() = getExpr().firstNodes();
+  eq SwitchStmt.getExpr().nextNodes() = getBlock().firstNodes();
+  eq Block.getStmt(int index).nextNodesTT() {
+    if (getStmt(index).isConstCase()) {
+      for (int i = index + 1; i < getNumStmt(); ++i) {
+        if (!(getStmt(i).isSwitchCase())) {
+          return getStmt(i).firstNodes();
+        }
+      }
+    }
+    return SmallSet.<CFGNode>empty();
+  }
+
+  eq Block.getStmt(int index).nextNodesFF() {
+    if (getStmt(index).isConstCase()) {
+      for (int i = index + 1; i < getNumStmt(); ++i) {
+        if (getStmt(i).isSwitchCase()) {
+          return getStmt(i).firstNodes();
+        }
+      }
+      return nextNodes();
+    }
+    return SmallSet.<CFGNode>empty();
+  }
+
+  eq Block.getStmt(int index).nextNodes() {
+    SmallSet<CFGNode> res = new SmallSet<CFGNode>();
+    if (getStmt(index).isConstCase()) {
+      res.add(getStmt(index).nextNodesTT());
+      res.add(getStmt(index).nextNodesFF());
+    } else {
+      res.add((getNumStmt() - 1 == index) ? nextNodes()
+                                          : getStmt(index + 1).firstNodes());
+    }
+    return res;
+  }
+
+  eq ConstCase.firstNodes() = (!getValue().isLiteral())
+                                  ? getValue().firstNodes()
+                                  : SmallSet.<CFGNode>singleton(this);
+  eq ConstCase.getValue().nextNodes() = (!getValue().isLiteral())
+                                            ? SmallSet.<CFGNode>singleton(this)
+                                            : SmallSet.<CFGNode>empty();
+
+  /************************ SynchronizedStmt **********************************/
+  eq SynchronizedStmt.firstNodes() = getExpr().firstNodes();
+  eq SynchronizedStmt.getExpr().nextNodes() = getBlock().firstNodes();
+
+  /****************************** EmptyStmt **********************************/
+  eq EmptyStmt.firstNodes() = nextNodes();
+
+  /**
+   * Workaround to not use 'instanceof'
+   */
+  syn Boolean Stmt.isConstCase() = false;
+  eq ConstCase.isConstCase() = true;
+
+  syn Boolean Stmt.isSwitchCase() = false;
+  eq Case.isSwitchCase() = true;
+
+  syn Boolean Expr.isLiteral() = false;
+  eq Literal.isLiteral() = true;
+
+  syn Boolean Stmt.isSuperConstructorAccess() = false;
+  eq ExprStmt.isSuperConstructorAccess() = getExpr().isSuperConstructorAccess();
+
+  syn Boolean BodyDecl.isStaticInitializer() = false;
+  eq StaticInitializer.isStaticInitializer() = true;
+
+  syn Boolean BodyDecl.isStaticFieldDecl() = false;
+  eq FieldDecl.isStaticFieldDecl() = isStatic();
+
+  syn Boolean Access.isArrayTypeWithAccess() = false;
+  eq ArrayTypeWithSizeAccess.isArrayTypeWithAccess() = true;
+
+  syn Boolean Expr.isVarAccess() = false;
+  eq VarAccess.isVarAccess() = true;
+
+  syn Boolean BodyDecl.isConstructorOrMethod() = false;
+  eq ConstructorDecl.isConstructorOrMethod() = true;
+  eq MethodDecl.isConstructorOrMethod() = true;
+  syn Boolean BodyDecl.isStaticInit() = false;
+  eq StaticInitializer.isStaticInit() = true;
+  eq FieldDecl.isStaticInit() = isStatic();
+
+  /**
+   * Predecessor relation.
+   */
+
+  MethodDecl contributes nta entry() to CFGNode.predColl();
+  MethodDecl contributes nta exit() to CFGNode.predColl();
+  ConstructorDecl contributes nta entry() to CFGNode.predColl();
+  ConstructorDecl contributes nta exit() to CFGNode.predColl();
+  ConstructorDecl contributes nta implicit() to CFGNode.predColl();
+  MethodAccess contributes nta getFinallyList() to CFGNode.predColl();
+  ConstructorDecl contributes nta getImplicitConstructorInvocation()
+      to CFGNode.predColl();
+  ClassDecl contributes nta instanceInitialization() to CFGNode.predColl();
+  ClassDecl contributes nta staticInitialization() to CFGNode.predColl();
+  ForStmt contributes nta implicitCondition() to CFGNode.predColl();
+  ReturnStmt contributes {
+    if (hasFinally())
+      getFinally().collectContributions();
+    if (hasResult())
+      getResult().collectContributions();
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
+  BreakStmt contributes {
+    if (hasFinally())
+      getFinally().collectContributions();
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
+  ContinueStmt contributes {
+    if (hasFinally())
+      getFinally().collectContributions();
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
+
+  ThrowStmt contributes {
+    if (hasFinally())
+      getFinally().collectContributions();
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
+
+  ResourceDeclaration contributes nta closeAccess() to CFGNode.predColl();
+  ClassInstanceExpr contributes {
+    if (hasFinally())
+      getFinallyList().collectContributions();
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
+  TryStmt contributes nta UncheckedExceptions() to CFGNode.predColl();
+  ReturnStmt contributes nta UncheckedExceptions() to CFGNode.predColl();
+  ContinueStmt contributes nta UncheckedExceptions() to CFGNode.predColl();
+  BreakStmt contributes nta UncheckedExceptions() to CFGNode.predColl();
+  ThrowStmt contributes nta UncheckedExceptions() to CFGNode.predColl();
+  MethodAccess contributes nta UncheckedExceptions() to CFGNode.predColl();
+}

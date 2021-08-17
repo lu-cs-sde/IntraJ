@@ -1,0 +1,150 @@
+digraph G {
+graph [splines=ortho, nodesep="1", ranksep="1"]
+node [shape=rect, fontname=Arial];
+{ rank = same; "Program[0]"}
+{ rank = same; "List[1]"}
+{ rank = same; "CompilationUnit[2]"}
+{ rank = same; "List[3]"; "List[4]"}
+{ rank = same; "ClassDecl[5]"}
+{ rank = same; "Modifiers[22]"; "Opt[25]"; "List[26]"; "List[27]"; "InstanceInitialization[6]"; "InstanceInitialization[14]"}
+{ rank = same; "List[23]"; "InstanceInitializer[28]"; "Entry[7]"; "Exit[8]"; "Entry[15]"; "Exit[16]"}
+{ rank = same; "Modifier[24]"; "Block[29]"}
+{ rank = same; "List[30]"}
+{ rank = same; "ForStmt[31]"}
+{ rank = same; "List[32]"; "Opt[42]"; "List[46]"; "Block[50]"}
+{ rank = same; "VarDeclStmt[33]"; "LTExpr[43]"; "ExprStmt[47]"; "List[51]"}
+{ rank = same; "Modifiers[34]"; "PrimitiveTypeAccess[36]"; "List[37]"; "VarAccess[44]"; "IntegerLiteral[45]"; "PostIncExpr[48]"; "BreakStmt[52]"}
+{ rank = same; "List[35]"; "VariableDeclarator[38]"; "VarAccess[49]"; "List[54]"; "UncheckedExceptions[53]"}
+{ rank = same; "List[39]"; "Opt[40]"}
+{ rank = same; "IntegerLiteral[41]"}
+"Program[0]" [label="Program\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[1]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"CompilationUnit[2]" [label="CompilationUnit\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[3]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[4]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"ClassDecl[5]" [label="ClassDecl\n < Break01 >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Modifiers[22]" [label="Modifiers\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[23]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Modifier[24]" [label="Modifier\n < public >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Opt[25]" [label="Opt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[26]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[27]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"InstanceInitializer[28]" [label="InstanceInitializer\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Block[29]" [label="Block\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[30]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"ForStmt[31]" [label="ForStmt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[32]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"VarDeclStmt[33]" [label="VarDeclStmt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Modifiers[34]" [label="Modifiers\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[35]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"PrimitiveTypeAccess[36]" [label="PrimitiveTypeAccess\n < int >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[37]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"VariableDeclarator[38]" [label="VariableDeclarator\n < i >", fillcolor=white   style=filled  ]
+"List[39]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Opt[40]" [label="Opt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"IntegerLiteral[41]" [label="IntegerLiteral\n < 0 >", fillcolor=white   style=filled  ]
+"Opt[42]" [label="Opt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"LTExpr[43]" [label="LTExpr\n ", fillcolor=white   style=filled  ]
+"VarAccess[44]" [label="VarAccess\n < i >", fillcolor=white   style=filled  ]
+"IntegerLiteral[45]" [label="IntegerLiteral\n < 10 >", fillcolor=white   style=filled  ]
+"List[46]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"ExprStmt[47]" [label="ExprStmt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"PostIncExpr[48]" [label="PostIncExpr\n < i >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"VarAccess[49]" [label="VarAccess\n < i >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Block[50]" [label="Block\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[51]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"BreakStmt[52]" [label="BreakStmt\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"List[54]" [label="List\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"UncheckedExceptions[53]" [label="UncheckedExceptions\n ", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"InstanceInitialization[6]" [label="InstanceInitialization\n < Instance >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Entry[7]" [label="Entry\n ", fillcolor=white   style=filled  ]
+"Exit[8]" [label="Exit\n ", fillcolor=white   style=filled  ]
+"InstanceInitialization[14]" [label="InstanceInitialization\n < Static >", style= dotted   fillcolor="#eeeeee" fontcolor="#aaaaaa"  ]
+"Entry[15]" [label="Entry\n ", fillcolor=white   style=filled  ]
+"Exit[16]" [label="Exit\n ", fillcolor=white   style=filled  ]
+"CompilationUnit[2]" -> "List[3]" [style=dashed, color=gray]
+"List[23]" -> "Modifier[24]" [style=dashed, color=gray]
+"Modifiers[22]" -> "List[23]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "Modifiers[22]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "Opt[25]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "List[26]" [style=dashed, color=gray]
+"Modifiers[34]" -> "List[35]" [style=dashed, color=gray]
+"VarDeclStmt[33]" -> "Modifiers[34]" [style=dashed, color=gray]
+"VarDeclStmt[33]" -> "PrimitiveTypeAccess[36]" [style=dashed, color=gray]
+"VariableDeclarator[38]" -> "List[39]" [style=dashed, color=gray]
+"Opt[40]" -> "IntegerLiteral[41]" [style=dashed, color=gray]
+"VariableDeclarator[38]" -> "Opt[40]" [style=dashed, color=gray]
+"List[37]" -> "VariableDeclarator[38]" [style=dashed, color=gray]
+"VarDeclStmt[33]" -> "List[37]" [style=dashed, color=gray]
+"List[32]" -> "VarDeclStmt[33]" [style=dashed, color=gray]
+"ForStmt[31]" -> "List[32]" [style=dashed, color=gray]
+"LTExpr[43]" -> "VarAccess[44]" [style=dashed, color=gray]
+"LTExpr[43]" -> "IntegerLiteral[45]" [style=dashed, color=gray]
+"Opt[42]" -> "LTExpr[43]" [style=dashed, color=gray]
+"ForStmt[31]" -> "Opt[42]" [style=dashed, color=gray]
+"PostIncExpr[48]" -> "VarAccess[49]" [style=dashed, color=gray]
+"ExprStmt[47]" -> "PostIncExpr[48]" [style=dashed, color=gray]
+"List[46]" -> "ExprStmt[47]" [style=dashed, color=gray]
+"ForStmt[31]" -> "List[46]" [style=dashed, color=gray]
+"BreakStmt[52]" -> "List[54]" [style=dashed, color=gray]
+"BreakStmt[52]" -> "UncheckedExceptions[53]" [style=dashed, color=gray]
+"List[51]" -> "BreakStmt[52]" [style=dashed, color=gray]
+"Block[50]" -> "List[51]" [style=dashed, color=gray]
+"ForStmt[31]" -> "Block[50]" [style=dashed, color=gray]
+"List[30]" -> "ForStmt[31]" [style=dashed, color=gray]
+"Block[29]" -> "List[30]" [style=dashed, color=gray]
+"InstanceInitializer[28]" -> "Block[29]" [style=dashed, color=gray]
+"List[27]" -> "InstanceInitializer[28]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "List[27]" [style=dashed, color=gray]
+"InstanceInitialization[6]" -> "Entry[7]" [style=dashed, color=gray]
+"InstanceInitialization[6]" -> "Exit[8]" [style=dashed, color=gray]
+"InstanceInitialization[14]" -> "Entry[15]" [style=dashed, color=gray]
+"InstanceInitialization[14]" -> "Exit[16]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "InstanceInitialization[6]" [style=dashed, color=gray]
+"ClassDecl[5]" -> "InstanceInitialization[14]" [style=dashed, color=gray]
+"List[4]" -> "ClassDecl[5]" [style=dashed, color=gray]
+"CompilationUnit[2]" -> "List[4]" [style=dashed, color=gray]
+"List[1]" -> "CompilationUnit[2]" [style=dashed, color=gray]
+"Program[0]" -> "List[1]" [style=dashed, color=gray]
+"Exit[16]" -> "Entry[15]" [color=red, constraint=false]
+"Entry[15]" -> "Exit[16]" [color=blue, constraint=false, xlabel=" "] 
+"Exit[8]" -> "LTExpr[43]" [color=red, constraint=false]
+"LTExpr[43]" -> "Exit[8]" [color=blue, constraint=false, xlabel=" "] 
+"LTExpr[43]" -> "IntegerLiteral[45]" [color=red, constraint=false]
+"IntegerLiteral[45]" -> "LTExpr[43]" [color=blue, constraint=false, xlabel=" "] 
+"IntegerLiteral[45]" -> "VarAccess[44]" [color=red, constraint=false]
+"VarAccess[44]" -> "IntegerLiteral[45]" [color=blue, constraint=false, xlabel=" "] 
+"VarAccess[44]" -> "VariableDeclarator[38]" [color=red, constraint=false]
+"VariableDeclarator[38]" -> "VarAccess[44]" [color=blue, constraint=false, xlabel=" "] 
+"VariableDeclarator[38]" -> "IntegerLiteral[41]" [color=red, constraint=false]
+"IntegerLiteral[41]" -> "VariableDeclarator[38]" [color=blue, constraint=false, xlabel=" "] 
+"IntegerLiteral[41]" -> "Entry[7]" [color=red, constraint=false]
+"Entry[7]" -> "IntegerLiteral[41]" [color=blue, constraint=false, xlabel=" "] 
+"List[3]" -> "List[4]" [style=invis]
+"InstanceInitialization[14]" -> "InstanceInitialization[6]" -> "Modifiers[22]" -> "Opt[25]" -> "List[26]" -> "List[27]" [style=invis]
+"List[32]" -> "Opt[42]" -> "List[46]" -> "Block[50]" [style=invis]
+"Modifiers[34]" -> "PrimitiveTypeAccess[36]" -> "List[37]" [style=invis]
+"List[39]" -> "Opt[40]" [style=invis]
+"VarAccess[44]" -> "IntegerLiteral[45]" [style=invis]
+"Entry[7]" -> "Exit[8]" [style=invis]
+"Entry[15]" -> "Exit[16]" [style=invis]
+
+subgraph cluster_legend {
+{node [style=filled, fillcolor=1, colorscheme="pastel13"]
+Nodes [label="Total Nr. Nodes
+45", fillcolor=1]
+Edges [label="Total Nr. Edges
+58", fillcolor=1]
+NodesCFG [label="CFG Nr. Nodes
+8", fillcolor=3]
+EdgesCFG [label="CFG Nr. Edges
+7", fillcolor=3]
+Nodes-> "Program[0]" -> NodesCFG  [style="invis"]
+Edges -> "Program[0]" ->EdgesCFG [style="invis"]}
+label = "Statistics of the framework: NEXTFramework"
+style="solid"
+ranksep=0.05
+nodesep=0.01
+labelloc = b
+len=2
+}}

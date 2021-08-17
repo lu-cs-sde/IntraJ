@@ -1,0 +1,72 @@
+#!/usr/bin/env groovy
+
+// This Jenkinsfile is for building ExtendJ with Ant.
+// Both the Ant and Gradle builds are continuously tested.
+pipeline {
+  agent any
+
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+  }
+
+  tools {
+    jdk 'oracle-jdk-6'
+    ant 'ant-1.8.4'
+  }
+
+  triggers {
+    pollSCM('H/10 * * * *')
+  }
+
+  stages {
+    stage('ExtendJ4') {
+      steps {
+        sh 'ant clean java4-frontend jar'
+        sh 'ant clean java4 jar'
+        sh 'cp extendj.jar java4'
+      }
+    }
+
+    stage('ExtendJ5') {
+      steps {
+        sh 'ant clean java5-frontend jar'
+        sh 'ant clean java5 jar'
+        sh 'cp extendj.jar java5'
+      }
+    }
+
+    stage('ExtendJ6') {
+      steps {
+        sh 'ant clean java6-frontend jar'
+        sh 'ant clean java6 jar'
+        sh 'cp extendj.jar java6'
+      }
+    }
+
+    stage('ExtendJ7') {
+      steps {
+        sh 'ant clean java7-frontend jar'
+        sh 'ant clean java7 jar'
+        sh 'cp extendj.jar java7'
+      }
+    }
+
+    stage('ExtendJ8') {
+      steps {
+        sh 'ant clean java8-frontend jar'
+        sh 'ant clean java8 jar'
+        sh 'cp extendj.jar java8'
+      }
+    }
+  }
+
+  post {
+    always {
+      archive 'java4/extendj.jar'
+      archive 'java5/extendj.jar'
+      archive 'java6/extendj.jar'
+      archive 'java7/extendj.jar'
+      archive 'java8/extendj.jar'
+    }
+  }
+}

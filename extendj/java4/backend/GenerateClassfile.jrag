@@ -1,0 +1,453 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ *                    2016, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect GenerateClassfile {
+  public void Program.generateClassfile() {
+    for (Iterator iter = compilationUnitIterator(); iter.hasNext(); ) {
+      CompilationUnit cu = (CompilationUnit) iter.next();
+      cu.generateClassfile();
+    }
+  }
+
+  public void CompilationUnit.generateClassfile() {
+    if (fromSource()) {
+      for (int i = 0; i < getNumTypeDecl(); i++) {
+        getTypeDecl(i).generateClassfile();
+      }
+    }
+  }
+
+  public void TypeDecl.generateClassfile() {
+    for (TypeDecl typeDecl : nestedTypes()) {
+      typeDecl.generateClassfile();
+    }
+  }
+
+  syn int TypeDecl.magicHeader() = 0xCAFEBABE;
+  syn int TypeDecl.minorVersion() = 0;
+  syn int TypeDecl.majorVersion() = 48;
+
+  public void ClassDecl.generateClassfile() {
+    super.generateClassfile();
+    String fileName = destinationPath();
+    if (program().options().verbose()) {
+      System.out.println("Writing class file to " + fileName);
+    }
+    try {
+      ConstantPool cp = constantPool();
+
+      // Force building of constant pool.
+      cp.addClass(constantPoolName());
+      if (hasSuperclass()) {
+        cp.addClass(superclass().constantPoolName());
+      }
+      int numInterfaces = 0;
+      for (InterfaceDecl iface : superInterfaces()) {
+        numInterfaces += 1;
+        cp.addClass(iface.constantPoolName());
+      }
+      for (FieldDeclarator field : fieldDeclarations()) {
+        cp.addUtf8(field.name());
+        cp.addUtf8(field.type().typeDescriptor());
+        field.attributes();
+      }
+      // Add fields to store enclosing variables.
+      for (Variable var : enclosingVariables()) {
+        cp.addUtf8("val$" + var.name());
+        cp.addUtf8(var.type().typeDescriptor());
+      }
+      if (needsEnclosing()) {
+        cp.addUtf8("this$0");
+        cp.addUtf8(enclosing().typeDescriptor());
+        cp.addUtf8("Synthetic");
+      }
+      for (BodyDecl method : methodsAndConstructors()) {
+        method.touchMethod(cp);
+      }
+      if (hasClinit()) {
+        cp.addUtf8("<clinit>");
+        cp.addUtf8("()V");
+        clinit_attributes();
+      }
+      attributes();
+
+      // Actual ClassFile generation.
+      File dest = new File(fileName);
+      File parentFile = dest.getParentFile();
+      if (parentFile != null) {
+        parentFile.mkdirs();
+      }
+      FileOutputStream f = new FileOutputStream(fileName);
+      DataOutputStream out = new DataOutputStream(new BufferedOutputStream(f));
+      out.writeInt(magicHeader());
+      out.writeChar(minorVersion());
+      out.writeChar(majorVersion());
+      cp.emit(out);
+      int flags = flags();
+      if (isNestedType()) {
+        flags = mangledFlags(flags);
+      }
+      flags |= Modifiers.ACC_SUPER;
+      out.writeChar(flags);
+      out.writeChar(cp.addClass(constantPoolName()));
+      out.writeChar(hasSuperclass() ? cp.addClass(superclass().constantPoolName()) : 0);
+      out.writeChar(numInterfaces);
+      for (InterfaceDecl iface : superInterfaces()) {
+        out.writeChar(cp.addClass(iface.constantPoolName()));
+      }
+      generateFields(out, cp);
+      if (needsEnclosing()) {
+        out.writeChar(0);
+        out.writeChar(cp.addUtf8("this$0"));
+        out.writeChar(cp.addUtf8(enclosing().typeDescriptor()));
+        out.writeChar(1);
+        new SyntheticAttribute(cp).emit(out);
+      }
+
+      Collection<BodyDecl> methods = methodsAndConstructors();
+      out.writeChar(methods.size() + (hasClinit() ? 1 : 0));
+      for (BodyDecl b : methods) {
+        b.generateMethod(out, cp);
+      }
+
+      if (hasClinit()) {
+        out.writeChar(Modifiers.ACC_STATIC);
+        out.writeChar(cp.addUtf8("<clinit>"));
+        out.writeChar(cp.addUtf8("()V"));
+        out.writeChar(clinit_attributes().size());
+        for (Attribute attribute : clinit_attributes()) {
+          attribute.emit(out);
+        }
+      }
+      out.writeChar(attributes().size());
+      for (Attribute attribute : attributes()) {
+        attribute.emit(out);
+      }
+      out.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  /** Generate bytecode attributes for the fields in this type. */
+  protected void TypeDecl.generateFields(DataOutputStream out, ConstantPool cp) throws IOException {
+    Collection<FieldDeclarator> fields = fieldDeclarations();
+    out.writeChar(fields.size() + (needsEnclosing() ? 1 : 0) + enclosingVariables().size());
+    for (FieldDeclarator field : fields) {
+      out.writeChar(field.flags());
+      out.writeChar(cp.addUtf8(field.name()));
+      out.writeChar(cp.addUtf8(field.type().typeDescriptor()));
+      out.writeChar(field.attributes().size());
+      for (Attribute attribute : field.attributes()) {
+        attribute.emit(out);
+      }
+    }
+    // Add fields to store enclosing variables.
+    for (Variable var : enclosingVariables()) {
+      out.writeChar(Modifiers.ACC_FINAL | Modifiers.ACC_SYNTHETIC);
+      out.writeChar(cp.addUtf8("val$" + var.name()));
+      out.writeChar(cp.addUtf8(var.type().typeDescriptor()));
+      out.writeChar(0);
+    }
+  }
+
+  public void InterfaceDecl.generateClassfile() {
+    super.generateClassfile();
+    String fileName = destinationPath();
+    if (program().options().verbose()) {
+      System.out.println("Writing class file to " + fileName);
+    }
+    try {
+      ConstantPool cp = constantPool();
+      // Force building of constant pool.
+      cp.addClass(constantPoolName());
+      cp.addClass("java/lang/Object");
+      for (int i = 0; i < getNumSuperInterface(); i++) {
+        cp.addClass(getSuperInterface(i).type().constantPoolName());
+      }
+      for (FieldDeclarator field : fieldDeclarations()) {
+        cp.addUtf8(field.name());
+        cp.addUtf8(field.type().typeDescriptor());
+        field.attributes();
+      }
+      for (BodyDecl obj : methodsAndConstructors()) {
+        if (obj instanceof MethodDecl) {
+          MethodDecl method = (MethodDecl) obj;
+          cp.addUtf8(method.name());
+          cp.addUtf8(method.descName());
+          method.attributes();
+        }
+      }
+      attributes();
+
+      if (hasClinit()) {
+        cp.addUtf8("<clinit>");
+        cp.addUtf8("()V");
+        clinit_attributes();
+      }
+
+      // Actual classfile generation.
+      File dest = new File(fileName);
+      File parentFile = dest.getParentFile();
+      if (parentFile != null) {
+        parentFile.mkdirs();
+      }
+
+      FileOutputStream f = new FileOutputStream(fileName);
+      DataOutputStream out = new DataOutputStream(new BufferedOutputStream(f));
+      out.writeInt(magicHeader());
+      out.writeChar(minorVersion());
+      out.writeChar(majorVersion());
+      cp.emit(out);
+      int flags = flags();
+      if (isNestedType()) {
+        flags = mangledFlags(flags);
+      }
+      if (isInterfaceDecl()) {
+        flags |= Modifiers.ACC_INTERFACE;
+      }
+      out.writeChar(flags);
+      out.writeChar(cp.addClass(constantPoolName()));
+      out.writeChar(cp.addClass("java/lang/Object"));
+      if (getNumSuperInterface() == 1 && getSuperInterface(0).type().isObject()) {
+        out.writeChar(0);
+      } else {
+        out.writeChar(getNumSuperInterface());
+      }
+      for (int i = 0; i < getNumSuperInterface(); i++) {
+        TypeDecl typeDecl = getSuperInterface(i).type();
+        if (typeDecl.isInterfaceDecl()) {
+          out.writeChar(cp.addClass(typeDecl.constantPoolName()));
+        }
+      }
+      Collection<FieldDeclarator> fields = fieldDeclarations();
+      out.writeChar(fields.size());
+      for (FieldDeclarator field : fields) {
+        out.writeChar(field.flags());
+        out.writeChar(cp.addUtf8(field.name()));
+        out.writeChar(cp.addUtf8(field.type().typeDescriptor()));
+        out.writeChar(field.attributes().size());
+        for (Attribute attribute : field.attributes()) {
+          attribute.emit(out);
+        }
+      }
+      Collection<BodyDecl> methods = methodsAndConstructors();
+      out.writeChar(methods.size() + (hasClinit() ? 1 : 0));
+      for (BodyDecl b : methods) {
+        b.generateMethod(out, cp);
+      }
+      if (hasClinit()) {
+        out.writeChar(Modifiers.ACC_STATIC);
+        out.writeChar(cp.addUtf8("<clinit>"));
+        out.writeChar(cp.addUtf8("()V"));
+        out.writeChar(clinit_attributes().size());
+        for (Attribute attribute : clinit_attributes()) {
+          attribute.emit(out);
+        }
+      }
+      out.writeChar(attributes().size());
+      for (Attribute attribute : attributes()) {
+        attribute.emit(out);
+      }
+      out.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  public void BodyDecl.generateMethod(DataOutputStream out, ConstantPool cp) throws IOException {
+  }
+
+  public void MethodDecl.generateMethod(DataOutputStream out, ConstantPool cp) throws IOException {
+    out.writeChar(flags());
+    out.writeChar(cp.addUtf8(name()));
+    out.writeChar(cp.addUtf8(descName()));
+    out.writeChar(attributes().size());
+    for (Attribute attribute : attributes()) {
+      attribute.emit(out);
+    }
+  }
+
+  public void ConstructorDecl.generateMethod(DataOutputStream out, ConstantPool cp)
+      throws IOException {
+    out.writeChar(flags());
+    out.writeChar(cp.addUtf8("<init>"));
+    out.writeChar(cp.addUtf8(descName()));
+    out.writeChar(attributes().size());
+    for (Attribute attribute : attributes()) {
+      attribute.emit(out);
+    }
+  }
+
+  public void BodyDecl.touchMethod(ConstantPool cp) {
+  }
+
+  public void MethodDecl.touchMethod(ConstantPool cp) {
+    cp.addUtf8(name());
+    cp.addUtf8(descName());
+    attributes();
+  }
+
+  public void ConstructorDecl.touchMethod(ConstantPool cp) {
+    cp.addUtf8("<init>");
+    cp.addUtf8(descName());
+    attributes();
+  }
+
+  /** @return a collection of the fields declared in this type. */
+  syn lazy Collection<FieldDeclarator> TypeDecl.fieldDeclarations() = Collections.emptyList();
+
+  eq ReferenceType.fieldDeclarations() {
+    Collection<FieldDeclarator> fields = new ArrayList<FieldDeclarator>();
+    for (BodyDecl decl : getBodyDeclList()) {
+      if (decl.isField()) {
+        fields.addAll(decl.fieldDeclarations());
+      }
+    }
+    if (hasAssertStatement()) {
+      fields.add(assertionsDisabled());
+    }
+    return fields;
+  }
+
+  /**
+   * A collection of accessor methods and constructors that should be generated
+   * in this type declaration. Accessors are used by inner classes to
+   * read/write/call protected or private fields/methods/constructors in this
+   * type or its supertypes.
+   */
+  coll HashSet<BodyDecl> TypeDecl.accessors() root CompilationUnit;
+
+  VarAccess contributes
+      fieldQualifierType().fieldAccessor(decl())
+      when requiresFieldAccessor()
+      to TypeDecl.accessors()
+      for fieldQualifierType();
+
+  syn boolean VarAccess.requiresFieldAccessor() =
+      requiresAccessor() && isSource();
+
+  VarAccess contributes
+      fieldQualifierType().fieldWriteAccessor(decl())
+      when requiresFieldWriteAccessor()
+      to TypeDecl.accessors()
+      for fieldQualifierType();
+
+  syn boolean VarAccess.requiresFieldWriteAccessor() =
+      requiresAccessor() && isDest();
+
+  /**
+   * @return all fields declared in this body decl
+   */
+  syn Collection<FieldDeclarator> BodyDecl.fieldDeclarations() = Collections.emptyList();
+
+  eq FieldDecl.fieldDeclarations() {
+    Collection<FieldDeclarator> fields = new ArrayList<FieldDeclarator>();
+    for (FieldDeclarator decl : getDeclaratorList()) {
+      fields.add(decl);
+    }
+    return fields;
+  }
+
+  MethodAccess contributes
+      methodQualifierType().methodAccessor(decl())
+      when requiresAccessor()
+      to TypeDecl.accessors()
+      for methodQualifierType();
+
+  ConstructorAccess contributes
+      decl().createAccessor()
+      when decl().isPrivate() && type() != hostType()
+      to TypeDecl.accessors()
+      for decl().createAccessor().hostType();
+
+  ClassInstanceExpr contributes
+      decl().createAccessor()
+      when decl().isPrivate() && type() != hostType()
+      to TypeDecl.accessors()
+      for decl().createAccessor().hostType();
+
+  ClassDecl contributes nta getImplicitConstructorOpt() to TypeDecl.accessors();
+
+  Dot contributes
+      ((SuperAccess) leftSide()).superAccessorTarget()
+          .superAccessor(superAccessorTargetMethod())
+      when requiresSuperAccessor()
+      to TypeDecl.accessors()
+      for ((SuperAccess) leftSide()).superAccessorTarget();
+
+  /** @return {@code true} if this is a method call that requires a super accessor. */
+  syn boolean Dot.requiresSuperAccessor() =
+      leftSide().isSuperAccess()
+      && rightSide().isInstanceMethodAccess()
+      && !hostType().instanceOf(leftSide().type());
+
+  syn MethodDecl Dot.superAccessorTargetMethod() =
+      ((MethodAccess) rightSide()).decl();
+
+  /**
+   * @return {@code true} if this access is a method call of a non-static method.
+   */
+  syn boolean Access.isInstanceMethodAccess() = false;
+
+  eq MethodAccess.isInstanceMethodAccess() = !decl().isStatic();
+
+  /** @return a collection of the methods and constructors declared in this type. */
+  syn Collection<BodyDecl> ReferenceType.methodsAndConstructors() {
+    Collection<BodyDecl> methods = new ArrayList<BodyDecl>();
+    for (BodyDecl decl : getBodyDeclList()) {
+      if (decl.isMethodOrConstructor()) {
+        methods.add(decl);
+      }
+    }
+    methods.addAll(accessors());
+    return methods;
+  }
+
+  eq ClassDecl.methodsAndConstructors() {
+    Collection<BodyDecl> methods = new ArrayList<BodyDecl>();
+    if (hasImplicitConstructor()) {
+      methods.add(getImplicitConstructor());
+    }
+    methods.addAll(super.methodsAndConstructors());
+    return methods;
+  }
+
+  syn boolean BodyDecl.isField() = false;
+
+  eq FieldDecl.isField() = true;
+
+  syn boolean BodyDecl.isMethodOrConstructor() = false;
+
+  eq MethodDecl.isMethodOrConstructor() = true;
+
+  eq ConstructorDecl.isMethodOrConstructor() = true;
+}

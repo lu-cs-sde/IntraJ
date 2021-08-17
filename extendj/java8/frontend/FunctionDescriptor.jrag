@@ -1,0 +1,226 @@
+/* Copyright (c) 2014, Erik Hogeman <Erik.Hogemn@gmail.com>
+ *               2017, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the Lund University nor the names of its
+ *       contributors may be used to endorse or promote products derived from
+ *       this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+aspect FunctionDescriptor {
+  /**
+   * Describes a function type.
+   *
+   * <p>Function types are defined by functional interfaces, but
+   * the function type is not always the identical to a single
+   * abstract method in the interface.
+   */
+  class FunctionDescriptor {
+    public final java.util.List<TypeDecl> throwsList;
+    public final Option<? extends MethodDecl> method;
+    public final InterfaceDecl fromInterface;
+
+    public FunctionDescriptor(InterfaceDecl fromInterface, MethodDecl method,
+        java.util.List<TypeDecl> throwsList) {
+      this.fromInterface = fromInterface;
+      this.method = method.nonWildcardParameterization();
+      this.throwsList = throwsList;
+    }
+
+    public boolean isGeneric() {
+      if (method.hasValue()) {
+        return method.get().isGeneric();
+      } else {
+        return false;
+      }
+    }
+
+    public InterfaceDecl fromInterface() {
+      return this.fromInterface;
+    }
+
+    public String toString() {
+      if (method.hasValue()) {
+        MethodDecl targetMethod = method.get();
+        StringBuilder str = new StringBuilder();
+        str.append(targetMethod.toString());
+        str.append(" throws ");
+        if (throwsList.size() > 0) {
+          str.append(throwsList.get(0).typeName());
+          for (int i = 1; i < throwsList.size(); i++) {
+            str.append(", " + throwsList.get(i).toString());
+          }
+        }
+        return str.toString();
+      } else {
+        return "<unknown>";
+      }
+    }
+  }
+
+  syn lazy boolean InterfaceDecl.hasFunctionDescriptor() {
+    return functionDescriptor() != null;
+  }
+
+  // 9.8
+  /**
+   * Builds a function type from this interface.
+   *
+   * If the interface can not be used to construct a valid function
+   * type then {@code null} is returned.
+   */
+  syn lazy FunctionDescriptor InterfaceDecl.functionDescriptor() {
+    java.util.List<MethodDecl> methods = collectAbstractMethods();
+
+    if (methods.isEmpty()) {
+      // No abstract method in this interface.
+      return null;
+    } else if (methods.size() == 1) {
+      MethodDecl m = methods.get(0);
+      ArrayList<TypeDecl> throwsList = new ArrayList<TypeDecl>();
+      for (Access exception : m.getExceptionList()) {
+        throwsList.add(exception.type());
+      }
+      return new FunctionDescriptor(this, m, throwsList);
+    } else {
+      MethodDecl foundMethod = null;
+
+      for (MethodDecl current : methods) {
+        foundMethod = current;
+        for (MethodDecl inner : methods) {
+          if (!current.subsignatureTo(inner) || !current.returnTypeSubstitutableFor(inner)) {
+            foundMethod = null;
+          }
+        }
+        if (foundMethod != null) {
+          break;
+        }
+      }
+
+      if (foundMethod == null) {
+        return null;
+      }
+
+      // Now the throws-list needs to be computed as stated in 9.8.
+      ArrayList<Access> descriptorThrows = new ArrayList<Access>();
+      for (MethodDecl current : methods) {
+        for (Access exception : current.getExceptionList()) {
+          boolean alreadyInserted = false;
+          for (Access found : descriptorThrows) {
+            if (found.sameType(exception)) {
+              alreadyInserted = true;
+              break;
+            }
+          }
+          if (alreadyInserted) {
+            continue;
+          }
+
+          boolean foundIncompatibleClause = false;
+          // Has to be the subtype to at least one exception in each clause.
+          if (foundMethod.isGeneric()) {
+            for (MethodDecl inner : methods) {
+              if (!inner.subtypeThrowsClause(exception)) {
+                foundIncompatibleClause = true;
+                break;
+              }
+            }
+          } else {
+            for (MethodDecl inner : methods) {
+              if (!inner.subtypeThrowsClauseErased(exception)) {
+                foundIncompatibleClause = true;
+                break;
+              }
+            }
+          }
+
+          if (!foundIncompatibleClause) {
+            // Was subtype to one exception in every clause
+            descriptorThrows.add(exception);
+          }
+        }
+      }
+
+      // Found a suitable method and finished building throws-list,
+      // now the descriptor just needs to be put together.
+      if (descriptorThrows.size() == 0) {
+        return new FunctionDescriptor(this, foundMethod, Collections.<TypeDecl>emptyList());
+      } else {
+        ArrayList<TypeDecl> throwsList = new ArrayList<TypeDecl>();
+
+        // All type variables must be replaced with foundMethods
+        // type variables if the descriptor is generic.
+        if (foundMethod.isGeneric()) {
+          GenericMethodDecl foundGeneric = foundMethod.genericDecl();
+          for (Access exception : descriptorThrows) {
+            if (exception.type() instanceof TypeVariable) {
+              TypeVariable foundVar = (TypeVariable) exception.type();
+              TypeVariable original = foundGeneric.getTypeParameter(foundVar.typeVarPosition());
+              throwsList.add(original);
+            } else {
+              throwsList.add(exception.type());
+            }
+          }
+        } else {
+          // All throwed types must be erased if the descriptor is not generic.
+          for (Access exception : descriptorThrows) {
+            throwsList.add(exception.type().erasure());
+          }
+        }
+        return new FunctionDescriptor(this, foundMethod, throwsList);
+      }
+    }
+  }
+
+  /**
+   * Checks that the argument exception is a subtype to all exceptions
+   * in the methods throws-clause. This takes the position of the type
+   * parameters into account.
+   */
+  public boolean MethodDecl.subtypeThrowsClause(Access exception) {
+    boolean foundCompatible = false;
+    for (Access throwsException : getExceptionList()) {
+      if (exception.type().strictSubtype(throwsException.type())) {
+        foundCompatible = true;
+        break;
+      }
+    }
+    return foundCompatible;
+  }
+
+  /**
+   * Checks that the argument exception is a subtype to all exceptions
+   * in the methods throws-clause. Performs erasure on all types before
+   * comparing them.
+   */
+  public boolean MethodDecl.subtypeThrowsClauseErased(Access exception) {
+    boolean foundCompatible = false;
+    for (Access throwsException : getExceptionList()) {
+      if (exception.type().erasure().strictSubtype(throwsException.type().erasure())) {
+        foundCompatible = true;
+        break;
+      }
+    }
+    return foundCompatible;
+  }
+
+}

@@ -1,0 +1,10 @@
+# Continuos integration script.
+language: java
+os: osx
+intall: true
+script:
+  - curl -s "https://get.sdkman.io" | bash
+  - source "$HOME/.sdkman/bin/sdkman-init.sh"
+  - sdk install java 7.0.292-zulu
+  - sdk use java 7.0.292-zulu
+  - ./gradlew build

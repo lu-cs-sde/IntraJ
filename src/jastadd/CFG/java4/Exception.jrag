@@ -1,0 +1,155 @@
+/* Copyright (c) 2021, Idriss Riouak <idriss.riouak@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect ExceptionJava4 {
+  /****************************** Exception **********************************/
+
+  /**
+   * Defines the first TryStmt that can handle the exception t.
+   */
+  inh SmallSet<CFGNode> TryStmt.exceptionLookup(TypeDecl t);
+  inh SmallSet<CFGNode> ThrowStmt.exceptionLookup(TypeDecl t);
+  inh SmallSet<CFGNode> ReturnStmt.exceptionLookup(TypeDecl t);
+  inh SmallSet<CFGNode> BreakStmt.exceptionLookup(TypeDecl t);
+  inh SmallSet<CFGNode> ContinueStmt.exceptionLookup(TypeDecl t);
+  inh SmallSet<CFGNode> MethodAccess.exceptionLookup(TypeDecl t);
+  inh SmallSet<CFGNode> ClassInstanceExpr.exceptionLookup(TypeDecl t);
+
+  eq CompilationUnit.getChild().exceptionLookup(TypeDecl t) {
+    return SmallSet.<CFGNode>empty();
+  }
+  eq Program.getChild().exceptionLookup(TypeDecl t) {
+    return SmallSet.<CFGNode>empty();
+  }
+
+  eq CFGRoot.getChild().exceptionLookup(TypeDecl t) =
+      SmallSet.<CFGNode>singleton(exit());
+
+  /******************** TRY STMT *********************************/
+  eq TryStmt.getBlock().exceptionLookup(TypeDecl t) =
+      firstNodeExceptionHandlerRecursive(t);
+
+  eq TryStmt.getCatchClause().nextNodes() =
+      hasFinally() ? getFinally().firstNodes() : nextNodes();
+
+  eq TryStmt.UncheckedExceptions().nextNodes() {
+    if (hasFinally())
+      return getFinally().firstNodes();
+    SmallSet<CFGNode> res = new SmallSet<CFGNode>().union(nextNodes());
+    res.add(exceptionLookup(lookupType("java.lang", "RuntimeException")));
+    return res;
+  }
+  eq TryStmt.getFinally().nextNodes() {
+    SmallSet<CFGNode> res = new SmallSet<CFGNode>().union(nextNodes());
+    TryStmt trystmt = getEnclosingTry();
+    if (trystmt != null && trystmt.hasFinally())
+      res.add(getEnclosingTry().getFinally().firstNodes());
+    else
+      res.add(exceptionLookup(lookupType("java.lang", "RuntimeException")));
+    return res;
+  }
+
+  eq TryStmt.getBlock().nextNodes() = UncheckedExceptions().firstNodes();
+  eq TryStmt.firstNodes() = getBlock().firstNodes();
+  eq UncheckedExceptions.firstNodes() = SmallSet.<CFGNode>singleton(this);
+
+  eq BasicCatch.firstNodes() = getParameter().firstNodes();
+  eq BasicCatch.getParameter().nextNodes() = getBlock().firstNodes();
+
+  eq ThrowStmt.succ() = getExpr().firstNodes();
+  eq ThrowStmt.getFinally().nextNodes() {
+    SmallSet<CFGNode> res =
+        new SmallSet<CFGNode>().union(exceptionLookup(getExpr().type()));
+    res.add(exceptionLookup(lookupType("java.lang", "RuntimeException")));
+    return res;
+  }
+
+  /******************** UNCHECKED EXCEPTION *********************************/
+  syn nta UncheckedExceptions ReturnStmt.UncheckedExceptions() =
+      new UncheckedExceptions();
+
+  syn nta UncheckedExceptions BreakStmt.UncheckedExceptions() =
+      new UncheckedExceptions();
+
+  syn nta UncheckedExceptions ContinueStmt.UncheckedExceptions() =
+      new UncheckedExceptions();
+
+  syn nta UncheckedExceptions ThrowStmt.UncheckedExceptions() =
+      new UncheckedExceptions();
+
+  syn nta UncheckedExceptions TryStmt.UncheckedExceptions() =
+      new UncheckedExceptions();
+
+  syn nta UncheckedExceptions MethodAccess.UncheckedExceptions() =
+      new UncheckedExceptions();
+
+  /*********************** METHOD ACCESS ************************************/
+
+  syn SmallSet<CFGNode> MethodAccess.exceptionsJumps() {
+    SmallSet<CFGNode> res = new SmallSet<CFGNode>();
+    for (Map.Entry<TypeDecl, SmallSet<CFGNode>> e : exceptions().entrySet()) {
+      CFGNode node = e.getValue().iterator().next();
+      if (node == exit()) {
+        res.add(exit().firstNodes());
+      } else {
+        res.add(e.getValue());
+      }
+    }
+    return res;
+  }
+
+  syn Map<TypeDecl, SmallSet<CFGNode>> ClassInstanceExpr.exceptions() {
+    Map<TypeDecl, SmallSet<CFGNode>> res = new LinkedHashMap();
+    for (Access a : decl().getExceptions())
+      res.put(a.type(), exceptionLookup(a.type()));
+    return res;
+  }
+
+  syn SmallSet<CFGNode> ClassInstanceExpr.exceptionsJumps() {
+    for (Map.Entry<TypeDecl, SmallSet<CFGNode>> e : exceptions().entrySet())
+      if (e.getValue() == SmallSet.<CFGNode>empty())
+        return exit().firstNodes();
+    return SmallSet.<CFGNode>empty();
+  }
+
+  syn Map<TypeDecl, SmallSet<CFGNode>> MethodAccess.exceptions() {
+    Map<TypeDecl, SmallSet<CFGNode>> res = new LinkedHashMap();
+    for (Access a : decl().getExceptions()) {
+      res.put(a.type(), exceptionLookup(a.type()));
+    }
+    Set<TypeDecl> tmp = new HashSet<>();
+    decl().collectExceptions(tmp);
+    for (TypeDecl a : tmp) {
+      res.put(a, exceptionLookup(a));
+    }
+
+    return res;
+  }
+}

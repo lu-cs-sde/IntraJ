@@ -1,0 +1,819 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ *                    2017, Jesper Öqvist
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+import java.io.*;
+
+aspect JVMBytecodesDebug  {
+  class BytecodeDebug extends Bytecode {
+    public static String toString(byte code) {
+      switch (code) {
+        case NOP: return "nop";
+        case ACONST_NULL: return "aconst_null";
+        case ICONST_M1: return "iconst_m1";
+        case ICONST_0: return "iconst_0";
+        case ICONST_1: return "iconst_1";
+        case ICONST_2: return "iconst_2";
+        case ICONST_3: return "iconst_3";
+        case ICONST_4: return "iconst_4";
+        case ICONST_5: return "iconst_5";
+        case LCONST_0: return "lconst_0";
+        case LCONST_1: return "lconst_1";
+        case FCONST_0: return "fconst_0";
+        case FCONST_1: return "fconst_1";
+        case FCONST_2: return "fconst_2";
+        case DCONST_0: return "dconst_0";
+        case DCONST_1: return "dconst_1";
+        case BIPUSH: return "bipush";
+        case SIPUSH: return "sipush";
+        case LDC: return "ldc";
+        case LDC_W: return "ldc_w";
+        case LDC2_W: return "ldc2_w";
+        case ILOAD: return "iload";
+        case LLOAD: return "lload";
+        case FLOAD: return "fload";
+        case DLOAD: return "dload";
+        case ALOAD: return "aload";
+        case ILOAD_0: return "iload_0";
+        case ILOAD_1: return "iload_1";
+        case ILOAD_2: return "iload_2";
+        case ILOAD_3: return "iload_3";
+        case LLOAD_0: return "lload_0";
+        case LLOAD_1: return "lload_1";
+        case LLOAD_2: return "lload_2";
+        case LLOAD_3: return "lload_3";
+        case FLOAD_0: return "fload_0";
+        case FLOAD_1: return "fload_1";
+        case FLOAD_2: return "fload_2";
+        case FLOAD_3: return "fload_3";
+        case DLOAD_0: return "dload_0";
+        case DLOAD_1: return "dload_1";
+        case DLOAD_2: return "dload_2";
+        case DLOAD_3: return "dload_3";
+        case ALOAD_0: return "aload_0";
+        case ALOAD_1: return "aload_1";
+        case ALOAD_2: return "aload_2";
+        case ALOAD_3: return "aload_3";
+        case IALOAD: return "iaload";
+        case LALOAD: return "laload";
+        case FALOAD: return "faload";
+        case DALOAD: return "daload";
+        case AALOAD: return "aaload";
+        case BALOAD: return "baload";
+        case CALOAD: return "caload";
+        case SALOAD: return "saload";
+        case ISTORE: return "istore";
+        case LSTORE: return "lstore";
+        case FSTORE: return "fstore";
+        case DSTORE: return "dstore";
+        case ASTORE: return "astore";
+        case ISTORE_0: return "istore_0";
+        case ISTORE_1: return "istore_1";
+        case ISTORE_2: return "istore_2";
+        case ISTORE_3: return "istore_3";
+        case LSTORE_0: return "lstore_0";
+        case LSTORE_1: return "lstore_1";
+        case LSTORE_2: return "lstore_2";
+        case LSTORE_3: return "lstore_3";
+        case FSTORE_0: return "fstore_0";
+        case FSTORE_1: return "fstore_1";
+        case FSTORE_2: return "fstore_2";
+        case FSTORE_3: return "fstore_3";
+        case DSTORE_0: return "dstore_0";
+        case DSTORE_1: return "dstore_1";
+        case DSTORE_2: return "dstore_2";
+        case DSTORE_3: return "dstore_3";
+        case ASTORE_0: return "astore_0";
+        case ASTORE_1: return "astore_1";
+        case ASTORE_2: return "astore_2";
+        case ASTORE_3: return "astore_3";
+        case IASTORE: return "iastore";
+        case LASTORE: return "lastore";
+        case FASTORE: return "fastore";
+        case DASTORE: return "dastore";
+        case AASTORE: return "aastore";
+        case BASTORE: return "bastore";
+        case CASTORE: return "castore";
+        case SASTORE: return "sastore";
+        case POP: return "pop";
+        case POP2: return "pop2";
+        case DUP: return "dup";
+        case DUP_X1: return "dup_x1";
+        case DUP_X2: return "dup_x2";
+        case DUP2: return "dup2";
+        case DUP2_X1: return "dup2_x1";
+        case DUP2_X2: return "dup2_x2" ;
+        case SWAP: return "swap";
+        case IADD: return "iadd";
+        case LADD: return "ladd";
+        case FADD: return "fadd";
+        case DADD: return "dadd";
+        case ISUB: return "isub";
+        case LSUB: return "lsub";
+        case FSUB: return "fsub";
+        case DSUB: return "dsub";
+        case IMUL: return "imul";
+        case LMUL: return "lmul";
+        case FMUL: return "fmul";
+        case DMUL: return "dmul";
+        case IDIV: return "idiv";
+        case LDIV: return "ldiv";
+        case FDIV: return "fdiv";
+        case DDIV: return "ddiv";
+        case IREM: return "irem";
+        case LREM: return "lrem";
+        case FREM: return "frem";
+        case DREM: return "drem";
+        case INEG: return "ineg";
+        case LNEG: return "lneg";
+        case FNEG: return "fneg";
+        case DNEG: return "dneg";
+        case ISHL: return "ishl";
+        case LSHL: return "lshl";
+        case ISHR: return "ishr";
+        case LSHR: return "lshr";
+        case IUSHR: return "iushr";
+        case LUSHR: return "lushr";
+        case IAND: return "iand";
+        case LAND: return "land";
+        case IOR: return "ior";
+        case LOR: return "lor";
+        case IXOR: return "ixor";
+        case LXOR: return "lxor";
+        case IINC: return "iinc";
+        case I2L: return "i2l";
+        case I2F: return "i2f";
+        case I2D: return "i2d";
+        case L2I: return "l2i";
+        case L2F: return "l2f";
+        case L2D: return "l2d";
+        case F2I: return "f2i";
+        case F2L: return "f2l";
+        case F2D: return "f2d";
+        case D2I: return "d2i";
+        case D2L: return "d2l";
+        case D2F: return "d2f";
+        case I2B: return "i2b";
+        case I2C: return "i2c";
+        case I2S: return "i2s";
+        case LCMP: return "lcmp";
+        case FCMPL: return "fcmpl";
+        case FCMPG: return "fcmpg";
+        case DCMPL: return "dcmpl";
+        case DCMPG: return "dcmpg";
+        case IFEQ: return "ifeq";
+        case IFNE: return "ifne";
+        case IFLT: return "iflt";
+        case IFGE: return "ifge";
+        case IFGT: return "ifgt";
+        case IFLE: return "ifle";
+        case IF_ICMPEQ: return "if_icmpeq";
+        case IF_ICMPNE: return "if_icmpne";
+        case IF_ICMPLT: return "if_icmplt";
+        case IF_ICMPGE: return "if_icmpge";
+        case IF_ICMPGT: return "if_icmpgt";
+        case IF_ICMPLE: return "if_icmple";
+        case IF_ACMPEQ: return "if_acmpeq";
+        case IF_ACMPNE: return "if_acmpne";
+        case GOTO: return "goto";
+        case JSR: return "jsr";
+        case RET: return "ret";
+        case TABLESWITCH: return "tableswitch";
+        case LOOKUPSWITCH: return "lookupswitch";
+        case IRETURN: return "ireturn";
+        case LRETURN: return "lreturn";
+        case FRETURN: return "freturn" ;
+        case DRETURN: return "dreturn";
+        case ARETURN: return "areturn";
+        case RETURN: return "return";
+        case GETSTATIC: return "getstatic" ;
+        case PUTSTATIC: return "putstatic";
+        case GETFIELD: return "getfield";
+        case PUTFIELD: return "putfield";
+        case INVOKEVIRTUAL: return "invokevirtual";
+        case INVOKESPECIAL: return "invokespecial";
+        case INVOKESTATIC: return "invokestatic";
+        case INVOKEINTERFACE: return "invokeinterface";
+        case NEW: return "new";
+        case NEWARRAY: return "newarray";
+        case ANEWARRAY: return "anewarray";
+        case ARRAYLENGTH: return "arraylength";
+        case ATHROW: return "athrow";
+        case CHECKCAST: return "checkcast";
+        case INSTANCEOF: return "instanceof";
+        case MONITORENTER: return "monitorenter";
+        case MONITOREXIT: return "monitorexit";
+        case WIDE: return "wide";
+        case MULTIANEWARRAY: return "multianewarray";
+        case IFNULL: return "ifnull";
+        case IFNONNULL: return "ifnonnull";
+        case GOTO_W: return "goto_w";
+        case JSR_W: return "jsr_w";
+        case BREAKPOINT: return "breakpoint";
+        case IMPDEP1: return "impdep1";
+        case IMPDEP2: return "impdep2";
+        default:
+          return "<UNKNOWN BYTECODE:" + code + ">";
+      }
+    }
+
+    private static String getByteOperand(byte[] codes, int index) {
+      return Integer.toString((int) codes[index]);
+    }
+
+    private static String getCharOperand(byte[] codes, int index) {
+      int hi = (codes[index + 0] << 8);
+      int lo = ((codes[index + 1] & 0xff) << 0);
+      return Integer.toString(hi + lo);
+    }
+
+    private static String getIntOperand(byte[] codes, int index) {
+      int hh = (codes[index + 0] << 24);
+      int hl = ((codes[index + 1] & 0xff) << 16);
+      int lh = ((codes[index + 2] & 0xff) << 8);
+      int ll = ((codes[index + 3] & 0xff) << 0);
+      return Integer.toString(hh + hl + lh + ll);
+    }
+
+    public static String getOperands(byte[] codes, int index) {
+      switch (codes[index]) {
+        case NOP:
+        case ACONST_NULL:
+        case ICONST_M1:
+        case ICONST_0:
+        case ICONST_1:
+        case ICONST_2:
+        case ICONST_3:
+        case ICONST_4:
+        case ICONST_5:
+        case LCONST_0:
+        case LCONST_1:
+        case FCONST_0:
+        case FCONST_1:
+        case FCONST_2:
+        case DCONST_0:
+        case DCONST_1:
+          return "";
+        case BIPUSH:
+          return getByteOperand(codes, index + 1);
+        case SIPUSH:
+          return getCharOperand(codes, index + 1);
+        case LDC:
+          return getByteOperand(codes, index + 1);
+        case LDC_W:
+        case LDC2_W:
+          return getCharOperand(codes, index + 1);
+        case ILOAD:
+        case LLOAD:
+        case FLOAD:
+        case DLOAD:
+        case ALOAD:
+          return getByteOperand(codes, index + 1);
+        case ILOAD_0:
+        case ILOAD_1:
+        case ILOAD_2:
+        case ILOAD_3:
+        case LLOAD_0:
+        case LLOAD_1:
+        case LLOAD_2:
+        case LLOAD_3:
+        case FLOAD_0:
+        case FLOAD_1:
+        case FLOAD_2:
+        case FLOAD_3:
+        case DLOAD_0:
+        case DLOAD_1:
+        case DLOAD_2:
+        case DLOAD_3:
+        case ALOAD_0:
+        case ALOAD_1:
+        case ALOAD_2:
+        case ALOAD_3:
+        case IALOAD:
+        case LALOAD:
+        case FALOAD:
+        case DALOAD:
+        case AALOAD:
+        case BALOAD:
+        case CALOAD:
+        case SALOAD:
+          return "";
+        case ISTORE:
+        case LSTORE:
+        case FSTORE:
+        case DSTORE:
+        case ASTORE:
+          return getByteOperand(codes, index + 1);
+        case ISTORE_0:
+        case ISTORE_1:
+        case ISTORE_2:
+        case ISTORE_3:
+        case LSTORE_0:
+        case LSTORE_1:
+        case LSTORE_2:
+        case LSTORE_3:
+        case FSTORE_0:
+        case FSTORE_1:
+        case FSTORE_2:
+        case FSTORE_3:
+        case DSTORE_0:
+        case DSTORE_1:
+        case DSTORE_2:
+        case DSTORE_3:
+        case ASTORE_0:
+        case ASTORE_1:
+        case ASTORE_2:
+        case ASTORE_3:
+        case IASTORE:
+        case LASTORE:
+        case FASTORE:
+        case DASTORE:
+        case AASTORE:
+        case BASTORE:
+        case CASTORE:
+        case SASTORE:
+        case POP:
+        case POP2:
+        case DUP:
+        case DUP_X1:
+        case DUP_X2:
+        case DUP2:
+        case DUP2_X1:
+        case DUP2_X2:
+        case SWAP:
+        case IADD:
+        case LADD:
+        case FADD:
+        case DADD:
+        case ISUB:
+        case LSUB:
+        case FSUB:
+        case DSUB:
+        case IMUL:
+        case LMUL:
+        case FMUL:
+        case DMUL:
+        case IDIV:
+        case LDIV:
+        case FDIV:
+        case DDIV:
+        case IREM:
+        case LREM:
+        case FREM:
+        case DREM:
+        case INEG:
+        case LNEG:
+        case FNEG:
+        case DNEG:
+        case ISHL:
+        case LSHL:
+        case ISHR:
+        case LSHR:
+        case IUSHR:
+        case LUSHR:
+        case IAND:
+        case LAND:
+        case IOR:
+        case LOR:
+        case IXOR:
+        case LXOR:
+          return "";
+        case IINC:
+          return getByteOperand(codes, index + 1) + " " + getByteOperand(codes, index + 2);
+        case I2L:
+        case I2F:
+        case I2D:
+        case L2I:
+        case L2F:
+        case L2D:
+        case F2I:
+        case F2L:
+        case F2D:
+        case D2I:
+        case D2L:
+        case D2F:
+        case I2B:
+        case I2C:
+        case I2S:
+        case LCMP:
+        case FCMPL:
+        case FCMPG:
+        case DCMPL:
+        case DCMPG:
+          return "";
+        case IFEQ:
+        case IFNE:
+        case IFLT:
+        case IFGE:
+        case IFGT:
+        case IFLE:
+        case IF_ICMPEQ:
+        case IF_ICMPNE:
+        case IF_ICMPLT:
+        case IF_ICMPGE:
+        case IF_ICMPGT:
+        case IF_ICMPLE:
+        case IF_ACMPEQ:
+        case IF_ACMPNE:
+        case GOTO:
+        case JSR:
+          return getCharOperand(codes, index + 1);
+        case RET:
+          return getByteOperand(codes, index + 1);
+        case TABLESWITCH:
+          {
+            String res = "";
+            int db = ((index + 4) / 4) * 4; // Align-4, step to defaultbytes.
+            int val = fourByteToInt(codes, db);
+            db += 4;
+            res = "defaultbytes:" + val;
+            int low = fourByteToInt(codes, db);
+            db += 4;
+            res += ", low:" + low;
+            int high = fourByteToInt(codes, db);
+            db += 4;
+            res += ", high:" + high;
+            for (int i = 0; i < (high - low + 1); i++) {
+              res += "\n\t" + "offset:" + fourByteToInt(codes, db + i * 4);
+            }
+            return res;
+          }
+        case LOOKUPSWITCH:
+          {
+            String res = "";
+            int db = ((index + 4) / 4) * 4; // Align-4, step to defaultbytes.
+            int val = fourByteToInt(codes, db);
+            db += 4;
+            res = "defaultbytes:" + val;
+            int npairs = fourByteToInt(codes, db);
+            db += 4;
+            res += ", npairs:" + npairs;
+            for (int i = 0; i < npairs; i++) {
+              res += "\n\t" + "match:" + fourByteToInt(codes, db + i * 8) + ", offset:"
+                  + fourByteToInt(codes, db + i * 8 + 4);
+            }
+            return res;
+          }
+        case IRETURN:
+        case LRETURN:
+        case FRETURN:
+        case DRETURN:
+        case ARETURN:
+        case RETURN:
+          return "";
+        case GETSTATIC:
+        case PUTSTATIC:
+        case GETFIELD:
+        case PUTFIELD:
+        case INVOKEVIRTUAL:
+        case INVOKESPECIAL:
+        case INVOKESTATIC:
+          return getCharOperand(codes, index + 1);
+        case INVOKEINTERFACE:
+          return getCharOperand(codes, index + 1) + " " + getByteOperand(codes, index + 3);
+        case NEW:
+          return getCharOperand(codes, index + 1);
+        case NEWARRAY:
+          return getByteOperand(codes, index + 1);
+        case ANEWARRAY:
+          return getCharOperand(codes, index + 1);
+        case ARRAYLENGTH:
+        case ATHROW:
+          return "";
+        case CHECKCAST:
+          return getCharOperand(codes, index + 1);
+        case INSTANCEOF:
+          return getCharOperand(codes, index + 1);
+        case MONITORENTER:
+        case MONITOREXIT:
+          return "";
+        case WIDE:
+          return "XXX";
+        case MULTIANEWARRAY:
+          return getCharOperand(codes, index + 1) + " " + getByteOperand(codes, index + 3);
+        case IFNULL:
+          return getCharOperand(codes, index + 1);
+        case IFNONNULL:
+          return getCharOperand(codes, index + 1);
+        case GOTO_W:
+          return getIntOperand(codes, index + 1);
+        case JSR_W:
+          return getIntOperand(codes, index + 1);
+        case BREAKPOINT:
+        case IMPDEP1:
+        case IMPDEP2:
+          return "";
+        default:
+          return "<UNKNOWN BYTECODE:" + codes[index] + ">";
+      }
+    }
+
+    public static int fourByteToInt(byte[] codes, int pos) {
+      int b1 = (int) codes[pos + 0];
+      int b2 = (int) codes[pos + 1];
+      int b3 = (int) codes[pos + 2];
+      int b4 = (int) codes[pos + 3];
+      int val = b1 << 24 | b2 << 16 | b3 << 8 | b4;
+      return val;
+    }
+
+    public static int stepBytecode(byte[] codes, int index) {
+      switch (codes[index]) {
+        case NOP: return 1;
+        case ACONST_NULL: return 1;
+        case LDC2_W:
+        case LDC_W: return 3;
+        case LDC: return 2;
+        case DCONST_0:
+        case DCONST_1:
+        case LCONST_0:
+        case LCONST_1: return 1;
+        case BIPUSH: return 2;
+        case SIPUSH: return 3;
+        case FCONST_1:
+        case FCONST_2:
+        case FCONST_0:
+        case ICONST_M1:
+        case ICONST_0:
+        case ICONST_1:
+        case ICONST_2:
+        case ICONST_3:
+        case ICONST_4:
+        case ICONST_5: return 1;
+        case FALOAD:
+        case BALOAD:
+        case CALOAD:
+        case SALOAD:
+        case IALOAD: return 1;
+        case DALOAD:
+        case LALOAD: return 1;
+        case AALOAD: return 1;
+        case FLOAD:
+        case FSTORE:
+        case ILOAD:
+        case ISTORE: return 2;
+        case FLOAD_0:
+        case FSTORE_0:
+        case ILOAD_0:
+        case ISTORE_0: return 1;
+        case FLOAD_1:
+        case FSTORE_1:
+        case ILOAD_1:
+        case ISTORE_1: return 1;
+        case FLOAD_2:
+        case FSTORE_2:
+        case ILOAD_2:
+        case ISTORE_2: return 1;
+        case FLOAD_3:
+        case FSTORE_3:
+        case ILOAD_3:
+        case ISTORE_3: return 1;
+        case DLOAD:
+        case DSTORE:
+        case LLOAD:
+        case LSTORE: return 2;
+        case DLOAD_0:
+        case DSTORE_0:
+        case LLOAD_0:
+        case LSTORE_0: return 1;
+        case DLOAD_1:
+        case DSTORE_1:
+        case LLOAD_1:
+        case LSTORE_1: return 1;
+        case DLOAD_2:
+        case DSTORE_2:
+        case LLOAD_2:
+        case LSTORE_2: return 1;
+        case DLOAD_3:
+        case DSTORE_3:
+        case LLOAD_3:
+        case LSTORE_3: return 1;
+        case ALOAD:
+        case ASTORE: return 2;
+        case ALOAD_0:
+        case ASTORE_0: return 1;
+        case ALOAD_1:
+        case ASTORE_1: return 1;
+        case ALOAD_2:
+        case ASTORE_2: return 1;
+        case ALOAD_3:
+        case ASTORE_3: return 1;
+        case FASTORE:
+        case IASTORE: return 1;
+        case DASTORE:
+        case LASTORE: return 1;
+        case AASTORE: return 1;
+        case BASTORE: return 1;
+        case CASTORE:
+        case SASTORE: return 1;
+        case POP: return 1;
+        case POP2: return 1;
+        case DUP: return 1;
+        case DUP_X1: return 1;
+        case DUP_X2: return 1;
+        case DUP2: return 1;
+        case DUP2_X1: return 1;
+        case DUP2_X2: return 1;
+        case SWAP: return 1;
+        case IADD: return 1;
+        case FADD: return 1;
+        case DADD: return 1;
+        case LADD: return 1;
+        case ISUB: return 1;
+        case FSUB: return 1;
+        case DSUB: return 1;
+        case LSUB: return 1;
+        case IMUL: return 1;
+        case LMUL: return 1;
+        case DMUL: return 1;
+        case FMUL: return 1;
+        case IDIV: return 1;
+        case LDIV: return 1;
+        case DDIV: return 1;
+        case FDIV: return 1;
+        case IREM: return 1;
+        case LREM: return 1;
+        case DREM: return 1;
+        case FREM: return 1;
+        case INEG: return 1;
+        case LNEG: return 1;
+        case DNEG: return 1;
+        case FNEG: return 1;
+        case ISHL: return 1;
+        case LSHL: return 1;
+        case ISHR: return 1;
+        case LSHR: return 1;
+        case IUSHR: return 1;
+        case LUSHR: return 1;
+        case IAND: return 1;
+        case LAND: return 1;
+        case IOR: return 1;
+        case LOR: return 1;
+        case IXOR: return 1;
+        case LXOR: return 1;
+        case IINC: return 3;
+        case I2L: return 1;
+        case I2F: return 1;
+        case I2D: return 1;
+        case L2I: return 1;
+        case L2F: return 1;
+        case L2D: return 1;
+        case F2I: return 1;
+        case F2L: return 1;
+        case F2D: return 1;
+        case D2I: return 1;
+        case D2L: return 1;
+        case D2F: return 1;
+        case I2B: return 1;
+        case I2C: return 1;
+        case I2S: return 1;
+        case LCMP: return 1;
+        case FCMPL: return 1;
+        case FCMPG: return 1;
+        case DCMPL: return 1;
+        case DCMPG: return 1;
+        case IFEQ: return 3;
+        case IFNE: return 3;
+        case IFLT: return 3;
+        case IFGE: return 3;
+        case IFGT: return 3;
+        case IFLE: return 3;
+        case IF_ICMPEQ: return 3;
+        case IF_ICMPNE: return 3;
+        case IF_ICMPLT: return 3;
+        case IF_ICMPGE: return 3;
+        case IF_ICMPGT: return 3;
+        case IF_ICMPLE: return 3;
+        case IF_ACMPEQ: return 3;
+        case IF_ACMPNE: return 3;
+        case GOTO: return 3;
+        case JSR: return 3;
+        case RET: return 2;
+        case TABLESWITCH:
+          {
+            int db = ((index + 4) / 4) * 4; // Align-4, step to defaultbytes.
+            db += 4;
+            int low = fourByteToInt(codes, db);
+            db += 4;
+            int high = fourByteToInt(codes, db);
+            db += 4;
+            db += (high-low+1)*4;
+            return db;
+          }
+        case LOOKUPSWITCH:
+          {
+            int db = ((index + 4) / 4) * 4; // Align-4, step to defaultbytes.
+            db += 4;
+            int np = fourByteToInt(codes, db);
+            db += 4;
+            db += np * 8;
+            return db;
+          }
+        case FRETURN:
+        case IRETURN: return 1;
+        case LRETURN:
+        case DRETURN: return 1;
+        case ARETURN: return 1;
+        case RETURN: return 1;
+        case GETSTATIC:
+        case PUTSTATIC:
+        case GETFIELD:
+        case PUTFIELD: return 3;
+        case INVOKEVIRTUAL: return 3;
+        case INVOKESPECIAL: return 3;
+        case INVOKESTATIC: return 3;
+        case INVOKEINTERFACE: return 5;
+        case NEW: return 3;
+        case NEWARRAY: return 2;
+        case ANEWARRAY: return 3;
+        case ARRAYLENGTH: return 1;
+        case ATHROW: return 1;
+        case CHECKCAST: return 3;
+        case INSTANCEOF: return 3;
+        case MONITORENTER: return 1;
+        case MONITOREXIT: return 1;
+        case WIDE:
+          switch (codes[index + 1]) {
+            case ILOAD: return 4;
+            case FLOAD: return 4;
+            case ALOAD: return 4;
+            case LLOAD: return 4;
+            case DLOAD: return 4;
+            case ISTORE: return 4;
+            case FSTORE: return 4;
+            case ASTORE: return 4;
+            case LSTORE: return 4;
+            case DSTORE: return 4;
+            case RET: return 4;
+            case IINC: return 6;
+            default:
+              System.err.println("ERROR_INVALID_OPCODE in stepBytecode (wide)");
+              return 1;
+          }
+        case MULTIANEWARRAY: return 4;
+        case IFNULL: return 3;
+        case IFNONNULL: return 3;
+        case GOTO_W: return 5;
+        case JSR_W: return 5;
+        default:
+          System.err.println("INVALID BYTECODE " + codes[index] + " in stepBytecode");
+          return 1;
+      }
+    }
+
+    public static void printBytecode(PrintStream p, byte[] bytes, int index) {
+      p.print(toString(bytes[index])+" "+getOperands(bytes, index));
+    }
+
+    public static void printBytecodes(PrintStream p, byte[] bytes, int start, int end) {
+      for (int i = start, cnt = 1; i < end; i += stepBytecode(bytes, i), cnt++) {
+        p.print("\t" + i + "\t" + cnt + "\t");
+        printBytecode(p, bytes, i);
+        p.println();
+      }
+    }
+
+    public static void printBytecodes(PrintStream p, byte[] bytes) {
+      for (int i = 0, cnt = 1; i < bytes.length; i += stepBytecode(bytes, i), cnt++) {
+        p.print("\t" + i + "\t" + cnt + "\t");
+        printBytecode(p, bytes, i);
+        p.println();
+      }
+    }
+
+    public static void appendBytecodes(StringBuilder p, byte[] bytes) {
+      for (int i = 0, cnt = 1; i < bytes.length; i += stepBytecode(bytes, i), cnt++) {
+        p.append(" " + i + " " + cnt + "\t");
+        p.append(toString(bytes[i])+" "+getOperands(bytes, i));
+        p.append("\n");
+      }
+    }
+  }
+}

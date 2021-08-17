@@ -1,0 +1,335 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ *               2011-2018, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * Type inference for generic instance creation.
+ *
+ * According to the JLSv7 $15.9.1, type inference for generic
+ * instance creation uses the type inference for generic methods.
+ *
+ * Empty type argument lists (&lt;&gt;) are parsed as DiamondAccess
+ * nodes. The type of the DiamondAccess is computed by creating placeholder
+ * methods and using generic method type inference from Java1.5Frontend
+ * to find the inferred type arguments for the DiamondAccess.
+ */
+aspect Diamond {
+
+  public void StandInMethodDecl.nameCheck() { }
+  public void StandInMethodDecl.typeCheck() { }
+  public void StandInMethodDecl.exceptionHandling() { }
+  public void StandInMethodDecl.checkUnreachableStmt() { }
+  public void StandInMethodDecl.definiteAssignment() { }
+  public void StandInMethodDecl.checkModifiers() { }
+
+  /**
+   * Creates a synthetic method access that is used to perform type inference
+   * for the diamond access.
+   */
+  syn nta MethodAccess DiamondAccess.methodAccess() =
+      new MethodAccess("#" + getTypeAccess().type().name(),
+          getClassInstanceExpr().getArgList().treeCopyNoTransform());
+
+  // This is to not make the synthetic method access qualified by the diamond access:
+  eq DiamondAccess.methodAccess().lookupType(String name) =
+      unqualifiedScope().lookupType(name);
+
+  /**
+   * If this DiamondAccess node constitutes a legal use of
+   * the diamond operator, the inferred generic type for the
+   * enclosing class instance expression is returned.
+   */
+  eq DiamondAccess.type() {
+    TypeDecl accessType = getTypeAccess().type();
+
+    if (isAnonymousDecl()) {
+      return accessType;
+    }
+
+    if (getClassInstanceExpr() == null) {
+      // It is an error if the DiamondAccess does not occurr
+      // within a class instance creation expression, but this
+      // error is handled in typeCheck.
+      return accessType;
+    }
+
+    if (!(accessType instanceof ParClassDecl)) {
+      // It is an error if the TypeDecl of a DiamondAccess is not
+      // a generic type, but this error is handled in typeCheck.
+      return accessType;
+    }
+
+    SimpleSet<MethodDecl> maxSpecific = chooseConstructor();
+
+    if (maxSpecific.isEmpty()) {
+      return getTypeAccess().type();
+    }
+
+    MethodDecl constructor = maxSpecific.iterator().next();
+    return constructor.type();
+  }
+
+  syn boolean Access.isDiamond() = false;
+  eq DiamondAccess.isDiamond() = true;
+
+  /**
+   * @return the nearest enclosing class instance expression, or {@code null}
+   * if there is no enclosing class instance expression.
+   */
+  inh ClassInstanceExpr DiamondAccess.getClassInstanceExpr();
+  eq ClassInstanceExpr.getAccess().getClassInstanceExpr() = this;
+  eq BodyDecl.getChild().getClassInstanceExpr() = null;
+  eq TypeDecl.getChild().getClassInstanceExpr() = null;
+  eq Program.getChild().getClassInstanceExpr() = null;
+
+  /**
+   * Choose a constructor for the diamond operator using stand-in
+   * methods. One stand-in method is generated for each constructor
+   * of the generic type. Type inference is then used to select the
+   * type arguments for the method, which can be used as the type
+   * arguments of the generic type.
+   */
+  protected SimpleSet<MethodDecl> DiamondAccess.chooseConstructor() {
+    TypeDecl type = getTypeAccess().type();
+
+    assert type instanceof ParClassDecl;
+
+    GenericClassDecl genericType = (GenericClassDecl) ((ParClassDecl) type).genericDecl();
+
+    List<MethodDecl> placeholderMethods = genericType.getStandInMethodList();
+    return methodAccess().maxSpecific(placeholderMethods);
+  }
+
+  /**
+   * The stand-in method list for the constructors of this generic
+   * class.  One stand-in method is generated for each constructor
+   * of the generic class.
+   *
+   * @return list of stand-in methods
+   */
+  syn nta List<MethodDecl> GenericClassDecl.getStandInMethodList() {
+    List<MethodDecl> methods = new List<MethodDecl>();
+    List<TypeVariable> typeParams = getTypeParameterList();
+    List<TypeVariable> classTypeVars = new List<TypeVariable>();
+    List<Access> typeArgs = new List<Access>();
+
+    // Copy the list of type parameters.
+    int arg = 0;
+    for (TypeVariable typeVar : typeParams) {
+      String substName = "#" + (arg++);
+      typeArgs.add(new TypeAccess(substName));
+      classTypeVars.add(new TypeVariable(
+          new Modifiers(),
+          substName,
+          new List<BodyDecl>(),
+          typeVar.getBoundList().treeCopyNoTransform()));
+    }
+
+    ParTypeAccess returnType = new ParTypeAccess(
+        createQualifiedAccess(),
+        typeArgs);
+
+    for (ConstructorDecl decl : constructors()) {
+      if (decl instanceof ConstructorDeclSubstituted) {
+        decl = ((ConstructorDeclSubstituted) decl).getOriginal();
+      }
+
+      // Filter accessible constructors.
+      if (!decl.accessibleFrom(hostType())) {
+        continue;
+      }
+
+      Collection<TypeVariable> originalTypeVars = new LinkedList<TypeVariable>();
+      List<TypeVariable> typeVars = new List<TypeVariable>();
+      for (TypeVariable typeVar : typeParams) {
+        originalTypeVars.add(typeVar);
+      }
+      for (TypeVariable typeVar : classTypeVars) {
+        typeVars.add((TypeVariable) typeVar.treeCopyNoTransform());
+      }
+
+      if (decl.isGeneric()) {
+        GenericConstructorDecl genericDecl = decl.genericDecl();
+        List<TypeVariable> typeVariables = new List<TypeVariable>();
+        for (int i = 0; i < genericDecl.getNumTypeParameter(); ++i) {
+          String substName = "#" + (arg+i);
+
+          TypeVariable typeVar = genericDecl.getTypeParameter(i);
+          originalTypeVars.add(typeVar);
+          typeVars.add(new TypeVariable(
+                new Modifiers(),
+                substName,
+                new List<BodyDecl>(),
+                typeVar.getBoundList().treeCopyNoTransform()));
+        }
+      }
+
+      List<ParameterDeclaration> substParameters = new List<ParameterDeclaration>();
+      for (ParameterDeclaration param : decl.getParameterList()) {
+        substParameters.add(param.substituted(originalTypeVars, typeVars));
+      }
+
+      List<Access> substExceptions = new List<Access>();
+      for (Access exception : decl.getExceptionList()) {
+        substExceptions.add(exception.substituted(originalTypeVars, typeVars));
+      }
+
+      StandInMethodDecl standInMethod = new StandInMethodDecl(
+          (Modifiers) decl.getModifiers().treeCopyNoTransform(),
+          (Access) returnType.treeCopyNoTransform(),
+          "#" + getID(),
+          substParameters,
+          substExceptions,
+          new Opt(new Block()),
+          typeVars);
+
+      methods.add(standInMethod);
+    }
+    return methods;
+  }
+
+  /**
+   * Builds a copy of this ParameterDeclaration node where all occurrences
+   * of type variables in the original type parameter list have been replaced
+   * by the substitution type parameters.
+   *
+   * <p>This should only be used to generate candidate methods for Diamond type
+   * inference.
+   *
+   * @return the substituted ParameterDeclaration node
+   */
+  public ParameterDeclaration ParameterDeclaration.substituted(Collection<TypeVariable> original,
+      List<TypeVariable> substitution) {
+    return new ParameterDeclaration(
+        (Modifiers) getModifiers().treeCopyNoTransform(),
+        getTypeAccess().substituted(original, substitution),
+        getID());
+  }
+
+  @Override
+  public ParameterDeclaration VariableArityParameterDeclaration.substituted(
+      Collection<TypeVariable> original, List<TypeVariable> substitution) {
+    return new VariableArityParameterDeclaration(
+        (Modifiers) getModifiers().treeCopyNoTransform(),
+        getTypeAccess().substituted(original, substitution),
+        getID());
+  }
+
+  /**
+   * Builds a copy of this Access node where all occurrences
+   * of type variables in the original type parameter list have been replaced
+   * by the substitution type parameters.
+   *
+   * <p>This should only be used to generate candidate methods for Diamond type
+   * inference.
+   *
+   * @return the substituted Access node
+   */
+  public Access Access.substituted(Collection<TypeVariable> original,
+      List<TypeVariable> substitution) {
+    return (Access) treeCopyNoTransform();
+  }
+
+  @Override
+  public Access TypeAccess.substituted(Collection<TypeVariable> original,
+      List<TypeVariable> substitution) {
+    TypeDecl decl = decl();
+    int i = 0;
+    for (TypeVariable typeVar : original) {
+      if (typeVar == decl) {
+        return new TypeAccess(substitution.getChild(i).getID());
+      }
+      i += 1;
+    }
+    return super.substituted(original, substitution);
+  }
+
+  @Override
+  public Access ParTypeAccess.substituted(Collection<TypeVariable> original,
+      List<TypeVariable> substitution) {
+    List<Access> substArgs = new List<Access>();
+    for (Access arg : getTypeArgumentList()) {
+      substArgs.add(arg.substituted(original, substitution));
+    }
+    return new ParTypeAccess(getTypeAccess().substituted(original, substitution), substArgs);
+  }
+
+  /**
+   * @return true if this access is part of an anonymous class declaration
+   */
+  inh boolean DiamondAccess.isAnonymousDecl();
+
+  /**
+   * @return true if this ClassInstanceExpr is an anonymous class declaration
+   */
+  eq ClassInstanceExpr.getAccess().isAnonymousDecl() = hasTypeDecl();
+
+  /**
+   * @return false
+   */
+  eq Program.getChild().isAnonymousDecl() = false;
+
+  /**
+   * @return true if the Access is part of a generic constructor invocation
+   * with explicit type arguments
+   */
+  inh boolean DiamondAccess.isExplicitGenericConstructorAccess();
+
+  eq ParClassInstanceExpr.getAccess().isExplicitGenericConstructorAccess() = true;
+
+  eq Program.getChild(int i).isExplicitGenericConstructorAccess() = false;
+
+  DiamondAccess contributes each typeProblems() to CompilationUnit.problems();
+
+  /**
+   * Checks if this diamond access is legal.
+   *
+   * <p>The diamond access is not legal if it either is part of an inner class
+   * declaration, if it is used to access a non-generic type, or if it is
+   * part of a call to a generic constructor with explicit type arguments.
+   */
+  syn Collection<Problem> DiamondAccess.typeProblems() {
+    Collection<Problem> problems = new LinkedList<Problem>();
+    if (isAnonymousDecl()) {
+      problems.add(error("the diamond operator can not be used with anonymous classes"));
+    }
+    if (isExplicitGenericConstructorAccess()) {
+      problems.add(error("the diamond operator may not be used with generic "
+          + "constructors with explicit type parameters"));
+    }
+    if (getClassInstanceExpr() == null) {
+      problems.add(error("the diamond operator can only be used in class instance expressions"));
+    }
+    if (!(getTypeAccess().type() instanceof ParClassDecl)) {
+      problems.add(error("the diamond operator can only be used to instantiate generic classes"));
+    }
+    return problems;
+  }
+}

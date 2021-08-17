@@ -1,0 +1,554 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ *                    2016, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect InnerClasses {
+  syn boolean TypeDecl.hasField(String name) {
+    if (!memberFields(name).isEmpty()) {
+      return true;
+    }
+    // TODO(joqvist): use memberFields() instead?
+    for (BodyDecl decl : getBodyDeclList()) {
+      if (decl instanceof FieldDecl) {
+        if (((FieldDecl) decl).hasField(name)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  syn boolean FieldDecl.hasField(String name) {
+    for (FieldDeclarator decl : getDeclaratorList()) {
+      if (decl.name().equals(name)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  syn TypeDecl Access.fieldQualifierType() {
+    throw new Error("Can not evaluate fieldQualifierType() on node of type "
+        + getClass().getSimpleName());
+  }
+
+  eq VarAccess.fieldQualifierType() {
+    if (hasPrevExpr()) {
+      return prevExpr().type();
+    }
+    TypeDecl typeDecl = hostType();
+    while (typeDecl != null && !typeDecl.hasField(name())) {
+      typeDecl = typeDecl.enclosingType();
+    }
+    if (typeDecl != null) {
+      return typeDecl;
+    }
+    return decl().hostType();
+  }
+
+  syn boolean TypeDecl.hasMethod(MethodDecl decl) {
+    String name = decl.name();
+    String signature = decl.signature();
+    return !memberMethods(name).isEmpty();
+  }
+
+  eq ClassDecl.hasMethod(MethodDecl decl) =
+      super.hasMethod(decl) || hasSuperclass() && superclass().hasMethod(decl);
+
+  syn TypeDecl MethodAccess.methodQualifierType() {
+    if (hasPrevExpr()) {
+      return prevExpr().type();
+    }
+    TypeDecl typeDecl = hostType();
+    // Find closest type that has the target method.
+    while (typeDecl != null) {
+      if (typeDecl.hasMethod(decl())) {
+        return typeDecl;
+      } else {
+        typeDecl = typeDecl.enclosingType();
+      }
+    }
+    return decl().hostType();
+  }
+
+  eq BoundMethodAccess.methodQualifierType() = boundHostType;
+
+  // Helpers attributes for arrays:
+  inh TypeDecl ArrayInit.expectedType();
+
+  eq Program.getChild().expectedType() = null;
+
+  eq ArrayCreationExpr.getArrayInit().expectedType() = type().componentType();
+  eq Declarator.getInit().expectedType() = type().componentType();
+  eq ArrayInit.getInit().expectedType() = expectedType().componentType();
+
+  syn lazy int ArrayCreationExpr.numArrays() {
+    int dims = type().dimension();
+    Access a = getTypeAccess();
+    while (a instanceof ArrayTypeAccess && !(a instanceof ArrayTypeWithSizeAccess)) {
+      dims -= 1;
+      a = ((ArrayTypeAccess) a).getAccess();
+    }
+    return dims;
+  }
+
+  syn TypeDecl TypeDecl.stringPromotion() = this;
+  eq ReferenceType.stringPromotion() = isType("java.lang", "String") ? this : typeObject();
+  eq NullType.stringPromotion() = typeObject();
+  eq ByteType.stringPromotion() = typeInt();
+  eq ShortType.stringPromotion() = typeInt();
+
+  syn boolean ASTNode.isStringAdd() = false;
+  eq AddExpr.isStringAdd() = type().isString() && !isConstant();
+
+  syn boolean AddExpr.firstStringAddPart() = type().isString() && !getLeftOperand().isStringAdd();
+  syn boolean AddExpr.lastStringAddPart() = !getParent().isStringAdd();
+
+  // TODO(joqvist): This could be an inherited attribute.
+  syn TypeDecl Access.superConstructorQualifier(TypeDecl targetEnclosingType) {
+    TypeDecl enclosing = hostType();
+    while (!enclosing.instanceOf(targetEnclosingType)) {
+      enclosing = enclosing.enclosingType();
+    }
+    return enclosing;
+  }
+
+  // TODO(joqvist): This could be an inherited attribute.
+  /** @return the host type that needs an implicit super accessor for this super access. */
+  syn TypeDecl SuperAccess.superAccessorTarget() {
+    TypeDecl targetDecl = type();
+    TypeDecl enclosing = hostType();
+    do {
+      enclosing = enclosing.enclosingType();
+    } while (!enclosing.instanceOf(targetDecl));
+    return enclosing;
+  }
+
+  /** The set of nested types that has this TypeDecl as their directly enclosing type. */
+  coll LinkedList<TypeDecl> TypeDecl.nestedTypes() root CompilationUnit;
+
+  TypeDecl contributes this
+      when isNestedType()
+      to TypeDecl.nestedTypes()
+      for enclosingType();
+
+  MethodAccess contributes {
+    if (transformed() != this) {
+      transformed().collectContributions();
+    } else {
+      super.collectContributions();
+    }
+  } to TypeDecl.nestedTypes();
+
+  ConstructorAccess contributes {
+    if (transformed() != this) {
+      transformed().collectContributions();
+    } else {
+      super.collectContributions();
+    }
+  } to TypeDecl.nestedTypes();
+
+  ClassInstanceExpr contributes {
+    if (transformed() != this) {
+      transformed().collectContributions();
+    } else {
+      super.collectContributions();
+    }
+  } to TypeDecl.nestedTypes();
+
+  // TODO(joqvist): convert to collection attribute.
+  /** Collect the set of variables used in the enclosing class(es). */
+  syn lazy Collection<Variable> TypeDecl.enclosingVariables() {
+    Collection<Variable> vars = new HashSet<Variable>();
+    for (TypeDecl e = this; e != null; e = e.enclosingType()) {
+      if (e.isLocalClass() || e.isAnonymous()) {
+        collectEnclosingVariables(vars, e.enclosingType());
+      }
+    }
+    if (isClassDecl()) {
+      ClassDecl classDecl = (ClassDecl) this;
+      if (classDecl.isNestedType() && classDecl.hasSuperclass()) {
+        vars.addAll(classDecl.superclass().enclosingVariables());
+      }
+    }
+    return vars;
+  }
+
+  public void ASTNode.collectEnclosingVariables(Collection<Variable> vars, TypeDecl typeDecl) {
+    for (int i = 0; i < getNumChild(); i++) {
+      getChild(i).collectEnclosingVariables(vars, typeDecl);
+    }
+  }
+
+  public void VarAccess.collectEnclosingVariables(Collection<Variable> vars, TypeDecl typeDecl) {
+    Variable v = decl();
+    if (!v.isInstanceVariable() && !v.isClassVariable() && v.hostType() == typeDecl) {
+      vars.add(v);
+    }
+    super.collectEnclosingVariables(vars, typeDecl);
+  }
+
+  // Unique IDs for accessor methods are generated using an atomic counter to
+  // ensure no duplicate IDs are generated.
+  private java.util.concurrent.atomic.AtomicInteger TypeDecl.nextUniqueId =
+      new java.util.concurrent.atomic.AtomicInteger(0);
+
+  private int TypeDecl.uniqueId() {
+    return nextUniqueId.getAndIncrement();
+  }
+
+  /**
+   * Creates a synthetic public method to access a private or protected
+   * method from another class.
+   *
+   * <p>The method is stored as an NTA in order to not modify the body
+   * declaration list of this type.
+   */
+  syn nta MethodDecl TypeDecl.methodAccessor(MethodDecl decl) {
+    List<ParameterDeclaration> parameterList = new List<ParameterDeclaration>();
+    for (ParameterDeclaration param : decl.getParameterList()) {
+      // We need to create a qualified access in case the
+      // method we are generating an access for is not declared
+      // in the methodQualifier type.
+      parameterList.add(new ParameterDeclaration(
+          param.type().createQualifiedAccess(),
+          param.name()));
+    }
+
+    List<Access> exceptionList = new List<Access>();
+    for (Access exception : decl.getExceptionList()) {
+      exceptionList.add((Access) exception.treeCopyNoTransform());
+    }
+
+    // Add synthetic flag to modifiers.
+    Modifiers modifiers = new Modifiers(new List<Modifier>(
+        new Modifier("synthetic"),
+        new Modifier("public")));
+    if (decl.getModifiers().isStatic()) {
+      modifiers.addModifier(new Modifier("static"));
+    }
+
+    // Build accessor declaration.
+    return new MethodDecl(
+        modifiers,
+        decl.getTypeAccess().type().createQualifiedAccess(),
+        name() + "$access$" + uniqueId(),
+        parameterList,
+        exceptionList,
+        new Opt<Block>(new Block(new List<Stmt>(decl.createAccessorStmt()))));
+  }
+
+  protected Stmt MethodDecl.createAccessorStmt() {
+    List<Access> argumentList = new List<Access>();
+    for (ParameterDeclaration param : getParameterList()) {
+      argumentList.add(new VarAccess(param.name()));
+    }
+    Access access = new BoundMethodAccess(name(), argumentList, this);
+    if (!isStatic()) {
+      access = new ThisAccess().qualifiesAccess(access);
+    }
+    return isVoid() ? (Stmt) new ExprStmt(access) : new ReturnStmt(new Opt(access));
+  }
+
+  private boolean MethodAccess.isSuperAccessor = false;
+
+  /**
+   * Flags this method access as a call that should be done with invokespecial.
+   */
+  protected MethodAccess MethodAccess.setSuperAccessor() {
+    isSuperAccessor = true;
+    return this;
+  }
+
+  /** Create a static super accessor binding. */
+  public Access MethodDecl.createBoundSuperAccessor(List<Expr> args) {
+    if (isStatic()) {
+      return hostType().createQualifiedAccess().qualifiesAccess(
+          new BoundMethodAccess(name(), args, this)
+          .setSuperAccessor());
+    } else {
+      return new BoundMethodAccess(name(), args, this)
+          .setSuperAccessor();
+    }
+  }
+
+  /**
+   * Builds a super accessor for a target method declaration.
+   *
+   * <p>Super accessors are static methods used to call a non-static method in an
+   * enclosing type via a super access.
+   */
+  syn nta MethodDecl TypeDecl.superAccessor(MethodDecl decl) {
+    List<ParameterDeclaration> parameters = new List<ParameterDeclaration>();
+    List<Expr> args = new List<Expr>();
+    parameters.add(new ParameterDeclaration(this, "this$0$super"));
+    for (ParameterDeclaration param : decl.getParameterList()) {
+      parameters.add(new ParameterDeclaration(param.type(), param.name()));
+      args.add(new VarAccess(param.name()));
+    }
+    Stmt stmt;
+    if (decl.type().isVoid()) {
+      stmt = new ExprStmt(new VarAccess("this$0$super")
+          .qualifiesAccess(decl.createBoundSuperAccessor(args)));
+    } else {
+      stmt = new ReturnStmt(new Opt<Expr>(new VarAccess("this$0$super")
+          .qualifiesAccess(decl.createBoundSuperAccessor(args))));
+    }
+    return new MethodDecl(
+        new Modifiers(new List<Modifier>(
+            new Modifier("synthetic"),
+            new Modifier("static"))),
+        decl.type().createQualifiedAccess(),
+        decl.name() + "$access$" + uniqueId(),
+        parameters,
+        new List(),
+        new Opt<Block>(new Block(new List<Stmt>(stmt))));
+  }
+
+  /** On demand construction of an accessor method for the given field. */
+  syn nta MethodDecl TypeDecl.fieldAccessor(Variable field) {
+    Modifiers modifiers = new Modifiers(new List<Modifier>(
+        new Modifier("static"),
+        new Modifier("synthetic"),
+        new Modifier("public")));
+
+    List<ParameterDeclaration> parameters = new List<ParameterDeclaration>();
+    if (!field.isStatic()) {
+      parameters.add(new ParameterDeclaration(createQualifiedAccess(), "that"));
+    }
+
+    return new MethodDecl(
+        modifiers,
+        field.type().createQualifiedAccess(),
+        "get$" + field.name() + "$access$" + uniqueId(),
+        parameters,
+        new List<Access>(),
+        new Opt<Block>(new Block(new List<Stmt>(new ReturnStmt(createAccess(field))))));
+  }
+
+  /** On demand construction of an accessor method for the given field. */
+  syn nta MethodDecl TypeDecl.fieldWriteAccessor(Variable field) {
+    Modifiers modifiers = new Modifiers(new List<Modifier>(
+        new Modifier("static"),
+        new Modifier("synthetic"),
+        new Modifier("public")));
+
+    List<ParameterDeclaration> parameters = new List<ParameterDeclaration>();
+    if (!field.isStatic()) {
+      parameters.add(new ParameterDeclaration(createQualifiedAccess(), "that"));
+    }
+    parameters.add(new ParameterDeclaration(field.type().createQualifiedAccess(), "value"));
+
+    return new MethodDecl(
+      modifiers,
+      field.type().createQualifiedAccess(),
+      "set$" + field.name() + "$access$" + uniqueId(),
+      parameters,
+      new List<Access>(),
+      new Opt<Block>(
+          new Block(new List<Stmt>(
+              new ExprStmt(new AssignSimpleExpr(createAccess(field), new VarAccess("value"))),
+              new ReturnStmt(new Opt<Expr>(new VarAccess("value")))))));
+  }
+
+  protected static Access ASTNode.createAccess(Variable var) {
+    if (var instanceof FieldDeclarator) {
+      return ((FieldDeclarator) var).createAccess();
+    } else {
+      throw new Error("Trying to create accessor for non-field.");
+    }
+  }
+
+  protected Access FieldDeclarator.createAccess() {
+    Access fieldAccess = new BoundFieldAccess(this);
+    return isStatic() ? fieldAccess : new VarAccess("that").qualifiesAccess(fieldAccess);
+  }
+
+  syn boolean Access.requiresAccessor() {
+    throw new Error("Can not evaluate requiresAccessor() on node of type "
+        + getClass().getSimpleName());
+  }
+
+  syn boolean VarAccess.requiresAccessor() {
+    Variable v = decl();
+    if (!(v instanceof FieldDeclarator)) {
+      return false;
+    }
+    FieldDeclarator f = (FieldDeclarator) v;
+    if (f.isPrivate() && v.hostType() != hostType()) {
+      return true;
+    }
+    if (f.isProtected() && !f.hostPackage().equals(hostPackage())
+        && !hostType().hasField(v.name())) {
+      return true;
+    }
+    return false;
+  }
+
+  syn boolean MethodAccess.requiresAccessor() {
+    MethodDecl decl = decl();
+    if (decl.isPrivate() && decl.hostType() != hostType()) {
+      return true;
+    }
+    return decl.isProtected()
+        && !decl.hostPackage().equals(hostPackage())
+        && !hostType().hasMethod(decl);
+  }
+
+  syn boolean ClassInstanceExpr.isAnonymousInNonStaticContext() {
+    return !unqualifiedScope().inStaticContext()
+        && (!inExplicitConstructorInvocation() || enclosingBodyDecl().hostType().isInnerType());
+  }
+
+  /**
+   * Finds the directly enclosing class instance expression, i.e. the expression
+   * defining this type. Throws an error if this type is not defined by a class instance
+   * expression.
+   */
+  inh ClassInstanceExpr TypeDecl.classInstanceExpression();
+
+  eq Program.getChild().classInstanceExpression() {
+    throw new Error("Missing enclosing class instance.");
+  }
+
+  eq ClassInstanceExpr.getChild().classInstanceExpression() = this;
+
+  syn lazy boolean TypeDecl.needsEnclosing() {
+    if (isAnonymous()) {
+      return classInstanceExpression().isAnonymousInNonStaticContext();
+    } else if (isLocalClass()) {
+      return !inStaticContext();
+    } else if (isInnerType()) {
+      return true;
+    }
+    return false;
+  }
+
+  syn lazy boolean TypeDecl.needsSuperEnclosing() {
+    if (!isAnonymous()) {
+      return false;
+    }
+    TypeDecl superClass = ((ClassDecl) this).superclass();
+    if (superClass.isLocalClass()) {
+      return !superClass.inStaticContext();
+    } else if (superClass.isInnerType()) {
+      return true;
+    } if (needsEnclosing() && enclosing() == superEnclosing()) {
+      return false;
+    }
+    return false;
+  }
+
+  syn TypeDecl TypeDecl.enclosing() {
+    if (!needsEnclosing()) {
+      return null;
+    }
+    TypeDecl typeDecl = enclosingType();
+    if (isAnonymous() && inExplicitConstructorInvocation()) {
+      typeDecl = typeDecl.enclosingType();
+    }
+    return typeDecl;
+  }
+
+  syn TypeDecl TypeDecl.superEnclosing() = null;
+  eq ClassDecl.superEnclosing() = superclass().enclosing();
+
+  syn boolean ConstructorDecl.needsEnclosing() = hostType().needsEnclosing();
+  syn boolean ConstructorDecl.needsSuperEnclosing() = hostType().needsSuperEnclosing();
+
+  syn TypeDecl ConstructorDecl.enclosing() = hostType().enclosing();
+  syn TypeDecl ConstructorDecl.superEnclosing() = hostType().superEnclosing();
+
+  /**
+   * This class is used to compare constructor declarations by signature
+   * rather than reference equality. This fixes multiple contributed
+   * constructor accessors due to using default constructors in multiple
+   * parameterizations of the same type.
+   */
+  class ConstructorSignatureMapper {
+    public final ConstructorDecl decl;
+
+    public ConstructorSignatureMapper(ConstructorDecl decl) {
+      this.decl = decl;
+    }
+
+    @Override
+    public int hashCode() {
+      return decl.signature().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o instanceof ConstructorSignatureMapper) {
+        ConstructorSignatureMapper other = (ConstructorSignatureMapper) o;
+        return decl.signature().equals(other.decl.signature());
+      }
+      return false;
+    }
+  }
+
+  syn ConstructorDecl ConstructorDecl.createAccessor() =
+      hostType().getAccessor(new ConstructorSignatureMapper(this));
+
+  syn nta ConstructorDecl TypeDecl.getAccessor(ConstructorSignatureMapper constructor) {
+    Modifiers modifiers = new Modifiers(new List<Modifier>(new Modifier("synthetic")));
+
+    List<ParameterDeclaration> parameters = constructor.decl.createAccessorParameters();
+
+    List<Access> exceptionList = new List<Access>();
+    for (Access exception : constructor.decl.getExceptionList()) {
+      exceptionList.add(exception.type().createQualifiedAccess());
+    }
+
+    // Add all parameters as arguments except for the dummy parameter.
+    List<Expr> args = new List<Expr>();
+    for (int i = 0; i < parameters.getNumChildNoTransform() - 1; i++) {
+      args.add(new VarAccess(((ParameterDeclaration) parameters.getChildNoTransform(i)).name()));
+    }
+    return new ConstructorDecl(
+        modifiers,
+        name(),
+        parameters,
+        exceptionList,
+        new Opt<Stmt>(new ExprStmt(new ConstructorAccess("this", args))),
+        new Block());
+  }
+
+  protected List<ParameterDeclaration> ConstructorDecl.createAccessorParameters() {
+    List<ParameterDeclaration> parameters = new List();
+    for (ParameterDeclaration param : getParameterList()) {
+      parameters.add(new ParameterDeclaration(param.type(), param.name()));
+    }
+    parameters.add(new ParameterDeclaration(
+        hostType().createBoundAccess(),
+        "p" + getNumParameter()));
+    return parameters;
+  }
+}

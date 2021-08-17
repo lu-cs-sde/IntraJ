@@ -1,0 +1,164 @@
+/* Copyright (c) 2005-2008, Torbjorn Ekman
+ *                    2016, Jesper Öqvist <jesper.oqvist@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+aspect GenericTypeVariables {
+
+  // The bounds of a type variable should be resolved to type names.
+  eq TypeVariable.getBound().nameType() = NameType.TYPE_NAME;
+
+  /**
+   * The first type bound of this type variable.
+   *
+   * <p>If no explicit bound is set, this returns a bound access to the Object type.
+   */
+  syn Access TypeVariable.firstBound() =
+      hasBound() ? getBound(0) : typeObject().boundAccess();
+
+  // TypeVariable has a list of bounds, which may be empty.
+  // To avoid handling special cases for unbounded type variables,
+  // we normalize the list of type bounds and add an implicit Object
+  // bound if the actual bound list is empty.
+  // The attributes below are used to work with this normalized view
+  // of the type variable bounds.
+  // To access the actual declared bounds, use the getBound(i), etc.
+  // methods.
+  syn int TypeVariable.getNumTypeBound() = Math.max(1, getNumBound());
+
+  syn Access TypeVariable.getTypeBound(int i) =
+      i == 0 ? firstBound() : getBound(i);
+
+  syn nta List<Access> TypeVariable.getTypeBoundList() {
+    List<Access> bounds = new List<Access>();
+    for (int i = 0; i < getNumTypeBound(); ++i) {
+      bounds.add(getTypeBound(i).treeCopyNoTransform());
+    }
+    return bounds;
+  }
+
+  eq TypeVariable.nameProblems() {
+      if (extractSingleType(lookupType(name())) != this) {
+        return Collections.singletonList(
+            errorf("*** Semantic Error: type variable %s is multiply declared", name()));
+      }
+      return Collections.emptySet();
+  }
+
+  syn nta TypeVariable TypeVariable.substituted(Parameterization par) =
+      new SubstitutedTypeVariable(
+          new Modifiers(new List<Modifier>()),
+          getID(),
+          new List<BodyDecl>(),
+          getBoundList().treeCopy(),
+          par);
+}
+
+aspect GenericTypeVariablesMembers {
+  eq TypeVariable.memberMethods(String name) {
+    Collection<MethodDecl> methods = new HashSet<MethodDecl>();
+    for (int i = 0; i < getNumTypeBound(); i++) {
+      for (MethodDecl method : getTypeBound(i).type().memberMethods(name)) {
+        methods.add(method);
+      }
+    }
+    return methods;
+  }
+
+  eq TypeVariable.memberFields(String name) {
+    SimpleSet<Variable> fields = emptySet();
+    for (int i = 0; i < getNumTypeBound(); i++) {
+      for (Variable field : getTypeBound(i).type().memberFields(name)) {
+        fields = fields.add(field);
+      }
+    }
+    return fields;
+  }
+
+  eq WildcardType.memberMethods(String name) = typeObject().memberMethods(name);
+
+  eq WildcardExtendsType.memberMethods(String name) = getAccess().type().memberMethods(name);
+
+  eq WildcardExtendsType.memberFields(String name) = getAccess().type().memberFields(name);
+}
+
+aspect GenricTypeVariablesTypeAnalysis {
+
+  TypeVariable contributes each typeProblems() to CompilationUnit.problems();
+
+  syn Collection<Problem> TypeVariable.typeProblems() {
+    Collection<Problem> problems = new LinkedList<Problem>();
+    TypeDecl first = firstBound().type();
+    if (!first.isTypeVariable()
+        && !first.isClassDecl()
+        && !first.isInterfaceDecl()) {
+      problems.add(errorf("the first type bound must be either a type variable,"
+          + " or a class or interface type which %s is not",
+          first.fullName()));
+    }
+    for (int i = 1; i < getNumTypeBound(); i++) {
+      if (!getTypeBound(i).type().isInterfaceDecl()) {
+        problems.add(errorf("type bound %s must be an interface type which %s is not",
+            i, getTypeBound(i).type().fullName()));
+      }
+    }
+    Collection<TypeDecl> typeSet = new HashSet<TypeDecl>();
+    for (int i = 0; i < getNumTypeBound(); i++) {
+      TypeDecl type = getTypeBound(i).type();
+      TypeDecl erasure = type.erasure();
+      if (typeSet.contains(erasure)) {
+        if (type != erasure) {
+          problems.add(errorf("the erasure %s of typebound %s is multiply declared in %s",
+              erasure.fullName(), getTypeBound(i).prettyPrint(), this));
+        } else {
+          problems.add(errorf("%s is multiply declared", type.fullName()));
+        }
+      }
+      typeSet.add(erasure);
+    }
+
+    for (int i = 0; i < getNumTypeBound(); i++) {
+      TypeDecl type = getTypeBound(i).type();
+      for (MethodDecl m : type.methods()) {
+        for (int j = i + 1; j < getNumTypeBound(); j++) {
+          TypeDecl destType = getTypeBound(j).type();
+          for (MethodDecl n : destType.memberMethods(m.name())) {
+            if (m.sameSignature(n) && m.type() != n.type()) {
+              problems.add(errorf("the two bounds, %s and %s, in type variable %s have"
+                  + " a method %s with conflicting return types %s and %s",
+                  type.name(), destType.name(), name(), m.signature(),
+                  m.type().name(), n.type().name()));
+            }
+          }
+        }
+      }
+    }
+    return problems;
+  }
+}

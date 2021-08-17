@@ -1,0 +1,227 @@
+/* Copyright (c) 2021, Idriss Riouak <idriss.riouak@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+import org.extendj.flow.utils.Gamma;
+import org.extendj.ast.SmallSet;
+aspect NPA {
+public
+  interface ReachedLVal {}
+  VariableDeclarator implements ReachedLVal;
+  ParameterDeclaration implements ReachedLVal;
+  FieldDeclarator implements ReachedLVal;
+  AssignExpr implements ReachedLVal;
+  PostfixExpr implements ReachedLVal;
+  PreIncExpr implements ReachedLVal;
+  PreDecExpr implements ReachedLVal;
+
+  interface Assign {}
+  AssignExpr implements Assign;
+  ImplicitAssignment implements Assign;
+  VariableDeclarator implements Assign;
+
+  /**************************************************************************
+  ************************** TRFunction *************************************
+  ***************************************************************************
+  */
+  syn Gamma CFGNode.trFun(Gamma gamma) { return gamma; }
+  eq Assign.trFun(Gamma gamma) {
+    Variable decl = getDeclaration();
+    if (getMayBeNull())
+      gamma._put(decl, AbsDomain.NULL);
+    else
+      gamma._put(decl, AbsDomain.NOTNULL);
+    return gamma;
+  }
+
+  eq VarAccess.trFun(Gamma gamma) {
+    Variable decl = varDecl();
+    if (NA_in().get(decl) == AbsDomain.NULL && isDereferencing())
+      gamma._put(decl, AbsDomain.NOTNULL);
+    return gamma;
+  }
+
+  /**************************************************************************
+  ***************************OUT ENVIRONMENT*********************************
+  ***************************************************************************
+  */
+
+  coll Gamma TryStmt.NA_out() with join; // TryStmt is not a CFGNode
+
+  CFGNode contributes  trFun(NA_out())
+   when getEnclosingTry()!=null to TryStmt.NA_out()  for getEnclosingTry();
+
+  syn Gamma CFGNode.NA_out() circular[new Gamma()] {
+    Gamma res = new Gamma(NA_in());
+    res = trFun(res);
+    return res;
+  }
+
+  /**************************************************************************
+   ***************************IN ENVIRONMENT*********************************
+   ***************************************************************************
+   */
+  syn Gamma CFGNode.NA_in() circular[new Gamma()] {
+    Gamma res = new Gamma();
+    for (CFGNode e : pred())
+      res.join(e.NA_out());
+    return res;
+  }
+  eq Entry.NA_in() = new Gamma();
+
+  /**************************************************************************
+  ************************** ERROR PREDICATE ********************************
+  *************************** ISNULLABLE ************************************
+  */
+  syn Boolean VarAccess.isNullable() {
+    AbsDomain res = NA_in().get(varDecl());
+    return isDereferencing() && (res == AbsDomain.NULL);
+  }
+
+  /**************************************************************************
+  ***************************ERROR COLLECTION********************************
+  ***************************************************************************
+  */
+  VarAccess contributes warning(getCompilationUnit().pathName(),
+                                "A 'NullPointerException' could be thrown;'" +
+                                    name() + "' is nullable.",
+                                Analysis.NPA) when
+  isNullable() to CompilationUnit.NPA();
+
+  /***************************************************************************
+   *************************** HELPERS ***************************************
+   ***************************************************************************
+   */
+  syn Variable ReachedLVal.getDeclaration();
+  eq VariableDeclarator.getDeclaration() = singletonValue();
+  eq FieldDeclarator.getDeclaration() = singletonValue();
+  eq ParameterDeclaration.getDeclaration() = singletonValue();
+  eq AssignExpr.getDeclaration() = getDest().varDecl();
+  eq PostfixExpr.getDeclaration() = getOperand().varDecl();
+  eq PreIncExpr.getDeclaration() = getOperand().varDecl();
+  eq PreDecExpr.getDeclaration() = getOperand().varDecl();
+
+  inh boolean VarAccess.isDereferencing();
+  eq Dot.getLeft().isDereferencing() = getLeft().isVarAccess();
+  eq EnhancedForStmt.getExpr().isDereferencing() = true;
+  eq CompilationUnit.getChild().isDereferencing() = false;
+
+  syn boolean Expr.getMayBeNull() = false;
+  eq NullLiteral.getMayBeNull() = true;
+  eq VarAccess.getMayBeNull() = NA_in().get(varDecl()) == AbsDomain.NULL;
+  eq AssignExpr.getMayBeNull() = getSource().getMayBeNull();
+  syn boolean VariableDeclarator.getMayBeNull() =
+      hasInit() ? getInit().getMayBeNull() : false;
+
+  eq CastExpr.varDecl() = getExpr().varDecl();
+
+  /*************************** IMPROVING ANALYSIS *****************************
+   *************************** EXTENDING THE CFGs *****************************
+   **************************** GENERETING FACTs ******************************
+   */
+
+public
+  interface FactGenerator {}
+  NEExpr implements FactGenerator;
+  EQExpr implements FactGenerator;
+  ImplicitAssignment implements CFGNode;
+
+  syn nta ImplicitAssignment EQExpr.assignTrue() =
+      new ImplicitAssignment(true, getFact());
+
+  syn nta ImplicitAssignment EQExpr.assignFalse() =
+      new ImplicitAssignment(false, getFact());
+
+  syn nta ImplicitAssignment NEExpr.assignTrue() =
+      new ImplicitAssignment(false, getFact());
+
+  syn nta ImplicitAssignment NEExpr.assignFalse() =
+      new ImplicitAssignment(true, getFact());
+
+  inh boolean FactGenerator.shouldHaveFacts();
+  eq IfStmt.getCondition().shouldHaveFacts() = true;
+  eq WhileStmt.getCondition().shouldHaveFacts() = true;
+  eq ConditionalExpr.getCondition().shouldHaveFacts() = true;
+  eq CompilationUnit.getChild().shouldHaveFacts() = false;
+  syn boolean FactGenerator.hasFact() = getFact() != null && shouldHaveFacts();
+  syn Variable FactGenerator.getFact() {
+    Variable kill = null;
+    if (getLeftOperand().isNullLiteral() &&
+        getRightOperand().varDecl() != null) {
+      kill = getRightOperand().varDecl();
+    } else if (getRightOperand().isNullLiteral() &&
+               getLeftOperand().varDecl() != null) {
+      kill = getLeftOperand().varDecl();
+    }
+    return kill;
+  }
+
+  eq EQExpr.succ() {
+    SmallSet<CFGNode> res = SmallSet.<CFGNode>empty().mutable();
+    if (hasFact()) {
+      res.add(assignTrue());
+      res.add(assignFalse());
+      return res;
+    }
+    return nextNodes();
+  }
+  eq NEExpr.succ() {
+    SmallSet<CFGNode> res = SmallSet.<CFGNode>empty().mutable();
+    if (hasFact()) {
+      res.add(assignTrue());
+      res.add(assignFalse());
+    } else {
+      return nextNodes();
+    }
+    return res;
+  }
+
+  eq EQExpr.assignTrue().nextNodes() = nextNodesTT();
+  eq EQExpr.assignFalse().nextNodes() = nextNodesFF();
+  eq NEExpr.assignTrue().nextNodes() = nextNodesTT();
+  eq NEExpr.assignFalse().nextNodes() = nextNodesFF();
+
+  EQExpr contributes {
+    if (hasFact()) {
+      assignTrue().collectContributions();
+      assignFalse().collectContributions();
+    }
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
+
+  NEExpr contributes {
+    if (hasFact()) {
+      assignTrue().collectContributions();
+      assignFalse().collectContributions();
+    }
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
+}
