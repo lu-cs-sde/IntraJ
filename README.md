@@ -1,6 +1,3 @@
-# [![Build Status](https://travis-ci.com/IdrissRio/IntraJ.svg?token=LhjNDeT6NSQyX5nVEcpn&branch=master)](https://travis-ci.com/IdrissRio/IntraJ)
-
-
 <p align="center">
   <img width="300"  src="resources/logo.png">
 </p>
@@ -44,7 +41,7 @@ To install all the necessary Python dependencies you can run the instruction des
 ### 2️⃣ Build 🛠
 To clone the **IntraJ** code, run, in your working directory:
 ```
-git clone https://github.com/IdrissRio/IntraJ.git --recursive
+git clone https://github.com/lu-cs-sde/IntraJ.git --recursive
 ```
 
 🗂 Move to the **IntraJ** directory:
