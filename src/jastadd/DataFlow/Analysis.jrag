@@ -35,7 +35,13 @@ aspect Analysis {
 public
   enum Analysis {
     DAA,
-    NPA
+    NPA;
+
+    public static String[] names(){
+      String valuesStr = Arrays.toString(Analysis.values());
+      return valuesStr.substring(1, valuesStr.length() - 1)
+          .replace(" ", "")
+          .split(",");}
   }
 
   coll TreeSet<WarningMsg>
