@@ -41,7 +41,7 @@ public
   PreIncExpr implements ReachedLVal;
   PreDecExpr implements ReachedLVal;
 
-  interface Assign {}
+  interface Assign extends CFGNode{}
   AssignExpr implements Assign;
   ImplicitAssignment implements Assign;
   VariableDeclarator implements Assign;
