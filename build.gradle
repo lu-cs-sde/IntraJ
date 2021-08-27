@@ -54,7 +54,7 @@ sourceSets.main {
     flatDir { dirs rootProject.file("tools") }
   }
   dependencies {
-    jastadd2 name: "jastadd-2.3.6-custom"
+    jastadd2 name: "jastadd2"
   }
 }
 
