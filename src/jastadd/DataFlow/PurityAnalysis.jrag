@@ -4,6 +4,7 @@ aspect PurityAnlysis {
 
   public
     interface Unpure  {}
+
     FieldDeclarator implements Unpure;
     MethodDecl implements Unpure;
     ParameterDeclaration implements Unpure;
