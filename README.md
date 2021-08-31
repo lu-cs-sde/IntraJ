@@ -1,3 +1,4 @@
+[![IntraJ Continuous Integration](https://github.com/lu-cs-sde/IntraJ/actions/workflows/main.yml/badge.svg)](https://github.com/lu-cs-sde/IntraJ/actions/workflows/main.yml)
 <p align="center">
   <img width="300"  src="resources/logo.png">
 </p>
