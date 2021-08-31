@@ -34,6 +34,7 @@ aspect Analysis {
    */
 public
   enum Analysis {
+    PURE,
     DAA,
     NPA;
 
@@ -43,6 +44,10 @@ public
           .replace(" ", "")
           .split(",");}
   }
+
+  coll TreeSet<WarningMsg>
+  CompilationUnit.PURE()[new TreeSet<WarningMsg>()] with add root
+      CompilationUnit;
 
   coll TreeSet<WarningMsg>
       CompilationUnit.DAA()[new TreeSet<WarningMsg>()] with add root
