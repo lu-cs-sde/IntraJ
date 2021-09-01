@@ -145,7 +145,7 @@ public
   eq ExprStmt.getChild().exprAsStmt() = (getExpr() instanceof UnaryIncDec);
   eq CompilationUnit.getChild().exprAsStmt() = false;
 
-  inh CompilationUnit VariableDeclarator.getCompilationUnit();
+
   inh CompilationUnit AssignExpr.getCompilationUnit();
   inh CompilationUnit VarAccess.getCompilationUnit();
   inh CompilationUnit PostfixExpr.getCompilationUnit();
