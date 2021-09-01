@@ -88,15 +88,15 @@ jar {
 }
 
 //jar.manifest.attributes 'Main-Class': 'org.extendj.JavaCompiler'
-jar.destinationDir = projectDir
+jar.destinationDirectory = projectDir
 
 // Java -source and -target version.
 sourceCompatibility = targetCompatibility = '1.7'
 
 task sourceZip(type: Zip) {
   description 'Builds a Zip file with the entire repisotory (including the ExtendJ submodule).'
-  destinationDir = projectDir
-  archiveName = "intraj-src.zip"
+  destinationDirectory = projectDir
+  archiveFileName = "intraj-src.zip"
 
   from (projectDir) {
     exclude '**/.git'
