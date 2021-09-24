@@ -4,10 +4,7 @@ aspect PurityAnlysis {
 
   public
     interface Unpure  {}
-<<<<<<< HEAD
 
-=======
->>>>>>> f27b049 (Removed inh eq getCompilationUnit for VariableDeclarator)
     FieldDeclarator implements Unpure;
     MethodDecl implements Unpure;
     ParameterDeclaration implements Unpure;
