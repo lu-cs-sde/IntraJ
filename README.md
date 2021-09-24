@@ -9,7 +9,7 @@
 * __[A Precise Framework for Source-Level Control-Flow Analysis](https://github.com/lu-cs-sde/IntraJSCAM2021/blob/main/intraj-preprint.pdf)__, _[Idriss Riouak 🔗](https://github.com/IdrissRio), [Christoph Reichenbach 🔗](https://creichen.net), [Görel Hedin 🔗](https://cs.lth.se/gorel-hedin/) and [Niklas Fors 🔗](https://portal.research.lu.se/portal/en/persons/niklas-fors(c1e9efdd-5891-45ec-aa9d-87b8fb7f3dbc).html)_. _[IEEE-SCAM 2021 🔗](http://www.ieee-scam.org/2021/#home)._ 
 <p float="left" align="center">
 <a href="https://icsme2021.github.io/cfp/AEandROSETrack.html">
-  <img  width="70"  src="resources/Open_research.png"> </a>
+  <img  width="70"  src="resources/Open_Research.png"> </a>
   <a href="https://icsme2021.github.io/cfp/AEandROSETrack.html"><img width="70"  src="resources/Research_Objects.png"> </a>
 </p>
 ---
