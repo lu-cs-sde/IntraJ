@@ -56,7 +56,7 @@ public
   coll Set<WarningMsg> CompilationUnit.NPA()[new TreeSet<WarningMsg>()] with add
       root CompilationUnit;
 
-  coll Set<CFGRoot> Program.methods()[new LinkedHashSet<>()] with add;
+  coll Set<CFGRoot> Program.methods()[new LinkedHashSet<>()] with add root Program;
   MethodDecl contributes this to Program.methods();
   ClassDecl contributes nta staticInitialization() to Program.methods();
   ClassDecl contributes nta instanceInitialization() to Program.methods();
