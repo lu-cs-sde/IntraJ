@@ -51,7 +51,7 @@ sourceSets.main {
   }
   repositories {
     mavenLocal()
-    flatDir { dirs rootProject.file("tools") }
+    flatDir { dirs "tools" }
   }
   dependencies {
     jastadd2 name: "jastadd2"
