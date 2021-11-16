@@ -79,8 +79,8 @@ public
 
 public
   class WarningMsg implements Comparable<WarningMsg> {
-    final Integer lineStart, columnStart, lineEnd, columnEnd;
-    final String errMsg;
+    public final Integer lineStart, columnStart, lineEnd, columnEnd;
+    public final String errMsg;
     final Analysis analysis;
     final String loc;
 
