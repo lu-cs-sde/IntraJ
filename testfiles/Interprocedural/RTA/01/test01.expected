@@ -1,0 +1,11 @@
+test01::Static:{
+}
+test01::Instance:{
+}
+test01::m:{
+}
+test01::q:{
+}
+test01::main:{
+	test01::m
+}

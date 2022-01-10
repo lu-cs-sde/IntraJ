@@ -1,0 +1,13 @@
+test04::Static:{
+}
+test04::Instance:{
+}
+test04::m:{
+}
+test::Static:{
+}
+test::Instance:{
+}
+test::q:{
+	test04::m
+}

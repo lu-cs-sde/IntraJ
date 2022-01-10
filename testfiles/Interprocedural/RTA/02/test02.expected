@@ -1,0 +1,9 @@
+test02::Static:{
+}
+test02::Instance:{
+}
+test02::m:{
+}
+test02::main:{
+	test02::m
+}

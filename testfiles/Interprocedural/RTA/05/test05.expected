@@ -1,0 +1,15 @@
+test05::Static:{
+}
+test05::Instance:{
+}
+test05::foo:{
+}
+test::Static:{
+}
+test::Instance:{
+}
+test::foo:{
+}
+test::q:{
+	test::foo
+}
