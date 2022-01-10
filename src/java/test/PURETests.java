@@ -58,7 +58,6 @@ public class PURETests {
         Assert.fail("Compilation errors found " + execCode);
       }
 
-      SmallSet<CFGNode> nodes = SmallSet.mutable();
       Program program = intraj.getEntryPoint();
       System.setOut(new PrintStream(baos));
       IJGraph graph = new IJGraph(true, true);
@@ -71,7 +70,6 @@ public class PURETests {
       //   // printNASets(fun.Entry(), outStream, nodes);
       // }
       // outStream.println();
-      Integer nbrWrn = 0;
       //   for (CompilationUnit cu : program.getCompilationUnits()) {
       //     for (WarningMsg wm : cu.PURE()) {
       //       if (wm.getAnalysisType() == Analysis.NPA)
