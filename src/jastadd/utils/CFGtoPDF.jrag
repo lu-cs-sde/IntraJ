@@ -652,7 +652,7 @@ public
                            ? "< " + getOperand().varDecl().name() + " >"
                            : "";
   eq Expr.CFGDump() = "";
-
+  eq MethodReference.CFGDump() = "< " + getID() + " >";
   inh String MethodAccess.getResourceName();
   eq ResourceDeclaration.getChild().getResourceName() = getID();
   eq CompilationUnit.getChild().getResourceName() = null;
