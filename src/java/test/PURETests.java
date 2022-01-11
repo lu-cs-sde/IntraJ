@@ -63,7 +63,7 @@ public class PURETests {
       IJGraph graph = new IJGraph(true, true);
       program.graphLayout(graph);
       program.printGraph(graph);
-      for (CFGRoot fun : program.methods()) {
+      for (CFGRoot fun : program.CFGRoots()) {
         printExit(fun.exit(), outStream);
       }
       // for (ConstructorDecl fun : program.constructors()) {

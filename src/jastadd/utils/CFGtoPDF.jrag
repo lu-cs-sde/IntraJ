@@ -164,6 +164,19 @@ aspect PrintGraph {
 
   eq MethodDecl.exit().prevNode() { return getChild(getNumChild() - 1); }
 
+  eq LambdaExpr.getChild(int i).prevNode() {
+    return i > 0 ? getChild(i - 1).lastNode() : entry();
+  }
+
+  eq LambdaExpr.lambdaDefinition().prevNode() { return this; }
+
+  eq LambdaDefinition.lastNode() = this;
+
+  eq LambdaExpr.entry().prevNode() { return lambdaDefinition(); }
+
+
+   eq LambdaExpr.exit().prevNode() { return getChild(getNumChild() - 1).lastNode(); }
+
   eq ResourceDeclaration.getChild(int i).prevNode() {
     return i > 0 ? getChild(i - 1).lastNode() : closeAccess().lastNode();
   }
@@ -336,6 +349,23 @@ public
       graph.addEdge(this.CFGName(), assignFalse().CFGName(), FlowRelation.NONE);
     }
   }
+
+ public
+  void LambdaExpr.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    for (ASTNode astnode : astChildren()) {
+      astnode.graphLayout(graph);
+      graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
+    }
+    graph.addNode(entry());
+    graph.addEdge(CFGName(), entry().CFGName(), FlowRelation.NONE);
+    graph.addNode(exit());
+    graph.addEdge(CFGName(), exit().CFGName(), FlowRelation.NONE);
+    graph.addNode(lambdaDefinition());
+    graph.addEdge(CFGName(), lambdaDefinition().CFGName(), FlowRelation.NONE);
+
+  }
+
 
 public
   void NEExpr.graphLayout(IJGraph graph) {
@@ -556,7 +586,7 @@ public
 public
   void Program.printGraph(IJGraph graph) {
     LinkedHashSet<CFGNode> visited = new LinkedHashSet<>();
-    for (CFGRoot md : methods()) {
+    for (CFGRoot md : CFGRoots()) {
       md.entry().printGraph(graph, visited);
     }
   }
@@ -623,6 +653,9 @@ public
   eq CompilationUnit.getChild().getID() = "";
 
   syn String ASTNode.CFGDump() = "";
+  eq LambdaDefinition.CFGDump() = "<" + getLambda().toString() + "> ◉ <" + getTargetFunction().toString()
+       + ">";
+  eq LambdaExpr.CFGDump() = "<" +toString() + ">";
   eq ClassInstanceExpr.CFGDump() = "<" + getAccess().type().name() + ">";
   eq EnumConstant.CFGDump() = "<" + getID() + ">";
   eq VarAccess.CFGDump() = "< " + getID() + " >";
@@ -631,7 +664,7 @@ public
   eq TypeAccess.CFGDump() = "< " + getID() + " >";
   eq MethodAccess.CFGDump() = "< " + getID() + " >";
   eq MethodDecl.CFGDump() = "< " + getID() + " >";
-  eq VariableDeclarator.CFGDump() = "< " + getID() + " >";
+  eq VariableDeclarator.CFGDump() = "< "+type().toString() + " " + getID() + " >";
   eq ConstructorDecl.CFGDump() = "< " + getID() + " >";
   eq ParameterDeclaration.CFGDump() = "< " + getID() + " >";
   eq ClassDecl.CFGDump() = "< " + getID() + " >";
@@ -653,10 +686,22 @@ public
                            : "";
   eq Expr.CFGDump() = "";
   eq MethodReference.CFGDump() = "< " + getID() + " >";
+  eq ConstructorReference.CFGDump() ="<" + getTypeAccess().type().name() + "::new>";
+  eq ClassReference.CFGDump() = "< " +  toString()+ " >";
+
   inh String MethodAccess.getResourceName();
   eq ResourceDeclaration.getChild().getResourceName() = getID();
   eq CompilationUnit.getChild().getResourceName() = null;
 
+  syn MethodDecl LambdaDefinition.getTargetFunction() {
+      InterfaceDecl ti = getLambda().targetInterface();
+      Iterator iter = ti.collectAbstractMethods().iterator();
+      while (iter.hasNext()) {
+        return (MethodDecl) iter.next();
+    }
+    return null;
+  }
+  
 public
   String ASTNode.genOrder(ArrayList<String> l) {
     if (l.size() <= 1)

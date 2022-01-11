@@ -1,4 +1,4 @@
-/* Copyright (c) 2021, Idriss Riouak <idriss.riouak@cs.lth.se>
+/* Copyright (c) 2022, Idriss Riouak <idriss.riouak@cs.lth.se>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -8,7 +8,7 @@
  * this list of conditions and the following disclaimer.
  *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
+ * this list of conditions and the folowing disclaimer in the documentation
  * and/or other materials provided with the distribution.
  *
  * 3. Neither the name of the copyright holder nor the names of its
@@ -28,29 +28,4 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
- aspect RTA {
-//     syn String CFGRoot.getName()= enclosingClass().getID() + "::" + getID();
-   
-
-//     inh ClassDecl CFGRoot.enclosingClass();
-//     eq ClassDecl.getChild().enclosingClass() = this;
-//     eq Program.getChild().enclosingClass() = null;
-
-//     syn Set<CFGRoot> CFGRoot.allFunctionCalls() = allFuncCalls();
-
-//     syn Set<CFGRoot> MethodAccess.allDecls(){
-//         LinkedHashSet<CFGRoot> res = new LinkedHashSet<>();
-//         Iterator iter = decls().iterator();
-//         while(iter.hasNext()){
-//             res.add((CFGRoot)iter.next());
-//         }
-//         return res;
-//     }
-//     coll LinkedHashSet<CFGRoot> CFGRoot.allFuncCalls() [new LinkedHashSet<CFGRoot>()] with addAll;
-//     MethodAccess contributes allDecls() to CFGRoot.allFuncCalls() for enclosingCFGRoot();
-
-
-//     inh CFGRoot MethodAccess.enclosingCFGRoot();
-//     eq CFGRoot.getChild().enclosingCFGRoot() = this;
-//     eq Program.getChild().enclosingCFGRoot() = null;
-}
+LambdaDefinition;

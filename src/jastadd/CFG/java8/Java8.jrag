@@ -30,11 +30,30 @@
 
  aspect CFG_java8 {
     MethodReference implements CFGNode;
+    ConstructorReference implements CFGNode;
+    LambdaExpr implements CFGRoot;
+    LambdaBody implements CFGSupport;
+    LambdaDefinition implements CFGNode;
+    
+    eq ConstructorReference.firstNodes() = SmallSet.<CFGNode> singleton(this);
     eq MethodReference.firstNodes() =SmallSet.<CFGNode>singleton(this);
     eq ExprMethodReference.firstNodes() = getExpr().firstNodes();
     eq ExprMethodReference.getExpr().nextNodes() = SmallSet.<CFGNode>singleton(this);
-    // abstract MethodReference : Expr ::= TypeArgument:Access* <ID:String>; 
 
+   syn nta LambdaDefinition LambdaExpr.lambdaDefinition() = new LambdaDefinition();
+   eq BlockLambdaBody.firstNodes() = getBlock().firstNodes();
+   eq ExprLambdaBody.firstNodes() = getExpr().firstNodes();
+   eq LambdaExpr.firstNodes() = lambdaDefinition().firstNodes();
+   eq LambdaDefinition.firstNodes() = SmallSet.<CFGNode>singleton(this);
+   eq LambdaExpr.lambdaDefinition().nextNodes() = nextNodes();
+   eq LambdaExpr.entry().nextNodes() = getLambdaBody().firstNodes();
+   eq LambdaExpr.getLambdaBody().nextNodes() = exit().firstNodes();
 
+   inh LambdaExpr LambdaDefinition.getLambda();
+   eq LambdaExpr.getChild().getLambda() = this;
+   eq Program.getChild().getLambda() = null;
 
+   LambdaExpr contributes nta lambdaDefinition() to CFGNode.predColl();
+   LambdaExpr contributes nta entry() to CFGNode.predColl();
+   LambdaExpr contributes nta exit() to CFGNode.predColl();
  }

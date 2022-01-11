@@ -514,6 +514,7 @@ public
 
   MethodDecl contributes nta entry() to CFGNode.predColl();
   MethodDecl contributes nta exit() to CFGNode.predColl();
+
   ConstructorDecl contributes nta entry() to CFGNode.predColl();
   ConstructorDecl contributes nta exit() to CFGNode.predColl();
   ConstructorDecl contributes nta implicit() to CFGNode.predColl();

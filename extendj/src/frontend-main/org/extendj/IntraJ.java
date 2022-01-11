@@ -204,7 +204,7 @@ public class IntraJ extends Frontend {
     Integer nNodes = 0, nEdges = 0;
     Integer maxNodes = 0, maxEdges = 0;
 
-    for (CFGRoot r : program.methods()) {
+    for (CFGRoot r : program.CFGRoots()) {
       int resNodes = r.numbCFGNode();
       int resEdges = r.numbEdges();
       nNodes += resNodes;
@@ -217,7 +217,7 @@ public class IntraJ extends Frontend {
       }
     }
     Utils.printStatistics(System.out,
-                          "Number roots: " + program.methods().size());
+                          "Number roots: " + program.CFGRoots().size());
     Utils.printStatistics(System.out, "Number CFGNodes: " + nNodes);
     Utils.printStatistics(System.out, "Number Edges: " + nEdges);
     Utils.printStatistics(System.out,
@@ -291,12 +291,12 @@ public class IntraJ extends Frontend {
   public Program getEntryPoint() { return program; }
 
   private void debug() {
-    for (CFGRoot root : getEntryPoint().methods()) {
+    for (CFGRoot root : getEntryPoint().CFGRoots()) {
       root.entry().printSuccSets(System.out,
                                  SmallSet.<CFGNode>empty().<CFGNode>mutable());
     }
     System.out.println("-----------");
-    for (CFGRoot root : getEntryPoint().methods()) {
+    for (CFGRoot root : getEntryPoint().CFGRoots()) {
       root.exit().printPredSets(System.out,
                                 SmallSet.<CFGNode>empty().<CFGNode>mutable());
     }

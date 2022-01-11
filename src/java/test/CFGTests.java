@@ -72,12 +72,12 @@ public class CFGTests {
       IJGraph graph = new IJGraph(true, true);
       program.graphLayout(graph);
       program.printGraph(graph);
-      for (CFGRoot fun : program.methods()) {
+      for (CFGRoot fun : program.CFGRoots()) {
         fun.entry().printSuccSets(outStream, nodes);
       }
       outStream.println();
       nodes = SmallSet.<CFGNode>empty().<CFGNode>mutable();
-      for (CFGRoot fun : program.methods()) {
+      for (CFGRoot fun : program.CFGRoots()) {
         fun.exit().printPredSets(outStream, nodes);
       }
 

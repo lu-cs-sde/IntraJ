@@ -56,19 +56,18 @@ public
   coll Set<WarningMsg> CompilationUnit.NPA()[new TreeSet<WarningMsg>()] with add
       root CompilationUnit;
 
-  coll Set<CFGRoot> Program.methods()[new LinkedHashSet<>()] with add root Program;
-  MethodDecl contributes this to Program.methods();
-  ClassDecl contributes nta staticInitialization() to Program.methods();
-  ClassDecl contributes nta instanceInitialization() to Program.methods();
-  ConstructorDecl contributes this to Program.methods();
+  coll Set<CFGRoot> Program.CFGRoots()[new LinkedHashSet<>()] with add root Program;
+  CFGRoot contributes this to Program.CFGRoots();
+  ClassDecl contributes nta staticInitialization() to Program.CFGRoots();
+  ClassDecl contributes nta instanceInitialization() to Program.CFGRoots();
 
-  coll Set<CFGRoot> CompilationUnit.methods()[new LinkedHashSet<>()] with add
+
+  coll Set<CFGRoot> CompilationUnit.CFGRoots()[new LinkedHashSet<>()] with add
       root CompilationUnit;
-  MethodDecl contributes this to CompilationUnit.methods();
-  ClassDecl contributes nta staticInitialization() to CompilationUnit.methods();
+  CFGRoot contributes this to Program.CFGRoots();
+  ClassDecl contributes nta staticInitialization() to CompilationUnit.CFGRoots();
   ClassDecl contributes nta instanceInitialization()
-      to CompilationUnit.methods();
-  ConstructorDecl contributes this to CompilationUnit.methods();
+      to CompilationUnit.CFGRoots();
 
   /**This class contains all the information related to a specific warning:
    * Location: file path.
