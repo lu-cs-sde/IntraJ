@@ -1,3 +1,6 @@
 [submodule "src/jastadd/CFG/IntraCFG"]
 	path = src/jastadd/CFG/IntraCFG
 	url = https://github.com/lu-cs-sde/IntraCFG.git
+[submodule "extendj"]
+	path = extendj
+	url = https://Idriss_Rio@bitbucket.org/Idriss_Rio/extendj.git
