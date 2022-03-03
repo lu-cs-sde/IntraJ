@@ -1,7 +1,0 @@
-%header {:
- package org.extendj.parser;
-
- import org.extendj.ast.*;
- import org.extendj.scanner.JavaScanner;
- import org.extendj.scanner.Unicode;
-:};
