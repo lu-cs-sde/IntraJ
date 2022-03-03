@@ -33,3 +33,6 @@ InstanceInitialization: MethodDecl;
 ImplicitCondition: BooleanLiteral;
 UncheckedExceptions :EmptyStmt;
 ImplicitAssignment::=  <MayBeNull:Boolean> <Declaration:Variable>;
+
+
+NTACloseResource : MethodAccess;
