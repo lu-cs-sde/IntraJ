@@ -30,6 +30,7 @@
 
 import org.extendj.flow.utils.Gamma;
 import org.extendj.ast.SmallSet;
+import org.extendj.analysis.Analysis;
 aspect NPA {
 public
   interface ReachedLVal {}
@@ -41,7 +42,7 @@ public
   PreIncExpr implements ReachedLVal;
   PreDecExpr implements ReachedLVal;
 
-  interface Assign extends CFGNode{}
+  interface Assign extends CFGNode {}
   AssignExpr implements Assign;
   ImplicitAssignment implements Assign;
   VariableDeclarator implements Assign;
@@ -111,7 +112,7 @@ public
   VarAccess contributes warning(getCompilationUnit().pathName(),
                                 "A 'NullPointerException' could be thrown;'" +
                                     name() + "' is nullable.",
-                                Analysis.NPA) when
+                                Analysis.AvailableAnalysis.NPA) when
   isNullable() to CompilationUnit.NPA();
 
   /***************************************************************************

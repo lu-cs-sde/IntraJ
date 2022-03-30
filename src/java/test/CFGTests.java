@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import org.extendj.IntraJ;
+import org.extendj.analysis.Analysis;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.ConstructorDecl;
@@ -56,6 +57,9 @@ public class CFGTests {
 
   @Test
   public void runTest() throws Exception {
+    Analysis.getAnalysisInstance().removeAllNodes();
+    Analysis.getAnalysisInstance().addAnalysis(
+        Analysis.AvailableAnalysis.TEST); // Activating testing mode
     PrintStream out = System.out;
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
          PrintStream outStream = new PrintStream(baos)) {

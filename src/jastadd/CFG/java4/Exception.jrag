@@ -78,7 +78,7 @@ aspect ExceptionJava4 {
 
   eq TryStmt.getBlock().nextNodes() = UncheckedExceptions().firstNodes();
   eq TryStmt.firstNodes() = getBlock().firstNodes();
-  eq UncheckedExceptions.firstNodes() = SmallSet.<CFGNode>singleton(this);
+  eq UncheckedExceptions.firstNodes() = dynamicFN();
 
   eq BasicCatch.firstNodes() = getParameter().firstNodes();
   eq BasicCatch.getParameter().nextNodes() = getBlock().firstNodes();

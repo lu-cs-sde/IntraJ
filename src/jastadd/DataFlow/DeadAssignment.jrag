@@ -30,7 +30,7 @@
 
 import org.extendj.IntraJ;
 aspect DAA {
-  
+
   // True <==> LVA_def() ∩  LVA_out() = emptyset
   syn boolean CFGNode.isDead() // = !LVA_def().compl(LVA_out()).isEmpty();
   {
@@ -56,7 +56,7 @@ aspect DAA {
   eq AssignExpr.DAA_isDeadAssign() {
     return !LVA_def().isEmpty() &&           // The assignment is a definition
            !getDest().varDecl().isFinal() && // The L-value is not final
-                   (getDeclaration().isLocalVariable() || // The def is a local vriable
+           (getDeclaration().isLocalVariable() || // The def is a local vriable
             (getDeclaration().isMethodParameter() &&
              getDeclaration().type().isPrimitiveType())) &&
            isDead();
@@ -74,20 +74,20 @@ aspect DAA {
   AssignExpr contributes warning(
       getCompilationUnit().pathName(),
       "The value stored in '" + getDest().varDecl().name() + "' is never read.",
-      Analysis.DAA) when
+      Analysis.AvailableAnalysis.DAA) when
   DAA_isDeadAssign() to CompilationUnit.DAA();
 
   VariableDeclarator contributes warning(
       getCompilationUnit().pathName(),
       "The value stored in '" + singletonValue().name() + "' is never read.",
-      Analysis.DAA) when
+      Analysis.AvailableAnalysis.DAA) when
   DAA_isDeadAssign() to CompilationUnit.DAA();
 
   UnaryIncDec contributes warning(getCompilationUnit().pathName(),
                                   "The value stored in '" +
                                       getOperand().varDecl().name() +
                                       "' is never read.",
-                                  Analysis.DAA) when
+                                  Analysis.AvailableAnalysis.DAA) when
   DAA_isDeadAssign() to CompilationUnit.DAA();
 
   /**************************************************************************
@@ -95,13 +95,12 @@ aspect DAA {
   ***************************************************************************
   */
 
-  syn boolean Expr.isUsualDefaultValue()  = false;
+  syn boolean Expr.isUsualDefaultValue() = false;
   eq MinusExpr.isUsualDefaultValue() = getOperand().isUsualDefaultValue();
   eq PlusExpr.isUsualDefaultValue() = getOperand().isUsualDefaultValue();
   eq StringLiteral.isUsualDefaultValue() = getLITERAL().equals("");
   eq NullLiteral.isUsualDefaultValue() = true;
   eq BooleanLiteral.isUsualDefaultValue() = true;
-  eq ParExpr.isUsualDefaultValue() = getExpr().isUsualDefaultValue();
   eq IntegerLiteral.isUsualDefaultValue() {
     String lit = getLITERAL();
     return (lit.equals("0") || lit.equals("1") || lit.equals("-1"));

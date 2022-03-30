@@ -37,7 +37,7 @@ public
   ContinueStmt implements ThrowsException;
   ThrowStmt implements ThrowsException;
 
-  TryWithResources implements CFGSupport;
+  TryWithResources implements CFGNode;
   NTACloseResource implements CFGNode;
 
   /**************************** TryWithResources*******************************/
@@ -304,183 +304,183 @@ public
     if (hasClose())
       getCloseList().collectContributions();
     super.collectContributions();
+  }
+  to CFGNode.predColl();
+
+  /**************************** ThrowStmt*******************************/
+
+  eq ThrowStmt.getExpr().nextNodes() {
+    if (hasClose())
+      return getClose(0).firstNodes();
+    else
+      return UncheckedExceptions().firstNodes();
+  }
+
+  ThrowStmt contributes {
+    if (hasClose())
+      getCloseList().collectContributions();
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
+
+  /**************************** ContinueStmt*******************************/
+  eq ContinueStmt.firstNodes() {
+    if (hasClose()) {
+      return getClose(0).firstNodes();
+    } else if (hasFinally()) {
+      return UncheckedExceptions().firstNodes();
+    } else {
+      return targetStmt().nextContinue();
     }
-    to CFGNode.predColl();
+  }
 
-    /**************************** ThrowStmt*******************************/
+  ContinueStmt contributes {
+    if (hasClose())
+      getCloseList().collectContributions();
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
 
-    eq ThrowStmt.getExpr().nextNodes() {
-      if (hasClose())
-        return getClose(0).firstNodes();
-      else
-        return UncheckedExceptions().firstNodes();
+  /**************************** ReturnStmt*******************************/
+  eq ReturnStmt.firstNodes() {
+    if (hasResult()) {
+      return getResult().firstNodes();
+    } else if (hasClose()) {
+      return getClose(0).firstNodes();
+    } else if (hasFinally()) {
+      return UncheckedExceptions().firstNodes();
+    } else {
+      return dynamicFN();
     }
+  }
 
-    ThrowStmt contributes {
-      if (hasClose())
-        getCloseList().collectContributions();
-      super.collectContributions();
+  eq ReturnStmt.getResult().nextNodes() {
+    if (hasClose()) {
+      return getClose(0).firstNodes();
+    } else if (hasFinally()) {
+      return UncheckedExceptions().firstNodes();
+    } else {
+      return dynamicFN();
     }
-    to CFGNode.predColl();
+  }
 
-    /**************************** ContinueStmt*******************************/
-    eq ContinueStmt.firstNodes() {
-      if (hasClose()) {
-        return getClose(0).firstNodes();
-      } else if (hasFinally()) {
-        return UncheckedExceptions().firstNodes();
-      } else {
-        return targetStmt().nextContinue();
-      }
-    }
+  ReturnStmt contributes {
+    if (hasClose())
+      getCloseList().collectContributions();
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
 
-    ContinueStmt contributes {
-      if (hasClose())
-        getCloseList().collectContributions();
-      super.collectContributions();
-    }
-    to CFGNode.predColl();
+  /**************************** BreakStmt*******************************/
 
-    /**************************** ReturnStmt*******************************/
-    eq ReturnStmt.firstNodes() {
-      if (hasResult()) {
-        return getResult().firstNodes();
-      } else if (hasClose()) {
-        return getClose(0).firstNodes();
-      } else if (hasFinally()) {
-        return UncheckedExceptions().firstNodes();
-      } else {
-        return SmallSet.<CFGNode>singleton(this);
-      }
-    }
+  eq BreakStmt.firstNodes() {
+    if (hasClose()) {
+      return getClose(0).firstNodes();
+    } else if (hasFinally())
+      return UncheckedExceptions().firstNodes();
+    else if (hasLabel())
+      return lookupLabel(getLabel()).nextNodes();
+    else
+      return targetStmt().nextNodes();
+  }
 
-    eq ReturnStmt.getResult().nextNodes() {
-      if (hasClose()) {
-        return getClose(0).firstNodes();
-      } else if (hasFinally()) {
-        return UncheckedExceptions().firstNodes();
-      } else {
-        return SmallSet.<CFGNode>singleton(this);
-      }
-    }
+  BreakStmt contributes {
+    if (hasClose())
+      getCloseList().collectContributions();
+    super.collectContributions();
+  }
+  to CFGNode.predColl();
 
-    ReturnStmt contributes {
-      if (hasClose())
-        getCloseList().collectContributions();
-      super.collectContributions();
-    }
-    to CFGNode.predColl();
+  /************************** ThrowsException*******************************/
 
-    /**************************** BreakStmt*******************************/
-
-    eq BreakStmt.firstNodes() {
-      if (hasClose()) {
-        return getClose(0).firstNodes();
-      } else if (hasFinally())
-        return UncheckedExceptions().firstNodes();
-      else if (hasLabel())
-        return lookupLabel(getLabel()).nextNodes();
-      else
-        return targetStmt().nextNodes();
-    }
-
-    BreakStmt contributes {
-      if (hasClose())
-        getCloseList().collectContributions();
-      super.collectContributions();
-    }
-    to CFGNode.predColl();
-
-    /************************** ThrowsException*******************************/
-
-    syn nta List<NTACloseResource> ThrowsException.getCloseList() {
-      List<NTACloseResource> res = new List<>();
-      int startIndex = 0;
-      TryStmt tr = getEnclosingTry();
-      if (tr == null || !tr.hasResources())
-        return res;
-      else if (tr.hasResources()) {
-        TryWithResources twr = (TryWithResources)tr;
-        for (int i = twr.getNumResource() - 1; i >= 0; --i) {
-          res.add(new NTACloseResource(twr.getResource(i).closeAccess()));
-        }
-      }
+  syn nta List<NTACloseResource> ThrowsException.getCloseList() {
+    List<NTACloseResource> res = new List<>();
+    int startIndex = 0;
+    TryStmt tr = getEnclosingTry();
+    if (tr == null || !tr.hasResources())
       return res;
-    }
-
-    eq ThrowsException.getClose(int index).nextNodes() {
-      if (index < getNumClose() - 1) {
-        return getClose(index + 1).firstNodes();
-      } else
-        return UncheckedExceptions().firstNodes();
-    }
-
-    eq ThrowsException.UncheckedExceptions().nextNodes() {
-      if (getEnclosingTry() == null && !hasFinally() && !isThrowStmt()) {
-        return SmallSet.<CFGNode>empty();
+    else if (tr.hasResources()) {
+      TryWithResources twr = (TryWithResources)tr;
+      for (int i = twr.getNumResource() - 1; i >= 0; --i) {
+        res.add(new NTACloseResource(twr.getResource(i).closeAccess()));
       }
-      SmallSet<CFGNode> res = new SmallSet<CFGNode>();
-      if (hasFinally() && getFinally().getNumStmt() > 0) {
-        if (getEnclosingTry() != null)
-          for (CatchClause cc : getEnclosingTry().getCatchClauses()) {
+    }
+    return res;
+  }
+
+  eq ThrowsException.getClose(int index).nextNodes() {
+    if (index < getNumClose() - 1) {
+      return getClose(index + 1).firstNodes();
+    } else
+      return UncheckedExceptions().firstNodes();
+  }
+
+  eq ThrowsException.UncheckedExceptions().nextNodes() {
+    if (getEnclosingTry() == null && !hasFinally() && !isThrowStmt()) {
+      return SmallSet.<CFGNode>empty();
+    }
+    SmallSet<CFGNode> res = new SmallSet<CFGNode>();
+    if (hasFinally() && getFinally().getNumStmt() > 0) {
+      if (getEnclosingTry() != null)
+        for (CatchClause cc : getEnclosingTry().getCatchClauses()) {
+          if (cc.handles(lookupType("java.lang", "RuntimeException"))) {
+            res.add(cc.firstNodes());
+          }
+        }
+      res.add(getFinally().firstNodes());
+    } else {
+      res.add(elseNode());
+      TryStmt tr = getEnclosingTry();
+    outer:
+      while (tr != null) {
+        if (tr.hasFinally()) {
+          for (CatchClause cc : tr.getCatchClauses()) {
             if (cc.handles(lookupType("java.lang", "RuntimeException"))) {
               res.add(cc.firstNodes());
+              break outer;
             }
           }
-        res.add(getFinally().firstNodes());
-      } else {
-        res.add(elseNode());
-        TryStmt tr = getEnclosingTry();
-      outer:
-        while (tr != null) {
-          if (tr.hasFinally()) {
-            for (CatchClause cc : tr.getCatchClauses()) {
-              if (cc.handles(lookupType("java.lang", "RuntimeException"))) {
-                res.add(cc.firstNodes());
-                break outer;
-              }
-            }
-            res.add(tr.getFinally().firstNodes());
-            break;
-          } else {
-            tr = tr.getEnclosingTry();
-            continue;
-          }
+          res.add(tr.getFinally().firstNodes());
+          break;
+        } else {
+          tr = tr.getEnclosingTry();
+          continue;
         }
-        if (tr == null)
-          res.add(exceptionLookup(lookupType("java.lang", "RuntimeException")));
       }
-      return res;
+      if (tr == null)
+        res.add(exceptionLookup(lookupType("java.lang", "RuntimeException")));
     }
+    return res;
+  }
 
-    syn Boolean ThrowsException.isThrowStmt() = false;
-    eq ThrowStmt.isThrowStmt() = true;
+  syn Boolean ThrowsException.isThrowStmt() = false;
+  eq ThrowStmt.isThrowStmt() = true;
 
-    syn SmallSet<CFGNode> ThrowsException.elseNode();
-    eq BreakStmt.elseNode() = hasLabel() ? lookupLabel(getLabel()).nextNodes()
-                                         : targetStmt().nextNodes();
+  syn SmallSet<CFGNode> ThrowsException.elseNode();
+  eq BreakStmt.elseNode() = hasLabel() ? lookupLabel(getLabel()).nextNodes()
+                                       : targetStmt().nextNodes();
 
-    eq ReturnStmt.elseNode() = SmallSet.<CFGNode>singleton(this);
+  eq ReturnStmt.elseNode() = dynamicFN();
 
-    eq ContinueStmt.elseNode() = targetStmt().nextContinue();
+  eq ContinueStmt.elseNode() = targetStmt().nextContinue();
 
-    eq ThrowStmt.elseNode() = exceptionLookup(getExpr().type());
+  eq ThrowStmt.elseNode() = exceptionLookup(getExpr().type());
 
-    /***************************
-     * NTACloseResource*******************************/
-    syn MethodAccess NTACloseResource.getOrigin() = origin;
-  private
-    MethodAccess NTACloseResource.origin;
-  public
-    NTACloseResource.NTACloseResource(MethodAccess origin) {
-      this.origin = origin;
-    }
+  /***************************
+   * NTACloseResource*******************************/
+  syn MethodAccess NTACloseResource.getOrigin() = origin;
+private
+  MethodAccess NTACloseResource.origin;
+public
+  NTACloseResource.NTACloseResource(MethodAccess origin) {
+    this.origin = origin;
+  }
 
-    /**************************** MultiCatch
-     * ***********************************/
-    eq MultiCatch.firstNodes() { return getParameter().firstNodes(); }
+  /**************************** MultiCatch
+   * ***********************************/
+  eq MultiCatch.firstNodes() { return getParameter().firstNodes(); }
 
-    eq MultiCatch.getParameter().nextNodes() { return getBlock().firstNodes(); }
+  eq MultiCatch.getParameter().nextNodes() { return getBlock().firstNodes(); }
 
-    eq MultiCatch.getBlock().nextNodes() { return nextNodes(); }
+  eq MultiCatch.getBlock().nextNodes() { return nextNodes(); }
 }

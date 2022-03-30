@@ -7,8 +7,8 @@ import java.util.Map;
 import java.util.Set;
 import org.extendj.IntraJ;
 import org.extendj.JavaChecker;
+import org.extendj.analysis.Analysis;
 import org.extendj.ast.AbsRef;
-import org.extendj.ast.Analysis;
 import org.extendj.ast.AssignExpr;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
@@ -48,6 +48,9 @@ public class PURETests {
 
   @Test
   public void runTest() throws Exception {
+    Analysis.getAnalysisInstance().removeAllNodes();
+    Analysis.getAnalysisInstance().addAnalysis(
+        Analysis.AvailableAnalysis.TEST); // Activating testing mode
     PrintStream out = System.out;
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
          PrintStream outStream = new PrintStream(baos)) {

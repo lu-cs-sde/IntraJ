@@ -52,9 +52,9 @@ public
    ***************************** DEF sets *************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.LVA_def()  = emptyBitSet();
+  syn BitSet CFGNode.LVA_def() = emptyBitSet();
   eq VariableDeclarator.LVA_def() = emptyBitSet().singleton(singletonValue());
-  eq AssignExpr.LVA_def() =getVarDeclSet();
+  eq AssignExpr.LVA_def() = getVarDeclSet();
   eq UnaryIncDec.LVA_def() = getVarDeclSet();
   eq ImplicitAssignment.LVA_def() = emptyBitSet();
 
@@ -62,10 +62,10 @@ public
    ***************************** USE sets *************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.LVA_use()  = emptyBitSet();
+  syn BitSet CFGNode.LVA_use() = emptyBitSet();
   eq VarAccess.LVA_use() = getVarDeclSet();
   eq UnaryIncDec.LVA_use() = getVarDeclSet();
- 
+
   /****************************************************************************
    ***************************** OUT sets *************************************
    ****************************************************************************
@@ -78,7 +78,6 @@ public
     return res;
   }
 
-
   /****************************************************************************
    ***************************** IN sets **************************************
    ****************************************************************************
@@ -88,22 +87,21 @@ public
   eq AssignExpr.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
   eq UnaryIncDec.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
   eq VarAccess.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
- 
 
   /****************************************************************************
    ***************************** GETVARDECLSET    *****************************
    ****************************************************************************
    */
 
-syn BitSet Expr.getVarDeclSet() = emptyBitSet();
-eq VarAccess.getVarDeclSet() =
-    (!isDest()) ? emptyBitSet().singleton(decl()) : emptyBitSet();
-eq UnaryIncDec.getVarDeclSet() =
-    (getOperand().varDecl() != null)
-        ? emptyBitSet().singleton(getOperand().varDecl())
-        : emptyBitSet();
-eq AssignExpr.getVarDeclSet() =
-    (getDest().varDecl() != null)
-        ? emptyBitSet().singleton(getDest().varDecl())
-        : emptyBitSet();
+  syn BitSet Expr.getVarDeclSet() = emptyBitSet();
+  eq VarAccess.getVarDeclSet() =
+      (!isDest()) ? emptyBitSet().singleton(decl()) : emptyBitSet();
+  eq UnaryIncDec.getVarDeclSet() =
+      (getOperand().varDecl() != null)
+          ? emptyBitSet().singleton(getOperand().varDecl())
+          : emptyBitSet();
+  eq AssignExpr.getVarDeclSet() =
+      (getDest().varDecl() != null)
+          ? emptyBitSet().singleton(getDest().varDecl())
+          : emptyBitSet();
 }

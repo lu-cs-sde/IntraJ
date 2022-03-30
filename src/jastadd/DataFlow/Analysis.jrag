@@ -29,43 +29,27 @@
  */
 
 aspect Analysis {
-  /**
-   * Analysis identifier.
-   */
-public
-  enum Analysis {
-    PURE,
-    DAA,
-    NPA;
 
-    public static String[] names(){
-      String valuesStr = Arrays.toString(Analysis.values());
-      return valuesStr.substring(1, valuesStr.length() - 1)
-          .replace(" ", "")
-          .split(",");}
-  }
+  coll TreeSet<WarningMsg> CompilationUnit
+      .PURE()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
 
-  coll TreeSet<WarningMsg>
-  CompilationUnit.PURE()[new TreeSet<WarningMsg>()] with add root
-      CompilationUnit;
-
-  coll TreeSet<WarningMsg>
-      CompilationUnit.DAA()[new TreeSet<WarningMsg>()] with add root
-          CompilationUnit;
+  coll TreeSet<WarningMsg> CompilationUnit
+      .DAA()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
 
   coll Set<WarningMsg> CompilationUnit.NPA()[new TreeSet<WarningMsg>()] with add
       root CompilationUnit;
 
-  coll Set<CFGRoot> Program.CFGRoots()[new LinkedHashSet<>()] with add root Program;
+  coll Set<CFGRoot> Program.CFGRoots()[new LinkedHashSet<>()] with add root
+      Program;
   CFGRoot contributes this to Program.CFGRoots();
   ClassDecl contributes nta staticInitialization() to Program.CFGRoots();
   ClassDecl contributes nta instanceInitialization() to Program.CFGRoots();
 
-
   coll Set<CFGRoot> CompilationUnit.CFGRoots()[new LinkedHashSet<>()] with add
       root CompilationUnit;
   CFGRoot contributes this to Program.CFGRoots();
-  ClassDecl contributes nta staticInitialization() to CompilationUnit.CFGRoots();
+  ClassDecl contributes nta staticInitialization()
+      to CompilationUnit.CFGRoots();
   ClassDecl contributes nta instanceInitialization()
       to CompilationUnit.CFGRoots();
 
@@ -78,15 +62,17 @@ public
 
 public
   class WarningMsg implements Comparable<WarningMsg> {
-    public final Integer lineStart, columnStart, lineEnd, columnEnd;
-    public final String errMsg;
-    final Analysis analysis;
+  public
+    final Integer lineStart, columnStart, lineEnd, columnEnd;
+  public
+    final String errMsg;
+    final Analysis.AvailableAnalysis analysis;
     final String loc;
 
   public
-    WarningMsg(String loc, Analysis analysis, Integer lineStart,
-               Integer columnStart, Integer lineEnd, Integer columnEnd,
-               String errMsg) {
+    WarningMsg(String loc, Analysis.AvailableAnalysis analysis,
+               Integer lineStart, Integer columnStart, Integer lineEnd,
+               Integer columnEnd, String errMsg) {
       this.analysis = analysis;
       this.lineStart = lineStart;
       this.lineEnd = lineEnd;
@@ -130,12 +116,12 @@ public
     }
 
   public
-    Analysis getAnalysisType() { return analysis; }
+    Analysis.AvailableAnalysis getAnalysisType() { return analysis; }
 
   } // End of class WarningMsg
 
   protected WarningMsg ASTNode.warning(String loc, String msg,
-                                       Analysis analysis) {
+                                       Analysis.AvailableAnalysis analysis) {
     return new WarningMsg(loc, analysis, lineStart(), columnStart() - 1,
                           lineEnd(), columnEnd(), msg);
   }
@@ -143,7 +129,6 @@ public
   inh Boolean UnaryIncDec.exprAsStmt();
   eq ExprStmt.getChild().exprAsStmt() = (getExpr() instanceof UnaryIncDec);
   eq CompilationUnit.getChild().exprAsStmt() = false;
-
 
   inh CompilationUnit AssignExpr.getCompilationUnit();
   inh CompilationUnit VarAccess.getCompilationUnit();

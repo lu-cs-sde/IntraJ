@@ -51,9 +51,9 @@ aspect CFGJava4 {
   MethodDecl implements CFGRoot;
   ConstructorDecl implements CFGRoot;
 
-  Stmt implements CFGSupport;
-  Expr implements CFGSupport;
-  BodyDecl implements CFGSupport;
+  Stmt implements CFGNode;
+  Expr implements CFGNode;
+  BodyDecl implements CFGNode;
 
   RelationalExpr implements BinExprCFG;
   BitwiseExpr implements BinExprCFG;
@@ -61,10 +61,10 @@ aspect CFGJava4 {
   ArithmeticExpr implements BinExprCFG;
 
 public
-  interface BinExprCFG extends CFGNode {}
+  interface BinExprCFG {}
   Unary implements CFGNode;
 
-  syn SmallSet<CFGNode> CFGSupport.jointTrueFalse() {
+  syn SmallSet<CFGNode> CFGNode.jointTrueFalse() {
     SmallSet<CFGNode> res = new SmallSet<CFGNode>();
     res.add(nextNodesTT());
     res.add(nextNodesFF());
@@ -85,12 +85,10 @@ public
            ? nextNodes()
            : getDeclarator(index + 1).firstNodes());
   eq FieldDeclarator.firstNodes() =
-      hasInit() ? getInit().firstNodes() : SmallSet.<CFGNode>singleton(this);
-  eq FieldDeclarator.getInit().nextNodes() = SmallSet.<CFGNode>singleton(this);
-  eq FieldDeclarator.getInit().nextNodesTT() =
-      SmallSet.<CFGNode>singleton(this);
-  eq FieldDeclarator.getInit().nextNodesFF() =
-      SmallSet.<CFGNode>singleton(this);
+      hasInit() ? getInit().firstNodes() : dynamicFN();
+  eq FieldDeclarator.getInit().nextNodes() = dynamicFN();
+  eq FieldDeclarator.getInit().nextNodesTT() = dynamicFN();
+  eq FieldDeclarator.getInit().nextNodesFF() = dynamicFN();
 
   eq MemberClassDecl.firstNodes() = nextNodes();
 
@@ -99,8 +97,7 @@ public
    */
   eq BinExprCFG.firstNodes() = getLeftOperand().firstNodes();
   eq BinExprCFG.getLeftOperand().nextNodes() = getRightOperand().firstNodes();
-  eq BinExprCFG.getRightOperand().nextNodes() =
-      SmallSet.<CFGNode>singleton(this);
+  eq BinExprCFG.getRightOperand().nextNodes() = dynamicFN();
 
   /************************* SHORT-CIRCUIT-EVALUATION *************************/
   eq AndLogicalExpr.firstNodes() = getLeftOperand().firstNodes();
@@ -113,12 +110,8 @@ public
   eq OrLogicalExpr.getLeftOperand().nextNodesFF() =
       getRightOperand().firstNodes();
 
-  eq LogicalExpr.getLeftOperand().nextNodes() {
-    SmallSet<CFGNode> res =
-        new SmallSet<CFGNode>().union(getLeftOperand().nextNodesTT());
-    res.add(getLeftOperand().nextNodesFF());
-    return res;
-  }
+  eq LogicalExpr.getLeftOperand().nextNodes() =
+      getLeftOperand().jointTrueFalse();
 
   eq LogicalExpr.getRightOperand().nextNodesTT() = nextNodesTT();
   eq LogicalExpr.getRightOperand().nextNodesFF() = nextNodesFF();
@@ -147,29 +140,23 @@ public
   eq CompilationUnit.getChild().isAssign() = false;
 
   eq ArrayAccess.firstNodes() = getExpr().firstNodes();
-  eq ArrayAccess.getExpr().nextNodes() = SmallSet.<CFGNode>singleton(this);
+  eq ArrayAccess.getExpr().nextNodes() = dynamicFN();
 
   eq MethodAccess.firstNodes() {
-    return (getNumArg() == 0) ? SmallSet.<CFGNode>singleton(this)
-                              : getArg(0).firstNodes();
+    return (getNumArg() == 0) ? dynamicFN() : getArg(0).firstNodes();
   }
   eq MethodAccess.getArg(int i).nextNodes() =
-      (getNumArg() - 1 == i) ? SmallSet.<CFGNode>singleton(this)
-                             : getArg(i + 1).firstNodes();
+      (getNumArg() - 1 == i) ? dynamicFN() : getArg(i + 1).firstNodes();
 
   eq MethodAccess.getArg(int index).nextNodesTT() =
-      (getNumArg() - 1 == index) ? SmallSet.<CFGNode>singleton(this)
-                                 : getArg(index + 1).firstNodes();
+      (getNumArg() - 1 == index) ? dynamicFN() : getArg(index + 1).firstNodes();
   eq MethodAccess.getArg(int index).nextNodesFF() =
-      (getNumArg() - 1 == index) ? SmallSet.<CFGNode>singleton(this)
-                                 : getArg(index + 1).firstNodes();
+      (getNumArg() - 1 == index) ? dynamicFN() : getArg(index + 1).firstNodes();
 
-  eq ConstructorAccess.firstNodes() = (getNumArg() == 0)
-                                          ? SmallSet.<CFGNode>singleton(this)
-                                          : getArg(0).firstNodes();
+  eq ConstructorAccess.firstNodes() =
+      (getNumArg() == 0) ? dynamicFN() : getArg(0).firstNodes();
   eq ConstructorAccess.getArg(int i).nextNodes() =
-      (getNumArg() - 1 == i) ? SmallSet.<CFGNode>singleton(this)
-                             : getArg(i + 1).firstNodes();
+      (getNumArg() - 1 == i) ? dynamicFN() : getArg(i + 1).firstNodes();
 
   /************************** BRACKET EXPRESSION *******************************
    * Forwards the flow to the internal expression.
@@ -179,15 +166,13 @@ public
   /****************************** Unary ****************************************
    * Forwards the flow to the internal expression.
    */
-  eq Unary.getOperand().nextNodes() = SmallSet.<CFGNode>singleton(this);
+  eq Unary.getOperand().nextNodes() = dynamicFN();
   eq Unary.firstNodes() = getOperand().firstNodes();
 
-  eq UnaryIncDec.firstNodes() = getOperand().isVarAccess()
-                                    ? SmallSet.<CFGNode>singleton(this)
-                                    : getOperand().firstNodes();
+  eq UnaryIncDec.firstNodes() =
+      getOperand().isVarAccess() ? dynamicFN() : getOperand().firstNodes();
   eq UnaryIncDec.getOperand().nextNodes() =
-      getOperand().isVarAccess() ? SmallSet.<CFGNode>empty()
-                                 : SmallSet.<CFGNode>singleton(this);
+      getOperand().isVarAccess() ? SmallSet.<CFGNode>empty() : dynamicFN();
 
   /************************** CAST EXPRESSION **********************************
    * Forwards the flow to the internal expression.
@@ -199,25 +184,22 @@ public
    */
   eq InstanceOfExpr.firstNodes() = getExpr().firstNodes();
   eq InstanceOfExpr.getExpr().nextNodes() = getTypeAccess().firstNodes();
-  eq InstanceOfExpr.getTypeAccess().nextNodes() =
-      SmallSet.<CFGNode>singleton(this);
+  eq InstanceOfExpr.getTypeAccess().nextNodes() = dynamicFN();
 
   /*************************** ASSIGN EXPRESSION ******************************/
   eq AssignExpr.firstNodes() = getDest().isVarAccess()
                                    ? getSource().firstNodes()
                                    : getDest().firstNodes();
   eq AssignExpr.getDest().nextNodes() = getSource().firstNodes();
-  eq AssignExpr.getSource().nextNodes() = SmallSet.<CFGNode>singleton(this);
-  eq AssignExpr.getChild().nextNodesTT() = SmallSet.<CFGNode>singleton(this);
-  eq AssignExpr.getChild().nextNodesFF() = SmallSet.<CFGNode>singleton(this);
+  eq AssignExpr.getSource().nextNodes() = dynamicFN();
+  eq AssignExpr.getChild().nextNodesTT() = dynamicFN();
+  eq AssignExpr.getChild().nextNodesFF() = dynamicFN();
 
   /***************************** CLASS INSTANCE EXRP***************************/
-  eq ClassInstanceExpr.firstNodes() = (getNumArg() != 0)
-                                          ? getArg(0).firstNodes()
-                                          : SmallSet.<CFGNode>singleton(this);
+  eq ClassInstanceExpr.firstNodes() =
+      (getNumArg() != 0) ? getArg(0).firstNodes() : dynamicFN();
   eq ClassInstanceExpr.getArg(int index).nextNodes() =
-      (getNumArg() - 1 == index) ? SmallSet.<CFGNode>singleton(this)
-                                 : getArg(index + 1).firstNodes();
+      (getNumArg() - 1 == index) ? dynamicFN() : getArg(index + 1).firstNodes();
 
   /************************** ARRAY INITIALISATION ****************************/
   eq ArrayInit.firstNodes() =
@@ -354,12 +336,10 @@ public
                                         : getDeclarator(index + 1).firstNodes();
 
   eq VariableDeclarator.firstNodes() =
-      hasInit() ? getInit().firstNodes() : SmallSet.<CFGNode>singleton(this);
+      hasInit() ? getInit().firstNodes() : dynamicFN();
   eq VariableDeclarator.getInit().nextNodes() = getInit().jointTrueFalse();
-  eq VariableDeclarator.getInit().nextNodesFF() =
-      SmallSet.<CFGNode>singleton(this);
-  eq VariableDeclarator.getInit().nextNodesTT() =
-      SmallSet.<CFGNode>singleton(this);
+  eq VariableDeclarator.getInit().nextNodesFF() = dynamicFN();
+  eq VariableDeclarator.getInit().nextNodesTT() = dynamicFN();
 
   /**************************** ReturnStmt*************************************
    * If the return statements is provided with an expression then the flow
@@ -371,13 +351,13 @@ public
 
   eq ReturnStmt.getFinally().nextNodes() {
     SmallSet<CFGNode> res = new SmallSet<CFGNode>();
-    res.add(SmallSet.<CFGNode>singleton(this));
+    res.add(dynamicFN());
     res.add(exceptionLookup(lookupType("java.lang", "RuntimeException")));
     return res;
   }
 
-  eq ReturnStmt.getResult().nextNodesFF() = SmallSet.<CFGNode>singleton(this);
-  eq ReturnStmt.getResult().nextNodesTT() = SmallSet.<CFGNode>singleton(this);
+  eq ReturnStmt.getResult().nextNodesFF() = dynamicFN();
+  eq ReturnStmt.getResult().nextNodesTT() = dynamicFN();
   eq ReturnStmt.succ() = SmallSet.<CFGNode>singleton(exit());
 
   /**************************** BreakStmt *************************************/
@@ -460,12 +440,10 @@ public
     return res;
   }
 
-  eq ConstCase.firstNodes() = (!getValue().isLiteral())
-                                  ? getValue().firstNodes()
-                                  : SmallSet.<CFGNode>singleton(this);
-  eq ConstCase.getValue().nextNodes() = (!getValue().isLiteral())
-                                            ? SmallSet.<CFGNode>singleton(this)
-                                            : SmallSet.<CFGNode>empty();
+  eq ConstCase.firstNodes() =
+      (!getValue().isLiteral()) ? getValue().firstNodes() : dynamicFN();
+  eq ConstCase.getValue().nextNodes() =
+      (!getValue().isLiteral()) ? dynamicFN() : SmallSet.<CFGNode>empty();
 
   /************************ SynchronizedStmt **********************************/
   eq SynchronizedStmt.firstNodes() = getExpr().firstNodes();
