@@ -38,9 +38,18 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TreeSet;
+import magpiebridge.core.IProjectService;
+import magpiebridge.core.MagpieServer;
+import magpiebridge.core.ServerAnalysis;
+import magpiebridge.core.ServerConfiguration;
+import magpiebridge.core.ToolAnalysis;
+import magpiebridge.projectservice.java.JavaProjectService;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.extendj.JavaChecker;
 import org.extendj.ast.Analysis;
 import org.extendj.ast.CFGNode;
@@ -53,6 +62,8 @@ import org.extendj.ast.SmallSet;
 import org.extendj.ast.WarningMsg;
 import org.extendj.flow.utils.IJGraph;
 import org.extendj.flow.utils.Utils;
+import org.extendj.magpiebridge.StaticServerAnalysis;
+import org.extendj.magpiebridge.analysis.AnalysisInjector;
 
 /**
  * Perform static semantic checks on a Java program.
@@ -75,6 +86,9 @@ public class IntraJ extends Frontend {
   private static boolean statistics = false;
   private static long totalTime = 0;
   public static boolean toTxt = false;
+  private static boolean vscode = false;
+  private static StaticServerAnalysis serverAnalysis =
+      new StaticServerAnalysis();
 
   public static ArrayList<Analysis> analysis = new ArrayList<>();
 
@@ -137,6 +151,8 @@ public class IntraJ extends Frontend {
       case "-debug":
         debug = true;
         break;
+      case "-vscode":
+        vscode = true;
       case "-helpfrontend":
         FEOptions.add("-help");
         break;
@@ -173,30 +189,69 @@ public class IntraJ extends Frontend {
    */
   public static void main(String args[])
       throws FileNotFoundException, InterruptedException, IOException {
-    IntraJ intraj = new IntraJ();
 
-    String[] jCheckerArgs = intraj.setEnv(args);
-    int exitCode = intraj.run(jCheckerArgs);
-    if (exitCode != 0) {
-      System.exit(exitCode);
-    }
-    DrAST_root_node = intraj.getEntryPoint();
-    if (pdf) {
-      intraj.generatePDF();
-    }
-    if (debug)
-      intraj.debug();
+    if (true) {
+      System.err.println("Running in vscode mode");
+      AnalysisInjector.initAnalysis(serverAnalysis);
+      createServer().launchOnStdio();
+      // createServer().launchOnSocketPort(5007);
+    } else {
+      IntraJ intraj = new IntraJ();
 
-    if (statistics) {
-      Utils.printStatistics(
-          System.out, "Elapsed time (CFG + Dataflow): " + totalTime / 1000 +
-                          "." + totalTime % 1000 + "s");
+      String[] jCheckerArgs = intraj.setEnv(args);
+      int exitCode = intraj.run(jCheckerArgs);
+      if (exitCode != 0) {
+        System.exit(exitCode);
+      }
+      DrAST_root_node = intraj.getEntryPoint();
+
+      if (pdf) {
+        intraj.generatePDF();
+      }
+      if (debug)
+        intraj.debug();
+
+      if (statistics) {
+        Utils.printStatistics(
+            System.out, "Elapsed time (CFG + Dataflow): " + totalTime / 1000 +
+                            "." + totalTime % 1000 + "s");
+      }
+      Utils.printStatistics(System.out,
+                            "Total number of warnings: " + numb_warning);
+      if (statistics) {
+        printProgramStatistics(intraj.getEntryPoint());
+      }
     }
-    Utils.printStatistics(System.out,
-                          "Total number of warnings: " + numb_warning);
-    if (statistics) {
-      printProgramStatistics(intraj.getEntryPoint());
+  }
+
+  private static MagpieServer createServer() {
+    ServerConfiguration config = new ServerConfiguration();
+
+    // setup server config for analysis triggering
+    try {
+      File logFile =
+          Files.createTempFile("magpie_server_trace", ".lsp").toFile();
+      config.setLSPMessageTracer(new PrintWriter(logFile));
+    } catch (IOException e) {
+      e.printStackTrace();
     }
+    System.err.println("File created successfully");
+    config.setDoAnalysisBySave(true);
+    config.setDoAnalysisByFirstOpen(false);
+    config.setDoAnalysisByOpen(false);
+
+    config.setShowConfigurationPage(true, true);
+    System.err.println("Setting server's configuration");
+    MagpieServer server = new MagpieServer(config);
+    System.err.println("MagpieBridge server created successfully");
+    String language = "java";
+    IProjectService javaProjectService = new JavaProjectService();
+    server.addProjectService(language, javaProjectService);
+    Either<ServerAnalysis, ToolAnalysis> analysis =
+        Either.forLeft(serverAnalysis);
+    server.addAnalysis(analysis, language);
+    System.err.println("Returning from createServer");
+    return server;
   }
 
   private static void printProgramStatistics(Program _program) {

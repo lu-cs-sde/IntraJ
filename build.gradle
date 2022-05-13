@@ -1,3 +1,5 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
 plugins {
   id 'java'
   id 'org.jastadd' version '1.13.3'
@@ -61,6 +63,7 @@ sourceSets.main {
 dependencies{
     testImplementation 'junit:junit:4.12'
     implementation 'junit:junit:4.12'
+    implementation 'com.github.magpiebridge:magpiebridge:0.1.2'
 }
 
 sourceSets.test{
@@ -80,18 +83,51 @@ test {
 }
 
 // Use JavaCompiler if you need bytecode generation.
-jar {
-  manifest {
-    attributes(
-      'Main-Class': !project.hasProperty("className") ? 'org.extendj.IntraJ': project.getProperty("className").toString())
-  }
+// jar {
+//   manifest {
+//     attributes(
+//       'Main-Class': !project.hasProperty("className") ? 'org.extendj.IntraJ': project.getProperty("className").toString())
+//   }
+// }
+
+task vsce(type:Exec) {
+    workingDir "."
+
+         commandLine 'sh', 'generate_vsce.sh'
+         println "DETECTED OS: not windows. Running `generate_vsce.sh`"
+    
+    
+    standardOutput = new ByteArrayOutputStream()
+
+    ext.output = {
+        return standardOutput.toString()
+    }
+}
+vsce.dependsOn 'build'
+
+
+task genJar(type: Jar) { 
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } } {
+        exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    }
+    from sourceSets.main.output
+    manifest {
+        attributes 'Main-Class': 'org.extendj.IntraJ'
+    }
+    baseName = 'intraj'
+    destinationDir= file('vscode')
 }
 
+artifacts {
+    archives  genJar
+}
 //jar.manifest.attributes 'Main-Class': 'org.extendj.JavaCompiler'
 jar.destinationDirectory = projectDir
 
 // Java -source and -target version.
-sourceCompatibility = targetCompatibility = '1.7'
+sourceCompatibility = targetCompatibility = '1.8'
 
 task sourceZip(type: Zip) {
   description 'Builds a Zip file with the entire repisotory (including the ExtendJ submodule).'
