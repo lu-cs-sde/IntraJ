@@ -10,22 +10,21 @@ import magpiebridge.core.AnalysisResult;
 import org.extendj.IntraJ;
 import org.extendj.ast.CompilationUnit;
 
-public class IntraJFramework extends AnalysisFramework {
+public class IntraJFramework {
   private IntraJ jChecker;
   private Collection<String> args;
 
-  @Override
   public void setup(Collection<? extends Module> files, Set<String> classPath,
                     Set<String> srcPath, Set<String> libPath,
                     Set<String> progPath) {
-    jChecker = new IntraJ();
+    jChecker = IntraJ.getInstance();
     args = new LinkedHashSet<String>();
 
     args.add("-nowarn");
 
     if (!classPath.isEmpty()) {
       args.add("-classpath");
-      args.add(calculateClassPathString(classPath));
+      args.add(computeClassPath(classPath));
     }
 
     for (String path : progPath) {
@@ -33,12 +32,10 @@ public class IntraJFramework extends AnalysisFramework {
     }
   }
 
-  @Override
   public int run() {
     return jChecker.run(args.toArray(new String[args.size()]));
   }
 
-  @Override
   public Collection<AnalysisResult>
   analyze(SourceFileModule file, URL clientURL, CodeAnalysis analysis) {
     for (CompilationUnit cu : jChecker.getEntryPoint().getCompilationUnits()) {
@@ -50,8 +47,15 @@ public class IntraJFramework extends AnalysisFramework {
     return analysis.getResult();
   }
 
-  @Override
-  public String frameworkName() {
-    return "IntraJ";
+  public String frameworkName() { return "IntraJ"; }
+
+  protected String computeClassPath(Set<String> classPath) {
+    StringBuilder sb = new StringBuilder();
+    for (String path : classPath) {
+      sb.append(path);
+      sb.append(";");
+    }
+
+    return sb.toString();
   }
 }

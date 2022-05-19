@@ -22,40 +22,26 @@ import org.extendj.magpiebridge.Result;
 import org.extendj.magpiebridge.ResultPosition;
 
 public class NPAnalysis implements CodeAnalysis<CompilationUnit> {
-  private Collection<AnalysisResult> results;
-
-  private static final Analysis ANALYSIS_TYPE = Analysis.NPA;
-
-  public NPAnalysis() { results = new HashSet<>(); }
+  private Collection<AnalysisResult> results = new HashSet<>();
 
   @Override
   public void doAnalysis(CompilationUnit cu, URL url) {
     results.clear();
+    for (WarningMsg wm : cu.NPA()) {
 
-    try {
-      TreeSet<WarningMsg> wmgs =
-          (TreeSet<WarningMsg>)cu.getClass()
-              .getDeclaredMethod(ANALYSIS_TYPE.toString())
-              .invoke(cu);
+      ResultPosition position = new ResultPosition(
+          wm.lineStart, wm.lineEnd, wm.columnStart, wm.columnEnd, url);
+      List<Pair<Position, String>> relatedInfo = new ArrayList<>();
 
-      for (WarningMsg wm : wmgs) {
-
-        ResultPosition position = new ResultPosition(
-            wm.lineStart, wm.lineEnd, wm.columnStart, wm.columnEnd, url);
-        List<Pair<Position, String>> relatedInfo = new ArrayList<>();
-
-        String code = "no code";
-        try {
-          code = MySourceCodeReader.getLinesInString(position);
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-
-        results.add(new Result(Kind.Diagnostic, position, wm.errMsg,
-                               relatedInfo, DiagnosticSeverity.Warning, null,
-                               code));
+      String code = "no code";
+      try {
+        code = MySourceCodeReader.getLinesInString(position);
+      } catch (Exception e) {
+        e.printStackTrace();
       }
-    } catch (Throwable t) {
+
+      results.add(new Result(Kind.Diagnostic, position, wm.errMsg, relatedInfo,
+                             DiagnosticSeverity.Warning, null, code));
     }
   }
 

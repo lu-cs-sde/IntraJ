@@ -22,47 +22,35 @@ import org.extendj.magpiebridge.Result;
 import org.extendj.magpiebridge.ResultPosition;
 
 public class DAAnalysis implements CodeAnalysis<CompilationUnit> {
-  private Collection<AnalysisResult> results;
+  private Collection<AnalysisResult> results = new HashSet<>();
 
   private static final Analysis ANALYSIS_TYPE = Analysis.DAA;
-
-  public DAAnalysis() { results = new HashSet<>(); }
 
   @Override
   public void doAnalysis(CompilationUnit cu, URL url) {
     results.clear();
 
-    try {
-      TreeSet<WarningMsg> wmgs =
-          (TreeSet<WarningMsg>)cu.getClass()
-              .getDeclaredMethod(ANALYSIS_TYPE.toString())
-              .invoke(cu);
+    for (WarningMsg wm : cu.DAA()) {
+      String code = "No code";
+      ResultPosition position = new ResultPosition(
+          wm.lineStart, wm.lineEnd, wm.columnStart, wm.columnEnd, url);
+      List<Pair<Position, String>> relatedInfo = new ArrayList<>();
 
-      for (WarningMsg wm : wmgs) {
-
-        ResultPosition position = new ResultPosition(
-            wm.lineStart, wm.lineEnd, wm.columnStart, wm.columnEnd, url);
-        List<Pair<Position, String>> relatedInfo = new ArrayList<>();
-
-        String code = "no code";
-        try {
-          code = MySourceCodeReader.getLinesInString(position);
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-
-        String correctCode = "";
-
-        ResultPosition repairPos = new ResultPosition(wm.lineStart, wm.lineEnd,
-                                                      0, wm.columnEnd + 1, url);
-
-        Pair<Position, String> repair = Pair.make(repairPos, correctCode);
-
-        results.add(new Result(Kind.Diagnostic, position, wm.errMsg,
-                               relatedInfo, DiagnosticSeverity.Warning, repair,
-                               code));
+      try {
+        code = MySourceCodeReader.getLinesInString(position);
+      } catch (Exception e) {
+        e.printStackTrace();
       }
-    } catch (Throwable t) {
+
+      String correctCode = "";
+
+      ResultPosition repairPos = new ResultPosition(wm.lineStart, wm.lineEnd, 0,
+                                                    wm.columnEnd + 1, url);
+
+      Pair<Position, String> repair = Pair.make(repairPos, correctCode);
+
+      results.add(new Result(Kind.Diagnostic, position, wm.errMsg, relatedInfo,
+                             DiagnosticSeverity.Warning, repair, code));
     }
   }
 

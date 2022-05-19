@@ -1,5 +1,5 @@
 {
-	"name": "intraj",
+	"name": "IntraJ",
 	"description": "IntraJ: fast and accurate intra-procedural dataflow analyses",
 	"author": "Idriss Riouak",
 	"license": "EPL-2.0",
@@ -9,7 +9,7 @@
 		"type": "git",
 		"url": "https://github.com/lu-cs-sde/IntraJ.git"
 	},
-	"publisher": "Idriss Riouak",
+	"publisher": "IdrissRiouak",
 	"categories": [],
 	"keywords": [
 		"multi-root ready"
@@ -24,7 +24,7 @@
 	"contributes": {
 		"configuration": {
 			"type": "object",
-			"title": "intrep",
+			"title": "IntraJ",
 			"properties": {
 				"intraj.trace.server": {
 					"scope": "window",

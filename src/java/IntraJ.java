@@ -89,6 +89,7 @@ public class IntraJ extends Frontend {
   private static boolean vscode = false;
   private static StaticServerAnalysis serverAnalysis =
       new StaticServerAnalysis();
+  private static IntraJ intraJ = new IntraJ();
 
   public static ArrayList<Analysis> analysis = new ArrayList<>();
 
@@ -196,7 +197,7 @@ public class IntraJ extends Frontend {
       createServer().launchOnStdio();
       // createServer().launchOnSocketPort(5007);
     } else {
-      IntraJ intraj = new IntraJ();
+      IntraJ intraj = getInstance();
 
       String[] jCheckerArgs = intraj.setEnv(args);
       int exitCode = intraj.run(jCheckerArgs);
@@ -235,22 +236,18 @@ public class IntraJ extends Frontend {
     } catch (IOException e) {
       e.printStackTrace();
     }
-    System.err.println("File created successfully");
     config.setDoAnalysisBySave(true);
     config.setDoAnalysisByFirstOpen(false);
     config.setDoAnalysisByOpen(false);
 
     config.setShowConfigurationPage(true, true);
-    System.err.println("Setting server's configuration");
     MagpieServer server = new MagpieServer(config);
-    System.err.println("MagpieBridge server created successfully");
     String language = "java";
     IProjectService javaProjectService = new JavaProjectService();
     server.addProjectService(language, javaProjectService);
     Either<ServerAnalysis, ToolAnalysis> analysis =
         Either.forLeft(serverAnalysis);
     server.addAnalysis(analysis, language);
-    System.err.println("Returning from createServer");
     return server;
   }
 
@@ -404,4 +401,6 @@ public class IntraJ extends Frontend {
         "  -niter=x: runs the analysis `x` times and prints the time necessary to execute an analysis.");
     System.exit(1);
   }
+
+  public static IntraJ getInstance() { return intraJ; }
 }

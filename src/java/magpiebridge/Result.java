@@ -41,7 +41,7 @@ public class Result implements AnalysisResult {
 
   public String toString(boolean useMarkdown) { return message; }
 
-  @Override
+  @Override // For Debugging
   public String toString() {
     return "Result [kind=" + kind + ", position=" + position +
         ", code=" + code + ", message=" + message + ", related=" + related +

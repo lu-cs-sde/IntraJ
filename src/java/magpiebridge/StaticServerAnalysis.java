@@ -19,7 +19,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.logging.Logger;
 import magpiebridge.core.AnalysisConsumer;
 import magpiebridge.core.AnalysisResult;
 import magpiebridge.core.IProjectService;
@@ -28,13 +27,11 @@ import magpiebridge.core.ServerAnalysis;
 import magpiebridge.core.analysis.configuration.ConfigurationOption;
 import magpiebridge.core.analysis.configuration.OptionType;
 import magpiebridge.projectservice.java.JavaProjectService;
-import org.extendj.magpiebridge.AnalysisFramework;
 import org.extendj.magpiebridge.CodeAnalysis;
-import org.extendj.magpiebridge.FilePathService;
 import org.extendj.magpiebridge.IntraJFramework;
 
 public class StaticServerAnalysis implements ServerAnalysis {
-  private static final Logger LOG = Logger.getLogger("main");
+
   public Set<String> srcPath;
   public Set<String> libPath;
   public Set<Path> classPath;
@@ -44,7 +41,7 @@ public class StaticServerAnalysis implements ServerAnalysis {
   public ExecutorService exeService;
   public Collection<Future<?>> last;
 
-  public AnalysisFramework framework;
+  public IntraJFramework framework = new IntraJFramework();
 
   public static Map<String, Boolean> activeAnalyses;
   public static Collection<CodeAnalysis<?>> analysisList;
@@ -56,8 +53,6 @@ public class StaticServerAnalysis implements ServerAnalysis {
     totalClassPath = new HashSet<>();
     last = new ArrayList<>(analysisList.size());
     activeAnalyses = new HashMap<>();
-
-    framework = new IntraJFramework();
   }
 
   @Override
@@ -82,9 +77,6 @@ public class StaticServerAnalysis implements ServerAnalysis {
     framework.setup(files, totalClassPath, srcPath, libPath, progFilesAbsPaths);
     int exitCode = framework.run();
 
-    LOG.info(framework.frameworkName() + " run completed with exitCode " +
-             exitCode);
-
     // ANALYZE
 
     // Clean up previous analysis results and ongoing analyses
@@ -92,8 +84,6 @@ public class StaticServerAnalysis implements ServerAnalysis {
     for (Future<?> f : last) {
       if (f != null && !f.isDone()) {
         f.cancel(false);
-        if (f.isCancelled())
-          LOG.info("Susscessfully cancelled last analysis and start new");
       }
     }
     last.clear();
@@ -116,8 +106,7 @@ public class StaticServerAnalysis implements ServerAnalysis {
 
   public void doAnalysisThread(Collection<? extends Module> files,
                                MagpieServer server, CodeAnalysis analysis) {
-    Collection<AnalysisResult> results =
-        new ArrayList<>(Collections.emptyList());
+    Collection<AnalysisResult> results = new ArrayList<>();
     for (Module file : files) {
       if (file instanceof SourceFileModule) {
         SourceFileModule sourceFile = (SourceFileModule)file;
@@ -135,7 +124,6 @@ public class StaticServerAnalysis implements ServerAnalysis {
 
   public void setClassPath(MagpieServer server,
                            Collection<? extends Module> files) {
-    LOG.severe("setClassPath");
     if (srcPath == null) {
       Optional<IProjectService> opt = server.getProjectService("java");
       if (opt.isPresent()) {
@@ -162,7 +150,6 @@ public class StaticServerAnalysis implements ServerAnalysis {
   }
 
   public static void addAnalysis(CodeAnalysis<?> analysis) {
-
     analysisList.add(analysis);
     activeAnalyses.put(analysis.getName(), true);
   }
@@ -188,16 +175,15 @@ public class StaticServerAnalysis implements ServerAnalysis {
       while (srcIt.hasNext()) {
         String src = srcIt.next();
         Collection<String> srcJavas =
-            FilePathService.getJavaFilesForFolder(new File(src), ".java");
+            getJavaFilesForFolder(new File(src), ".java");
         for (String javaPath : srcJavas) {
-          if (!requestedFiles.contains(
-                  FilePathService.getFileNameFromPath(javaPath)) &&
+          if (!requestedFiles.contains(getFileNameFromPath(javaPath)) &&
               !progFilesAbsPaths.contains(javaPath))
             progFilesAbsPaths.add(javaPath);
         }
 
         Collection<String> srcJars =
-            FilePathService.getJavaFilesForFolder(new File(src), ".jar");
+            getJavaFilesForFolder(new File(src), ".jar");
         for (String jarPath : srcJars) {
           totalClassPath.add(jarPath);
         }
@@ -208,17 +194,16 @@ public class StaticServerAnalysis implements ServerAnalysis {
       Iterator<String> libIt = libPath.iterator();
       while (libIt.hasNext()) {
         String lib = libIt.next();
-        Set<String> libJars = new HashSet<>(
-            FilePathService.getJavaFilesForFolder(new File(lib), ".jar"));
+        Set<String> libJars =
+            new HashSet<>(getJavaFilesForFolder(new File(lib), ".jar"));
         for (String jarPath : libJars) {
           totalClassPath.add(jarPath);
         }
 
         Collection<String> libJavas =
-            FilePathService.getJavaFilesForFolder(new File(lib), ".java");
+            getJavaFilesForFolder(new File(lib), ".java");
         for (String javaPath : libJavas) {
-          if (!requestedFiles.contains(
-                  FilePathService.getFileNameFromPath(javaPath)) &&
+          if (!requestedFiles.contains(getFileNameFromPath(javaPath)) &&
               !progFilesAbsPaths.contains(javaPath))
             progFilesAbsPaths.add(javaPath);
         }
@@ -232,56 +217,53 @@ public class StaticServerAnalysis implements ServerAnalysis {
 
   @Override
   public List<ConfigurationOption> getConfigurationOptions() {
-    LOG.severe("getConfigurationOptions");
     List<ConfigurationOption> options = new ArrayList<>();
-    ConfigurationOption framework =
-        new ConfigurationOption("Frameworks", OptionType.container);
-    framework.addChild(
-        new ConfigurationOption("IntraJ", OptionType.checkbox, "true"));
-
     ConfigurationOption analyses =
         new ConfigurationOption("Analyses", OptionType.container);
-
     for (CodeAnalysis a : analysisList) {
       analyses.addChild(
           new ConfigurationOption(a.getName(), OptionType.checkbox, "true"));
     }
-
-    options.add(framework);
     options.add(analyses);
     return options;
   }
 
   @Override
   public void configure(List<ConfigurationOption> configuration) {
-    LOG.severe("configure");
     for (ConfigurationOption o : configuration) {
       switch (o.getName()) {
-      case "Frameworks":
-        for (ConfigurationOption c : o.getChildren()) {
-          if (c.getValueAsBoolean())
-            framework = frameworkConstructor(c.getName());
-        }
-        break;
       case "Analyses":
         for (ConfigurationOption c : o.getChildren()) {
           activeAnalyses.put(c.getName(), c.getValueAsBoolean());
         }
         break;
-      default:
-        LOG.warning("No configuration case mathcing " + o.getName());
       }
     }
   }
 
-  private AnalysisFramework frameworkConstructor(String name) {
-    LOG.severe("frameworkConstructor");
-    switch (name) {
-    case "IntraJ":
-      return new IntraJFramework();
-    default:
-      LOG.severe("No framework matched name " + name);
-      return null;
+  // Helper methods for classpaths:
+  public static Collection<String> getJavaFilesForFolder(final File folder,
+                                                         String ext) {
+    Collection<String> files = new HashSet<>();
+    if (folder.isDirectory()) {
+      for (final File fileEntry : folder.listFiles()) {
+        if (fileEntry.isDirectory()) {
+          files.addAll(getJavaFilesForFolder(fileEntry, ext));
+        } else if (fileEntry.getName().endsWith(ext)) {
+          files.add(fileEntry.getAbsolutePath());
+        }
+      }
+    } else if (folder.getName().endsWith(ext)) {
+      files.add(folder.getAbsolutePath());
     }
+
+    return files;
+  }
+
+  public static String getFileNameFromPath(String path) {
+    File f = new File(path);
+    if (f.isFile())
+      return f.getName();
+    return "";
   }
 }

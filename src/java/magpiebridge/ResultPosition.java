@@ -22,33 +22,6 @@ public class ResultPosition implements Position {
   private URL urlToSourceFile;
   private String srcPath;
 
-  // Default constructor usefull for testing
-  public ResultPosition(URL url) {
-    firstOffset = 3;
-    lastOffset = 10;
-
-    firstLine = 1;
-    lastLine = 1;
-
-    firstCol = 3;
-    lastCol = 10;
-
-    urlToSourceFile = url;
-  }
-
-  public ResultPosition(ASTNode resultSourceNode, URL url) {
-    firstOffset = resultSourceNode.getStart();
-    lastOffset = resultSourceNode.getEnd();
-
-    firstLine = Symbol.getLine(firstOffset);
-    lastLine = Symbol.getLine(lastOffset);
-
-    firstCol = Symbol.getColumn(firstOffset);
-    lastCol = Symbol.getColumn(lastOffset);
-
-    urlToSourceFile = url;
-  }
-
   public ResultPosition(int firstLine, int lastLine, int firstCol, int lastCol,
                         URL url) {
     this.firstOffset = Symbol.makePosition(firstLine, firstCol);
