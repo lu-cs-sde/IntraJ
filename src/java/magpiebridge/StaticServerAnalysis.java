@@ -9,9 +9,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +29,7 @@ import magpiebridge.core.analysis.configuration.OptionType;
 import magpiebridge.projectservice.java.JavaProjectService;
 import org.extendj.magpiebridge.CodeAnalysis;
 import org.extendj.magpiebridge.IntraJFramework;
+import org.extendj.magpiebridge.analysis.*;
 
 public class StaticServerAnalysis implements ServerAnalysis {
 
@@ -43,16 +44,17 @@ public class StaticServerAnalysis implements ServerAnalysis {
 
   public IntraJFramework framework = new IntraJFramework();
 
-  public static Map<String, Boolean> activeAnalyses;
-  public static Collection<CodeAnalysis<?>> analysisList;
+  public Map<CodeAnalysis<?>, Boolean> activeAnalyses;
 
   public StaticServerAnalysis() {
     exeService = Executors.newSingleThreadExecutor();
-    analysisList = new ArrayList<CodeAnalysis<?>>();
+    activeAnalyses = new LinkedHashMap<CodeAnalysis<?>, Boolean>();
+    activeAnalyses.put(new StringEqAnalysis(), true);
+    activeAnalyses.put(new DAAnalysis(), true);
+    activeAnalyses.put(new NPAnalysis(), true);
     progFilesAbsPaths = new HashSet<>();
     totalClassPath = new HashSet<>();
-    last = new ArrayList<>(analysisList.size());
-    activeAnalyses = new HashMap<>();
+    last = new ArrayList<>(activeAnalyses.size());
   }
 
   @Override
@@ -89,10 +91,9 @@ public class StaticServerAnalysis implements ServerAnalysis {
     last.clear();
 
     // Initiate analyses on seperate threads and set them running
-    for (CodeAnalysis analysis : analysisList) {
-      if (!activeAnalyses.get(analysis.getName()))
+    for (CodeAnalysis analysis : activeAnalyses.keySet()) {
+      if (!activeAnalyses.get(analysis))
         continue;
-
       last.add(exeService.submit(new Runnable() {
         @Override
         public void run() {
@@ -149,10 +150,9 @@ public class StaticServerAnalysis implements ServerAnalysis {
     updatePaths(files);
   }
 
-  public static void addAnalysis(CodeAnalysis<?> analysis) {
-    analysisList.add(analysis);
-    activeAnalyses.put(analysis.getName(), true);
-  }
+  // public void addAnalysis(CodeAnalysis<?> analysis) {
+  //   activeAnalyses.put(analysis, true);
+  // }
 
   private void updatePaths(Collection<? extends Module> files) {
     progFilesAbsPaths.clear();
@@ -220,7 +220,7 @@ public class StaticServerAnalysis implements ServerAnalysis {
     List<ConfigurationOption> options = new ArrayList<>();
     ConfigurationOption analyses =
         new ConfigurationOption("Analyses", OptionType.container);
-    for (CodeAnalysis a : analysisList) {
+    for (CodeAnalysis a : activeAnalyses.keySet()) {
       analyses.addChild(
           new ConfigurationOption(a.getName(), OptionType.checkbox, "true"));
     }
@@ -231,12 +231,14 @@ public class StaticServerAnalysis implements ServerAnalysis {
   @Override
   public void configure(List<ConfigurationOption> configuration) {
     for (ConfigurationOption o : configuration) {
-      switch (o.getName()) {
-      case "Analyses":
+      if (o.getName().equals("Analyses")) {
         for (ConfigurationOption c : o.getChildren()) {
-          activeAnalyses.put(c.getName(), c.getValueAsBoolean());
+          for (CodeAnalysis a : activeAnalyses.keySet()) {
+            if (a.getName().equals(c.getName())) {
+              activeAnalyses.put(a, c.getValueAsBoolean());
+            }
+          }
         }
-        break;
       }
     }
   }

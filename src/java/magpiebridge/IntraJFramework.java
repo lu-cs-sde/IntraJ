@@ -17,7 +17,7 @@ public class IntraJFramework {
   public void setup(Collection<? extends Module> files, Set<String> classPath,
                     Set<String> srcPath, Set<String> libPath,
                     Set<String> progPath) {
-    jChecker = IntraJ.getInstance();
+    jChecker = new IntraJ();
     args = new LinkedHashSet<String>();
 
     args.add("-nowarn");
@@ -38,6 +38,7 @@ public class IntraJFramework {
 
   public Collection<AnalysisResult>
   analyze(SourceFileModule file, URL clientURL, CodeAnalysis analysis) {
+    System.err.println("Analyzing " + analysis.getName());
     for (CompilationUnit cu : jChecker.getEntryPoint().getCompilationUnits()) {
       if (cu.getClassSource().sourceName().equals(file.getAbsolutePath())) {
         analysis.doAnalysis(cu, clientURL);

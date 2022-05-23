@@ -63,7 +63,6 @@ import org.extendj.ast.WarningMsg;
 import org.extendj.flow.utils.IJGraph;
 import org.extendj.flow.utils.Utils;
 import org.extendj.magpiebridge.StaticServerAnalysis;
-import org.extendj.magpiebridge.analysis.AnalysisInjector;
 
 /**
  * Perform static semantic checks on a Java program.
@@ -193,7 +192,7 @@ public class IntraJ extends Frontend {
 
     if (true) {
       System.err.println("Running in vscode mode");
-      AnalysisInjector.initAnalysis(serverAnalysis);
+      // AnalysisInjector.initAnalysis(serverAnalysis);
       createServer().launchOnStdio();
       // createServer().launchOnSocketPort(5007);
     } else {
@@ -227,19 +226,21 @@ public class IntraJ extends Frontend {
 
   private static MagpieServer createServer() {
     ServerConfiguration config = new ServerConfiguration();
-
-    // setup server config for analysis triggering
-    try {
-      File logFile =
-          Files.createTempFile("magpie_server_trace", ".lsp").toFile();
-      config.setLSPMessageTracer(new PrintWriter(logFile));
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
     config.setDoAnalysisBySave(true);
-    config.setDoAnalysisByFirstOpen(false);
-    config.setDoAnalysisByOpen(false);
+    config.setDoAnalysisByFirstOpen(true);
+    config.setDoAnalysisByOpen(true);
+    config.supportWarningSuppression();
 
+    /**
+     * Set up the server to start a configuration page (HTML page in client or
+     * browser) after initialization.
+     *
+     * @param showConfigurationPage true, if the server should start a
+     *     configuration page. The default value is false.
+     * @param addDefaultActions true, if the server should add default action
+     *     button <code> Run Analysis</code> to the default configuration page.
+     * @return the server configuration
+     */
     config.setShowConfigurationPage(true, true);
     MagpieServer server = new MagpieServer(config);
     String language = "java";

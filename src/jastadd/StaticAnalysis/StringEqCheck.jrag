@@ -2,9 +2,52 @@ aspect STREQ {
   EQExpr contributes warning(
       getCompilationUnit().pathName(),
       "Use of '==' to compare strings is discouraged. Use 'equals()' instead.",
-      Analysis.STREQ) when
+      Analysis.STREQ, null, getRelatedInfo()) when
       left()
           .type()
           .isString() &&
       right().type().isString() to CompilationUnit.STREQ();
+
+  syn java.util.List<Pair<Position, String>> EQExpr.getRelatedInfo() {
+    java.util.List<Pair<Position, String>> result = new ArrayList<>();
+
+    result.add(
+        Pair.make(getLeftOperand().getPosition(),
+                  getLeftOperand().prettyPrint() + " is of type String"));
+    result.add(
+        Pair.make(getRightOperand().getPosition(),
+                  getRightOperand().prettyPrint() + " is of type String"));
+    System.err.println("ATTENTION" + result);
+    return result;
+  }
+
+  syn Position ASTNode.getPosition() {
+    try {
+      ResultPosition res = new ResultPosition(
+          lineStart(), lineEnd(), columnStart() - 1, columnEnd(),
+          new File(getCompilationUnit().pathName()).toURL());
+      return res;
+    } catch (Throwable t) {
+      t.printStackTrace();
+    }
+    return null;
+  }
+
+  syn Position Variable.getPosition() {
+    try {
+      ResultPosition res = new ResultPosition(
+          lineStart(), lineEnd(), columnStart() - 1, columnEnd(),
+          new File(getCompilationUnit().pathName()).toURL());
+      return res;
+    } catch (Throwable t) {
+      t.printStackTrace();
+    }
+    return null;
+  }
+
+  eq Expr.getPosition() {
+    if (varDecl() != null)
+      return varDecl().getPosition();
+    return getPosition();
+  }
 }

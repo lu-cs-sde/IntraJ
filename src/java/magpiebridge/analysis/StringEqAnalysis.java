@@ -49,13 +49,18 @@ public class StringEqAnalysis implements CodeAnalysis<CompilationUnit> {
       if (lr.length == 2) {
         String correctCode = lr[0] + ".equals(" + lr[1] + ")";
         repair = Pair.make(position, correctCode);
+        relatedInfo.add(Pair.make(position, "Reason A"));
+        relatedInfo.add(Pair.make(position, "Reason B"));
       }
 
       if (repair != null)
         relatedInfo.add(repair);
 
-      results.add(new Result(Kind.Diagnostic, position, wm.errMsg, relatedInfo,
-                             DiagnosticSeverity.Warning, repair, code));
+      // System.err.println("ATTENTION" + wm.relatedInfo);
+
+      results.add(new Result(Kind.Diagnostic, position, wm.errMsg,
+                             wm.relatedInfo, DiagnosticSeverity.Warning, repair,
+                             code));
     }
   }
 
@@ -63,8 +68,8 @@ public class StringEqAnalysis implements CodeAnalysis<CompilationUnit> {
 
   @Override
   public String getName() {
-    return "StringEQ";
+    return "StringEqAnalysis";
   }
 
-  public static String name() { return "StringEQ"; }
+  public static String name() { return "StringEqAnalysis"; }
 }

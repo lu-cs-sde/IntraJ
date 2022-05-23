@@ -29,11 +29,11 @@
  */
 
 aspect CFGCache {
-  cache CFGNode.succ();
-  cache CFGNode.isDead();
-  cache CFGNode.DAA_isDeadAssign();
-  cache CFGNode.LVA_def();
-  cache CFGNode.LVA_use();
+  // cache CFGNode.succ();
+  // cache CFGNode.isDead();
+  // cache CFGNode.DAA_isDeadAssign();
+  // cache CFGNode.LVA_def();
+  // cache CFGNode.LVA_use();
   cache Expr.isUsualDefaultValue();
   cache CFGNode.emptyBitSet();
   cache CFGRoot.emptyBitSet();

@@ -108,10 +108,10 @@ public
   ***************************ERROR COLLECTION********************************
   ***************************************************************************
   */
-  VarAccess contributes warning(getCompilationUnit().pathName(),
-                                "A 'NullPointerException' could be thrown;'" +
-                                    name() + "' is nullable.",
-                                Analysis.NPA) when
+  VarAccess contributes warning(
+      getCompilationUnit().pathName(),
+      "A 'NullPointerException' could be thrown;'" + name() + "' is nullable.",
+      Analysis.NPA, Pair.make(NPAgetPosition(), NPARepairCode()), null) when
   isNullable() to CompilationUnit.NPA();
 
   /***************************************************************************
@@ -224,4 +224,31 @@ public
     super.collectContributions();
   }
   to CFGNode.predColl();
+
+  syn String VarAccess.NPARepairCode() {
+    if (parentDot() == null)
+      return "";
+    StringBuilder res = new StringBuilder();
+    res.append("if(" + name() + " !=null)");
+    res.append(parentDot().prettyPrint());
+
+    return res.toString();
+  }
+
+  syn Position VarAccess.NPAgetPosition() {
+    Dot dot = parentDot();
+    if (getCompilationUnit() != null && dot != null &&
+        !(dot.getParent() instanceof ExprStmt)) {
+      try {
+        ResultPosition res = new ResultPosition(
+            dot.lineStart(), dot.lineEnd(), dot.columnStart() - 1,
+            dot.columnEnd(),
+            new File(dot.getCompilationUnit().pathName()).toURL());
+        return res;
+      } catch (Throwable p) {
+        p.printStackTrace();
+      }
+    }
+    return null;
+  }
 }

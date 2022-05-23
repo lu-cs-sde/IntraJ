@@ -61,8 +61,8 @@ public class DAAnalysis implements CodeAnalysis<CompilationUnit> {
 
   @Override
   public String getName() {
-    return "DAA";
+    return "DAAnalysis";
   }
 
-  public static String name() { return "DAA"; }
+  public static String name() { return "DAAnalysis"; }
 }

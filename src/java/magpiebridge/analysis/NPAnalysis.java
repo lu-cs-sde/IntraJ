@@ -39,9 +39,10 @@ public class NPAnalysis implements CodeAnalysis<CompilationUnit> {
       } catch (Exception e) {
         e.printStackTrace();
       }
+      System.err.println("TEST" + wm.repair);
 
       results.add(new Result(Kind.Diagnostic, position, wm.errMsg, relatedInfo,
-                             DiagnosticSeverity.Warning, null, code));
+                             DiagnosticSeverity.Warning, wm.repair, code));
     }
   }
 
@@ -52,8 +53,8 @@ public class NPAnalysis implements CodeAnalysis<CompilationUnit> {
 
   @Override
   public String getName() {
-    return "NPA";
+    return "NPAnalysis";
   }
 
-  public static String name() { return "NPA"; }
+  public static String name() { return "NPAnalysis"; }
 }

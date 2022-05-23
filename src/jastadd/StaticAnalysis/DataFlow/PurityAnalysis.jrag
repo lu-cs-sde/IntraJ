@@ -130,12 +130,12 @@ aspect PurityAnlysis {
       throw new RuntimeException(
           "Reached root of getEnclosingMethod() without a solution");
     }
- 
+
     MethodDecl contributes warning(getCompilationUnit().pathName(),
                                    "The method '" + name() + "' is not pure",
-                                   Analysis.PURE) when !isPure()
+                                   Analysis.PURE, null, null) when !isPure()
         to CompilationUnit.PURE();
- 
+
     /************************************RULES *********************************/
   public
     Env AssignExpr.RULE_SC(Env env) {
