@@ -10,11 +10,9 @@ import magpiebridge.core.AnalysisResult;
 import magpiebridge.core.Kind;
 import magpiebridge.util.SourceCodeReader;
 import org.eclipse.lsp4j.DiagnosticSeverity;
-import org.extendj.ast.Analysis;
 import org.extendj.ast.CompilationUnit;
 import org.extendj.ast.WarningMsg;
 import org.extendj.magpiebridge.CodeAnalysis;
-import org.extendj.magpiebridge.MySourceCodeReader;
 import org.extendj.magpiebridge.Result;
 import org.extendj.magpiebridge.ResultPosition;
 

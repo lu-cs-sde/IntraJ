@@ -36,7 +36,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import org.extendj.IntraJ;
-import org.extendj.ast.Analysis;
+import org.extendj.analysis.Analysis;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
@@ -59,105 +59,126 @@ public class NPATests {
 
   @Test
   public void NPA01() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA01.java", Analysis.NPA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA01.java",
+                           Analysis.AvailableAnalysis.NPA, 0);
   }
 
   @Test
   public void NPA02() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA02.java", Analysis.NPA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA02.java",
+                           Analysis.AvailableAnalysis.NPA, 0);
   }
 
   @Test
   public void NPA03() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA03.java", Analysis.NPA, 2);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA03.java",
+                           Analysis.AvailableAnalysis.NPA, 2);
   }
 
   @Test
   public void NPA04() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA04.java", Analysis.NPA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA04.java",
+                           Analysis.AvailableAnalysis.NPA, 1);
   }
 
   @Test
   public void NPA05() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA05.java", Analysis.NPA, 2);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA05.java",
+                           Analysis.AvailableAnalysis.NPA, 2);
   }
 
   @Test
   public void NPA06() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA06.java", Analysis.NPA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA06.java",
+                           Analysis.AvailableAnalysis.NPA, 0);
   }
 
   @Test
   public void NPA07() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA07.java", Analysis.NPA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA07.java",
+                           Analysis.AvailableAnalysis.NPA, 0);
   }
 
   @Test
   public void NPA08() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA08.java", Analysis.NPA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA08.java",
+                           Analysis.AvailableAnalysis.NPA, 0);
   }
 
   @Test
   public void NPA09() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA09.java", Analysis.NPA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA09.java",
+                           Analysis.AvailableAnalysis.NPA, 1);
   }
 
   @Test
   public void NPA10() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA10.java", Analysis.NPA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA10.java",
+                           Analysis.AvailableAnalysis.NPA, 1);
   }
 
   @Test
   public void NPA11() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA11.java", Analysis.NPA, 2);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA11.java",
+                           Analysis.AvailableAnalysis.NPA, 2);
   }
 
   @Test
   public void NPA12() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA12.java", Analysis.NPA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA12.java",
+                           Analysis.AvailableAnalysis.NPA, 1);
   }
   @Test
   public void NPA13() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA13.java", Analysis.NPA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA13.java",
+                           Analysis.AvailableAnalysis.NPA, 1);
   }
 
   @Test
   public void NPA14() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA14.java", Analysis.NPA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA14.java",
+                           Analysis.AvailableAnalysis.NPA, 0);
   }
 
   @Test
   public void NPA15() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA15.java", Analysis.NPA, 2);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA15.java",
+                           Analysis.AvailableAnalysis.NPA, 2);
   }
 
   @Test
   public void NPA16() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA16.java", Analysis.NPA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA16.java",
+                           Analysis.AvailableAnalysis.NPA, 1);
   }
 
   @Test
   public void NPA17() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA17.java", Analysis.NPA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA17.java",
+                           Analysis.AvailableAnalysis.NPA, 1);
   }
 
   @Test
   public void NPA18() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA18.java", Analysis.NPA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA18.java",
+                           Analysis.AvailableAnalysis.NPA, 0);
   }
 
   @Test
   public void NPA19() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA19.java", Analysis.NPA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA19.java",
+                           Analysis.AvailableAnalysis.NPA, 0);
   }
 
   @Test
   public void NPA20() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA20.java", Analysis.NPA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA20.java",
+                           Analysis.AvailableAnalysis.NPA, 1);
   }
 
   @Test
   public void NPA21() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA21.java", Analysis.NPA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA21.java",
+                           Analysis.AvailableAnalysis.NPA, 1);
   }
 }

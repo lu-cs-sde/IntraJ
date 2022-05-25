@@ -31,53 +31,55 @@
 import com.ibm.wala.cast.tree.CAstSourcePositionMap.Position;
 import com.ibm.wala.util.collections.Pair;
 import org.extendj.magpiebridge.ResultPosition;
+import org.extendj.analysis.Analysis;
 
 aspect Analysis {
   /**
    * Analysis identifier.
    */
-public
-  enum Analysis {
-    PURE, DAA, NPA, STREQ;
+  // public
+  //   enum Analysis {
+  //     PURE, DAA, NPA, STREQ;
 
-    public static String[] names(){
-        String valuesStr = Arrays.toString(Analysis.values());
-        return valuesStr.substring(1, valuesStr.length() - 1)
-            .replace(" ", "")
-            .split(",");}
-}
+  //     public static String[] names(){
+  //         String valuesStr = Arrays.toString(Analysis.values());
+  //         return valuesStr.substring(1, valuesStr.length() - 1)
+  //             .replace(" ", "")
+  //             .split(",");}
+  // }
 
-coll TreeSet<WarningMsg> CompilationUnit
-    .PURE()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
+  coll TreeSet<WarningMsg> CompilationUnit
+      .PURE()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
 
-coll TreeSet<WarningMsg> CompilationUnit
-    .STREQ()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
+  coll TreeSet<WarningMsg> CompilationUnit
+      .STREQ()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
 
-coll TreeSet<WarningMsg> CompilationUnit
-    .DAA()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
+  coll TreeSet<WarningMsg> CompilationUnit
+      .DAA()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
 
-coll Set<WarningMsg> CompilationUnit
-    .NPA()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
+  coll Set<WarningMsg> CompilationUnit.NPA()[new TreeSet<WarningMsg>()] with add
+      root CompilationUnit;
 
-coll Set<CFGRoot>
-    Program.CFGRoots()[new LinkedHashSet<>()] with add root Program;
-CFGRoot contributes this to Program.CFGRoots();
-ClassDecl contributes nta staticInitialization() to Program.CFGRoots();
-ClassDecl contributes nta instanceInitialization() to Program.CFGRoots();
+  coll Set<CFGRoot> Program.CFGRoots()[new LinkedHashSet<>()] with add root
+      Program;
+  CFGRoot contributes this to Program.CFGRoots();
+  ClassDecl contributes nta staticInitialization() to Program.CFGRoots();
+  ClassDecl contributes nta instanceInitialization() to Program.CFGRoots();
 
-coll Set<CFGRoot> CompilationUnit
-    .CFGRoots()[new LinkedHashSet<>()] with add root CompilationUnit;
-CFGRoot contributes this to Program.CFGRoots();
-ClassDecl contributes nta staticInitialization() to CompilationUnit.CFGRoots();
-ClassDecl contributes nta
-instanceInitialization() to CompilationUnit.CFGRoots();
+  coll Set<CFGRoot> CompilationUnit.CFGRoots()[new LinkedHashSet<>()] with add
+      root CompilationUnit;
+  CFGRoot contributes this to Program.CFGRoots();
+  ClassDecl contributes nta staticInitialization()
+      to CompilationUnit.CFGRoots();
+  ClassDecl contributes nta instanceInitialization()
+      to CompilationUnit.CFGRoots();
 
-/**This class contains all the information related to a specific warning:
- * Location: file path.
- * Analysis: analysis identifier.
- * LineStart, ColumnStart, LineEnd, ColumnEnd: are source code location.
- * errMsg: contains a description of the error message.
- */
+  /**This class contains all the information related to a specific warning:
+   * Location: file path.
+   * Analysis: analysis identifier.
+   * LineStart, ColumnStart, LineEnd, ColumnEnd: are source code location.
+   * errMsg: contains a description of the error message.
+   */
 
 public
 class WarningMsg implements Comparable<WarningMsg> {
@@ -85,7 +87,7 @@ public
   final Integer lineStart, columnStart, lineEnd, columnEnd;
 public
   final String errMsg;
-  final Analysis analysis;
+  final Analysis.AvailableAnalysis analysis;
   final String loc;
 public
   final Pair<Position, String> repair;
@@ -93,7 +95,7 @@ public
   final java.util.List<Pair<Position, String>> relatedInfo;
 
 public
-  WarningMsg(String loc, Analysis analysis, Integer lineStart,
+  WarningMsg(String loc, Analysis.AvailableAnalysis analysis, Integer lineStart,
              Integer columnStart, Integer lineEnd, Integer columnEnd,
              String errMsg, Pair<Position, String> repair,
              java.util.List<Pair<Position, String>> relatedInfo) {
@@ -142,14 +144,14 @@ public
   }
 
 public
-  Analysis getAnalysisType() { return analysis; }
+  Analysis.AvailableAnalysis getAnalysisType() { return analysis; }
 
 } // End of class WarningMsg
 
-protected WarningMsg
-    ASTNode.warning(String loc, String msg, Analysis analysis,
-                    Pair<Position, String> repair,
-                    java.util.List<Pair<Position, String>> relatedInfo) {
+protected WarningMsg ASTNode.warning(
+    String loc, String msg, Analysis.AvailableAnalysis analysis,
+    Pair<Position, String> repair,
+    java.util.List<Pair<Position, String>> relatedInfo) {
   return new WarningMsg(loc, analysis, lineStart(), columnStart() - 1,
                         lineEnd(), columnEnd(), msg, repair, relatedInfo);
 }
@@ -159,7 +161,6 @@ eq ExprStmt.getChild().exprAsStmt() = (getExpr() instanceof UnaryIncDec);
 eq CompilationUnit.getChild().exprAsStmt() = false;
 
 inh CompilationUnit ASTNode.getCompilationUnit();
-
 eq CompilationUnit.getChild().getCompilationUnit() = this;
 eq Program.getChild().getCompilationUnit() = null;
 }

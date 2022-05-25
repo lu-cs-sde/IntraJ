@@ -48,7 +48,7 @@ import java.util.LinkedList;
 import java.util.Scanner;
 import java.util.TreeSet;
 import org.extendj.IntraJ;
-import org.extendj.ast.Analysis;
+import org.extendj.analysis.Analysis;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
@@ -124,7 +124,9 @@ public class UtilTest {
   }
 
   public static void checkWarnings(File file, String filename,
-                                   Analysis analysis, int nerrors) {
+
+                                   Analysis.AvailableAnalysis analysis,
+                                   int nerrors) {
     IntraJ.excludeLiteralsAndNull = true;
     Program program = genAST(new File(file, filename));
     int res = computeAnalysis(program, analysis);
@@ -133,7 +135,8 @@ public class UtilTest {
     }
   }
 
-  private static int computeAnalysis(Program program, Analysis analysis) {
+  private static int computeAnalysis(Program program,
+                                     Analysis.AvailableAnalysis analysis) {
     Integer nbrWrn = 0;
     try {
       for (CompilationUnit cu : program.getCompilationUnits()) {

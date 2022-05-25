@@ -111,7 +111,8 @@ public
   VarAccess contributes warning(
       getCompilationUnit().pathName(),
       "A 'NullPointerException' could be thrown;'" + name() + "' is nullable.",
-      Analysis.NPA, Pair.make(NPAgetPosition(), NPARepairCode()), null) when
+      Analysis.AvailableAnalysis.NPA,
+      Pair.make(NPAgetPosition(), NPARepairCode()), null) when
   isNullable() to CompilationUnit.NPA();
 
   /***************************************************************************

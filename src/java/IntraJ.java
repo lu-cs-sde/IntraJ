@@ -51,7 +51,7 @@ import magpiebridge.core.ToolAnalysis;
 import magpiebridge.projectservice.java.JavaProjectService;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.extendj.JavaChecker;
-import org.extendj.ast.Analysis;
+import org.extendj.analysis.Analysis;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
@@ -88,9 +88,8 @@ public class IntraJ extends Frontend {
   private static boolean vscode = false;
   private static StaticServerAnalysis serverAnalysis =
       new StaticServerAnalysis();
-  private static IntraJ intraJ = new IntraJ();
-
-  public static ArrayList<Analysis> analysis = new ArrayList<>();
+  // private static IntraJ intraJ = new IntraJ();
+  public static Analysis analysis = Analysis.getAnalysisInstance();
 
   private String[] setEnv(String[] args) throws FileNotFoundException {
     if (args.length < 1) {
@@ -110,31 +109,18 @@ public class IntraJ extends Frontend {
       if (opt.equals("-help")) {
         printOptionsUsage();
       } else if (opt.startsWith("-Wall")) {
-        for (Analysis a : Analysis.values())
-          analysis.add(a);
-        continue;
+        analysis.enableAllAnalyses();
       } else if (opt.equals("-txt-output")) {
         toTxt = true;
         continue;
       } else if (opt.startsWith("-Wexcept=")) {
         String an = opt.substring(9, opt.length());
-        if (Arrays.asList(Analysis.names()).contains(an)) {
-          analysis.remove(Analysis.valueOf(an));
-          continue;
-        }
-        System.err.println("There is no analsis with name '" + an +
-                           "' -wExcept");
-        printOptionsUsage();
-
+        analysis.disableAnalysis(analysis.getAnalysis(an));
+        continue;
       } else if (opt.startsWith("-W")) {
         String an = opt.substring(2, opt.length());
-
-        if (Arrays.asList(Analysis.names()).contains(an)) {
-          analysis.add(Analysis.valueOf(an));
-          continue;
-        }
-        System.err.println("There is no analsis with name '" + an + "' -W");
-        printOptionsUsage();
+        analysis.addAnalysis(analysis.getAnalysis(an));
+        continue;
       }
       switch (opt) {
       case "-succ":
@@ -196,7 +182,7 @@ public class IntraJ extends Frontend {
       createServer().launchOnStdio();
       // createServer().launchOnSocketPort(5007);
     } else {
-      IntraJ intraj = getInstance();
+      IntraJ intraj = new IntraJ();
 
       String[] jCheckerArgs = intraj.setEnv(args);
       int exitCode = intraj.run(jCheckerArgs);
@@ -309,14 +295,14 @@ public class IntraJ extends Frontend {
    */
   protected void processNoErrors(CompilationUnit unit) {
     Integer nbrWrn = 0;
-    for (Analysis a : analysis) {
+    for (Analysis.AvailableAnalysis a : analysis.getActiveAnalyses()) {
       try {
         long startTime = System.currentTimeMillis();
         TreeSet<WarningMsg> wmgs = (TreeSet<WarningMsg>)unit.getClass()
                                        .getDeclaredMethod(a.toString())
                                        .invoke(unit);
         for (WarningMsg wm : wmgs) {
-          if (analysis.contains(wm.getAnalysisType())) {
+          if (analysis.getActiveAnalyses().contains(wm.getAnalysisType())) {
             wm.print(System.out);
             nbrWrn++;
           }
@@ -402,6 +388,4 @@ public class IntraJ extends Frontend {
         "  -niter=x: runs the analysis `x` times and prints the time necessary to execute an analysis.");
     System.exit(1);
   }
-
-  public static IntraJ getInstance() { return intraJ; }
 }

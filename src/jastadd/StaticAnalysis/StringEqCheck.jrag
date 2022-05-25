@@ -2,7 +2,7 @@ aspect STREQ {
   EQExpr contributes warning(
       getCompilationUnit().pathName(),
       "Use of '==' to compare strings is discouraged. Use 'equals()' instead.",
-      Analysis.STREQ, null, getRelatedInfo()) when
+      Analysis.AvailableAnalysis.STREQ, null, getRelatedInfo()) when
       left()
           .type()
           .isString() &&
@@ -17,7 +17,6 @@ aspect STREQ {
     result.add(
         Pair.make(getRightOperand().getPosition(),
                   getRightOperand().prettyPrint() + " is of type String"));
-    System.err.println("ATTENTION" + result);
     return result;
   }
 

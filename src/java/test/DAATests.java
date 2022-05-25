@@ -36,7 +36,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import org.extendj.IntraJ;
-import org.extendj.ast.Analysis;
+import org.extendj.analysis.Analysis;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
@@ -58,69 +58,83 @@ public class DAATests {
 
   @Test
   public void DAA01() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA01.java", Analysis.DAA, 4);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA01.java",
+                           Analysis.AvailableAnalysis.DAA, 4);
   }
 
   @Test
   public void DAA02() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA02.java", Analysis.DAA, 3);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA02.java",
+                           Analysis.AvailableAnalysis.DAA, 3);
   }
 
   @Test
   public void DAA03() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA03.java", Analysis.DAA, 2);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA03.java",
+                           Analysis.AvailableAnalysis.DAA, 2);
   }
 
   @Test
   public void DAA04() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA04.java", Analysis.DAA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA04.java",
+                           Analysis.AvailableAnalysis.DAA, 0);
   }
 
   @Test
   public void DAA05() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA05.java", Analysis.DAA, 3);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA05.java",
+                           Analysis.AvailableAnalysis.DAA, 3);
   }
 
   @Test
   public void DAA06() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA06.java", Analysis.DAA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA06.java",
+                           Analysis.AvailableAnalysis.DAA, 0);
   }
 
   @Test
   public void DAA07() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA07.java", Analysis.DAA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA07.java",
+                           Analysis.AvailableAnalysis.DAA, 0);
   }
 
   @Test
   public void DAA08() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA08.java", Analysis.DAA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA08.java",
+                           Analysis.AvailableAnalysis.DAA, 0);
   }
 
   @Test
   public void DAA09() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA09.java", Analysis.DAA, 3);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA09.java",
+                           Analysis.AvailableAnalysis.DAA, 3);
   }
 
   @Test
   public void DAA10() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA10.java", Analysis.DAA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA10.java",
+                           Analysis.AvailableAnalysis.DAA, 0);
   }
 
   @Test
   public void DAA11() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA11.java", Analysis.DAA, 0);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA11.java",
+                           Analysis.AvailableAnalysis.DAA, 0);
   }
 
   @Test
   public void DAA12() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA12.java", Analysis.DAA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA12.java",
+                           Analysis.AvailableAnalysis.DAA, 1);
   }
   @Test
   public void DAA13() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA13.java", Analysis.DAA, 1);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA13.java",
+                           Analysis.AvailableAnalysis.DAA, 1);
   }
   @Test
   public void DAA14() {
-    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA14.java", Analysis.DAA, 3);
+    UtilTest.checkWarnings(TEST_DIRECTORY, "DAA14.java",
+                           Analysis.AvailableAnalysis.DAA, 3);
   }
 }

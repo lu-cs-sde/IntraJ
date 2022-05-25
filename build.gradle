@@ -106,7 +106,7 @@ task vsce(type:Exec) {
 vsce.dependsOn 'build'
 
 
-task genJar(type: Jar) { 
+task vscode(type: Jar) { 
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 
     from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } } {
@@ -120,8 +120,22 @@ task genJar(type: Jar) {
     destinationDir= file('vscode')
 }
 
+task intraj(type: Jar) { 
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } } {
+        exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    }
+    from sourceSets.main.output
+    manifest {
+        attributes 'Main-Class': 'org.extendj.IntraJ'
+    }
+    baseName = 'intraj'
+    destinationDir = projectDir
+}
+
 artifacts {
-    archives  genJar
+    archives  vscode, intraj;
 }
 //jar.manifest.attributes 'Main-Class': 'org.extendj.JavaCompiler'
 jar.destinationDirectory = projectDir
