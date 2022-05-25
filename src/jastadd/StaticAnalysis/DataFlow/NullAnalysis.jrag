@@ -238,7 +238,7 @@ public
   syn Position VarAccess.NPAgetPosition() {
     Dot dot = parentDot();
     if (getCompilationUnit() != null && dot != null &&
-        !(dot.getParent() instanceof ExprStmt)) {
+        (dot.getParent() instanceof ExprStmt)) {
       try {
         ResultPosition res = new ResultPosition(
             dot.lineStart(), dot.lineEnd(), dot.columnStart() - 1,

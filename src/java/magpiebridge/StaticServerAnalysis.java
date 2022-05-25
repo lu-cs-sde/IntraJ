@@ -44,11 +44,11 @@ public class StaticServerAnalysis implements ServerAnalysis {
 
   public IntraJFramework framework = new IntraJFramework();
 
-  public Map<CodeAnalysis<?>, Boolean> activeAnalyses;
+  public Map<CodeAnalysis, Boolean> activeAnalyses;
 
   public StaticServerAnalysis() {
     exeService = Executors.newSingleThreadExecutor();
-    activeAnalyses = new LinkedHashMap<CodeAnalysis<?>, Boolean>();
+    activeAnalyses = new LinkedHashMap<CodeAnalysis, Boolean>();
     activeAnalyses.put(new StringEqAnalysis(), true);
     activeAnalyses.put(new DAAnalysis(), true);
     activeAnalyses.put(new NPAnalysis(), true);
