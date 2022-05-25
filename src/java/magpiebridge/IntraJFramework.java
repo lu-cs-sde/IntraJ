@@ -38,7 +38,6 @@ public class IntraJFramework {
 
   public Collection<AnalysisResult>
   analyze(SourceFileModule file, URL clientURL, CodeAnalysis analysis) {
-    System.err.println("Analyzing " + analysis.getName());
     for (CompilationUnit cu : jChecker.getEntryPoint().getCompilationUnits()) {
       if (cu.getClassSource().sourceName().equals(file.getAbsolutePath())) {
         analysis.doAnalysis(cu, clientURL);

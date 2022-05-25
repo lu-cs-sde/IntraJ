@@ -52,6 +52,7 @@ import magpiebridge.projectservice.java.JavaProjectService;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.extendj.JavaChecker;
 import org.extendj.analysis.Analysis;
+import org.extendj.analysis.Warning;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
@@ -59,7 +60,6 @@ import org.extendj.ast.Frontend;
 import org.extendj.ast.MethodDecl;
 import org.extendj.ast.Program;
 import org.extendj.ast.SmallSet;
-import org.extendj.ast.WarningMsg;
 import org.extendj.flow.utils.IJGraph;
 import org.extendj.flow.utils.Utils;
 import org.extendj.magpiebridge.StaticServerAnalysis;
@@ -82,10 +82,11 @@ public class IntraJ extends Frontend {
   private static int n_iter = 0;
   private static boolean statistics = false;
   private static long totalTime = 0;
-  private static boolean vscode = false;
+  public static boolean vscode = false;
   private static StaticServerAnalysis serverAnalysis =
       new StaticServerAnalysis();
   public static Analysis analysis = Analysis.getAnalysisInstance();
+  public static MagpieServer server;
 
   private static String[] setEnv(String[] args) throws FileNotFoundException {
     if (args.length < 1) {
@@ -195,7 +196,7 @@ public class IntraJ extends Frontend {
     config.setDoAnalysisByFirstOpen(true);
     config.setDoAnalysisByOpen(true);
     config.setShowConfigurationPage(false, true);
-    MagpieServer server = new MagpieServer(config);
+    server = new MagpieServer(config);
     String language = "java";
     IProjectService javaProjectService = new JavaProjectService();
     server.addProjectService(language, javaProjectService);
@@ -265,10 +266,10 @@ public class IntraJ extends Frontend {
     for (Analysis.AvailableAnalysis a : analysis.getActiveAnalyses()) {
       try {
         long startTime = System.currentTimeMillis();
-        TreeSet<WarningMsg> wmgs = (TreeSet<WarningMsg>)unit.getClass()
-                                       .getDeclaredMethod(a.toString())
-                                       .invoke(unit);
-        for (WarningMsg wm : wmgs) {
+        TreeSet<Warning> wmgs = (TreeSet<Warning>)unit.getClass()
+                                    .getDeclaredMethod(a.toString())
+                                    .invoke(unit);
+        for (Warning wm : wmgs) {
           if (analysis.getActiveAnalyses().contains(wm.getAnalysisType())) {
             wm.print(System.out);
             nbrWrn++;

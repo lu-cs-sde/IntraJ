@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
 public class Analysis {
 
   // Enum that specifies all the available AvailableAnalysis

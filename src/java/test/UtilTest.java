@@ -49,12 +49,12 @@ import java.util.Scanner;
 import java.util.TreeSet;
 import org.extendj.IntraJ;
 import org.extendj.analysis.Analysis;
+import org.extendj.analysis.Warning;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
 import org.extendj.ast.MethodDecl;
 import org.extendj.ast.Program;
-import org.extendj.ast.WarningMsg;
 import org.extendj.flow.utils.IJGraph;
 import org.extendj.flow.utils.Utils;
 
@@ -140,10 +140,10 @@ public class UtilTest {
     Integer nbrWrn = 0;
     try {
       for (CompilationUnit cu : program.getCompilationUnits()) {
-        TreeSet<WarningMsg> wmgs = (TreeSet<WarningMsg>)cu.getClass()
-                                       .getDeclaredMethod(analysis.toString())
-                                       .invoke(cu);
-        for (WarningMsg wm : wmgs) {
+        TreeSet<Warning> wmgs = (TreeSet<Warning>)cu.getClass()
+                                    .getDeclaredMethod(analysis.toString())
+                                    .invoke(cu);
+        for (Warning wm : wmgs) {
           if (analysis.equals(wm.getAnalysisType())) {
             wm.print(System.out);
             nbrWrn++;
