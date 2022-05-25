@@ -28,7 +28,7 @@ evaluation/antlr-2.7.2/
 
 .ipynb_checkpoints
 
-
 # VSCode extension
 vscode/intraj.jar
 vscode/intraj-0.0.1.vsix
+vscode/out

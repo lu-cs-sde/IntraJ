@@ -34,22 +34,6 @@ import org.extendj.magpiebridge.ResultPosition;
 import org.extendj.analysis.Analysis;
 
 aspect Analysis {
-  /**
-   * Analysis identifier.
-   */
-  // public
-  //   enum Analysis {
-  //     PURE, DAA, NPA, STREQ;
-
-  //     public static String[] names(){
-  //         String valuesStr = Arrays.toString(Analysis.values());
-  //         return valuesStr.substring(1, valuesStr.length() - 1)
-  //             .replace(" ", "")
-  //             .split(",");}
-  // }
-
-  coll TreeSet<WarningMsg> CompilationUnit
-      .PURE()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
 
   coll TreeSet<WarningMsg> CompilationUnit
       .STREQ()[new TreeSet<WarningMsg>()] with add root CompilationUnit;
@@ -65,14 +49,6 @@ aspect Analysis {
   CFGRoot contributes this to Program.CFGRoots();
   ClassDecl contributes nta staticInitialization() to Program.CFGRoots();
   ClassDecl contributes nta instanceInitialization() to Program.CFGRoots();
-
-  coll Set<CFGRoot> CompilationUnit.CFGRoots()[new LinkedHashSet<>()] with add
-      root CompilationUnit;
-  CFGRoot contributes this to Program.CFGRoots();
-  ClassDecl contributes nta staticInitialization()
-      to CompilationUnit.CFGRoots();
-  ClassDecl contributes nta instanceInitialization()
-      to CompilationUnit.CFGRoots();
 
   /**This class contains all the information related to a specific warning:
    * Location: file path.

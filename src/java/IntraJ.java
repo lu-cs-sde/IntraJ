@@ -72,7 +72,6 @@ public class IntraJ extends Frontend {
   public enum FlowProfiling { BACKWARD, FORWARD, COLLECTION, NONE, ALL }
   private static Boolean pred = false;
   private static Boolean succ = false;
-  private static Boolean debug = false;
   private static Boolean pdf = false;
   private static Boolean multipleFiles = false;
   public static Boolean excludeLiteralsAndNull = false;
@@ -81,17 +80,14 @@ public class IntraJ extends Frontend {
   public static Object DrAST_root_node;
   private static Integer numb_warning = 0;
   private static int n_iter = 0;
-  private static boolean printTime = false;
   private static boolean statistics = false;
   private static long totalTime = 0;
-  public static boolean toTxt = false;
   private static boolean vscode = false;
   private static StaticServerAnalysis serverAnalysis =
       new StaticServerAnalysis();
-  // private static IntraJ intraJ = new IntraJ();
   public static Analysis analysis = Analysis.getAnalysisInstance();
 
-  private String[] setEnv(String[] args) throws FileNotFoundException {
+  private static String[] setEnv(String[] args) throws FileNotFoundException {
     if (args.length < 1) {
       System.err.println("You must specify a source file on the command line!");
       printOptionsUsage();
@@ -110,9 +106,6 @@ public class IntraJ extends Frontend {
         printOptionsUsage();
       } else if (opt.startsWith("-Wall")) {
         analysis.enableAllAnalyses();
-      } else if (opt.equals("-txt-output")) {
-        toTxt = true;
-        continue;
       } else if (opt.startsWith("-Wexcept=")) {
         String an = opt.substring(9, opt.length());
         analysis.disableAnalysis(analysis.getAnalysis(an));
@@ -134,14 +127,10 @@ public class IntraJ extends Frontend {
         pdf = true;
         pred = true;
         break;
-      case "-debug":
-        debug = true;
-        break;
       case "-vscode":
         vscode = true;
-      case "-helpfrontend":
-        FEOptions.add("-help");
         break;
+
       case "-statistics":
         statistics = true;
         break;
@@ -175,36 +164,26 @@ public class IntraJ extends Frontend {
    */
   public static void main(String args[])
       throws FileNotFoundException, InterruptedException, IOException {
-
-    if (true) {
-      System.err.println("Running in vscode mode");
-      // AnalysisInjector.initAnalysis(serverAnalysis);
+    String[] jCheckerArgs = setEnv(args);
+    if (vscode) {
       createServer().launchOnStdio();
-      // createServer().launchOnSocketPort(5007);
     } else {
       IntraJ intraj = new IntraJ();
-
-      String[] jCheckerArgs = intraj.setEnv(args);
       int exitCode = intraj.run(jCheckerArgs);
+      DrAST_root_node = intraj.getEntryPoint();
       if (exitCode != 0) {
         System.exit(exitCode);
       }
-      DrAST_root_node = intraj.getEntryPoint();
 
-      if (pdf) {
+      if (pdf)
         intraj.generatePDF();
-      }
-      if (debug)
-        intraj.debug();
 
       if (statistics) {
         Utils.printStatistics(
             System.out, "Elapsed time (CFG + Dataflow): " + totalTime / 1000 +
                             "." + totalTime % 1000 + "s");
-      }
-      Utils.printStatistics(System.out,
-                            "Total number of warnings: " + numb_warning);
-      if (statistics) {
+        Utils.printStatistics(System.out,
+                              "Total number of warnings: " + numb_warning);
         printProgramStatistics(intraj.getEntryPoint());
       }
     }
@@ -215,19 +194,7 @@ public class IntraJ extends Frontend {
     config.setDoAnalysisBySave(true);
     config.setDoAnalysisByFirstOpen(true);
     config.setDoAnalysisByOpen(true);
-    config.supportWarningSuppression();
-
-    /**
-     * Set up the server to start a configuration page (HTML page in client or
-     * browser) after initialization.
-     *
-     * @param showConfigurationPage true, if the server should start a
-     *     configuration page. The default value is false.
-     * @param addDefaultActions true, if the server should add default action
-     *     button <code> Run Analysis</code> to the default configuration page.
-     * @return the server configuration
-     */
-    config.setShowConfigurationPage(true, true);
+    config.setShowConfigurationPage(false, true);
     MagpieServer server = new MagpieServer(config);
     String language = "java";
     IProjectService javaProjectService = new JavaProjectService();
@@ -329,18 +296,6 @@ public class IntraJ extends Frontend {
 
   public Program getEntryPoint() { return program; }
 
-  private void debug() {
-    for (CFGRoot root : getEntryPoint().CFGRoots()) {
-      root.entry().printSuccSets(System.out,
-                                 SmallSet.<CFGNode>empty().<CFGNode>mutable());
-    }
-    System.out.println("-----------");
-    for (CFGRoot root : getEntryPoint().CFGRoots()) {
-      root.exit().printPredSets(System.out,
-                                SmallSet.<CFGNode>empty().<CFGNode>mutable());
-    }
-  }
-
   private void generatePDF() throws IOException, InterruptedException {
     graph = new IJGraph(pred, succ);
     program.graphLayout(graph);
@@ -360,8 +315,8 @@ public class IntraJ extends Frontend {
     Utils.printInfo(System.out, "PDF file generated correctly");
   }
 
-  void printOptionsUsage() {
-    System.out.println(name() + " - Version:" + version());
+  static void printOptionsUsage() {
+    System.out.println("IntraJ");
     System.out.println("Available options:");
     System.out.println("  -help: prints all the available options.");
     System.out.println(
