@@ -44,9 +44,9 @@ aspect STREQ {
     return null;
   }
 
-  eq Expr.getPosition() {
-    if (varDecl() != null)
-      return varDecl().getPosition();
-    return getPosition();
-  }
+  // eq Expr.getPosition() {
+  //   if (varDecl() != null)
+  //     return varDecl().getPosition();
+  //   return getPosition();
+  // }
 }

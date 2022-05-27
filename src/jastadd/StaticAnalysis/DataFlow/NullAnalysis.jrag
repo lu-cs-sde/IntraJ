@@ -112,7 +112,7 @@ public
       getCompilationUnit().pathName(),
       "A 'NullPointerException' could be thrown;'" + name() + "' is nullable.",
       Analysis.AvailableAnalysis.NPA,
-      Pair.make(NPAgetPosition(), NPARepairCode()), null) when
+      Pair.make(NPAgetPosition(), NPARepairCode()), getMotivations()) when
   isNullable() to CompilationUnit.NPA();
 
   /***************************************************************************
@@ -137,6 +137,8 @@ public
   eq NullLiteral.getMayBeNull() = true;
   eq VarAccess.getMayBeNull() = NA_in().get(varDecl()) == AbsDomain.NULL;
   eq AssignExpr.getMayBeNull() = getSource().getMayBeNull();
+  eq ConditionalExpr.getMayBeNull() =
+      getTrueExpr().getMayBeNull() || getFalseExpr().getMayBeNull();
   syn boolean VariableDeclarator.getMayBeNull() =
       hasInit() ? getInit().getMayBeNull() : false;
 
@@ -153,17 +155,26 @@ public
   EQExpr implements FactGenerator;
   ImplicitAssignment implements CFGNode;
 
-  syn nta ImplicitAssignment EQExpr.assignTrue() =
-      new ImplicitAssignment(true, getFact());
+public
+  ImplicitAssignment.ImplicitAssignment(Boolean p0, Variable p1, int start,
+                                        int end) {
+    setMayBeNull(p0);
+    setDeclaration(p1);
+    setStart(start);
+    setEnd(end);
+  }
 
-  syn nta ImplicitAssignment EQExpr.assignFalse() =
-      new ImplicitAssignment(false, getFact());
+  syn nta ImplicitAssignment EQExpr.assignTrue() = new ImplicitAssignment(
+      true, getFact(), getParent().getStart(), getParent().getEnd());
 
-  syn nta ImplicitAssignment NEExpr.assignTrue() =
-      new ImplicitAssignment(false, getFact());
+  syn nta ImplicitAssignment EQExpr.assignFalse() = new ImplicitAssignment(
+      false, getFact(), getParent().getStart(), getParent().getEnd());
 
-  syn nta ImplicitAssignment NEExpr.assignFalse() =
-      new ImplicitAssignment(true, getFact());
+  syn nta ImplicitAssignment NEExpr.assignTrue() = new ImplicitAssignment(
+      false, getFact(), getParent().getStart(), getParent().getEnd());
+
+  syn nta ImplicitAssignment NEExpr.assignFalse() = new ImplicitAssignment(
+      true, getFact(), getParent().getStart(), getParent().getEnd());
 
   inh boolean FactGenerator.shouldHaveFacts();
   eq IfStmt.getCondition().shouldHaveFacts() = true;
@@ -250,5 +261,82 @@ public
       }
     }
     return null;
+  }
+
+public
+  ArrayList<Pair<Position, String>> CFGNode.getMotivations(
+      Set<CFGNode> visisted, Variable ref) {
+    ArrayList<Pair<Position, String>> res =
+        new ArrayList<Pair<Position, String>>();
+    if (visisted.contains(this))
+      return res;
+    visisted.add(this);
+    if (NA_out().get(ref) != null) {
+      for (CFGNode n : pred()) {
+        res.addAll(n.getMotivations(visisted, ref));
+      }
+    }
+    return res;
+  }
+
+public
+  ArrayList<Pair<Position, String>> ImplicitAssignment.getMotivations(
+      Set<CFGNode> visisted, Variable ref) {
+    ArrayList<Pair<Position, String>> res =
+        new ArrayList<Pair<Position, String>>();
+    if (visisted.contains(this) || NA_out().get(ref) == null ||
+        NA_out().get(ref) == AbsDomain.NOTNULL)
+      return res;
+    visisted.add(this);
+    if (NA_out().get(ref) != null) {
+      if (getDeclaration() == ref && (NA_out().get(ref) == AbsDomain.NULL)) {
+        res.add(Pair.make(getPosition(), "Checking if " + ref.name() +
+                                             " is null implies that " +
+                                             ref.name() + " might be null"));
+      }
+    }
+    for (CFGNode n : pred()) {
+      res.addAll(n.getMotivations(visisted, ref));
+    }
+
+    return res;
+  }
+
+public
+  ArrayList<Pair<Position, String>> AssignExpr.getMotivations(
+      Set<CFGNode> visisted, Variable ref) {
+    ArrayList<Pair<Position, String>> res =
+        new ArrayList<Pair<Position, String>>();
+    if (visisted.contains(this) || NA_out().get(ref) == null ||
+        NA_out().get(ref) == AbsDomain.NOTNULL)
+      return res;
+    visisted.add(this);
+    System.err.println("AssignExpr.getMotivations" + prettyPrint());
+    System.err.println(NA_in());
+    System.err.println(NA_out());
+    if (NA_out().get(ref) != null) {
+      if ((NA_in().get(ref) == null || NA_in().get(ref) == AbsDomain.NOTNULL) &&
+          (NA_out().get(ref) == AbsDomain.NULL)) {
+        System.err.println("Inside.getMotivations" + getPosition());
+        res.add(Pair.make(getPosition(),
+                          "Assigning a value to " + ref.name() +
+                              " that might be null. The assigned value is: " +
+                              getSource().prettyPrint()));
+      }
+    }
+    for (CFGNode n : pred()) {
+      res.addAll(n.getMotivations(visisted, ref));
+    }
+
+    return res;
+  }
+
+  syn ArrayList<Pair<Position, String>> VarAccess.getMotivations() {
+    ArrayList<Pair<Position, String>> res =
+        getMotivations(new HashSet<CFGNode>(), decl());
+    if (res.isEmpty()) {
+      res.add(Pair.make(getPosition(), "No motivation found"));
+    }
+    return res;
   }
 }
