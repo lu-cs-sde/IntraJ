@@ -22,9 +22,9 @@ aspect STREQ {
 
   syn Position ASTNode.getPosition() {
     try {
-      ResultPosition res = new ResultPosition(
-          lineStart(), lineEnd(), columnStart() - 1, columnEnd(),
-          new File(getCompilationUnit().pathName()).toURL());
+      IJPosition res =
+          new IJPosition(lineStart(), lineEnd(), columnStart() - 1, columnEnd(),
+                         getCompilationUnit().pathName());
       return res;
     } catch (Throwable t) {
       t.printStackTrace();
@@ -34,9 +34,9 @@ aspect STREQ {
 
   syn Position Variable.getPosition() {
     try {
-      ResultPosition res = new ResultPosition(
-          lineStart(), lineEnd(), columnStart() - 1, columnEnd(),
-          new File(getCompilationUnit().pathName()).toURL());
+      IJPosition res =
+          new IJPosition(lineStart(), lineEnd(), columnStart() - 1, columnEnd(),
+                         getCompilationUnit().pathName());
       return res;
     } catch (Throwable t) {
       t.printStackTrace();

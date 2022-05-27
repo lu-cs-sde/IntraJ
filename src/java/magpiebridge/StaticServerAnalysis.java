@@ -27,8 +27,8 @@ import magpiebridge.core.ServerAnalysis;
 import magpiebridge.core.analysis.configuration.ConfigurationOption;
 import magpiebridge.core.analysis.configuration.OptionType;
 import magpiebridge.projectservice.java.JavaProjectService;
+import org.extendj.IntraJ;
 import org.extendj.magpiebridge.CodeAnalysis;
-import org.extendj.magpiebridge.IntraJFramework;
 import org.extendj.magpiebridge.analysis.*;
 
 public class StaticServerAnalysis implements ServerAnalysis {
@@ -42,7 +42,7 @@ public class StaticServerAnalysis implements ServerAnalysis {
   public ExecutorService exeService;
   public Collection<Future<?>> last;
 
-  public IntraJFramework framework = new IntraJFramework();
+  public IntraJ framework = IntraJ.getInstance();
 
   public Map<CodeAnalysis, Boolean> activeAnalyses;
 

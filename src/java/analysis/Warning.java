@@ -8,7 +8,7 @@ import java.net.URL;
 import magpiebridge.util.SourceCodeReader;
 import org.extendj.IntraJ;
 import org.extendj.flow.utils.Utils;
-import org.extendj.magpiebridge.ResultPosition;
+import org.extendj.magpiebridge.IJPosition;
 
 public class Warning implements Comparable<Warning> {
   private final Integer lineStart, columnStart, lineEnd, columnEnd;
@@ -17,7 +17,7 @@ public class Warning implements Comparable<Warning> {
   final String sourceFilePath;
   private final Pair<Position, String> repair;
   private final java.util.List<Pair<Position, String>> relatedInfo;
-  private ResultPosition position = null;
+  private IJPosition position = null;
   private String code = "Error...";
 
   public Warning(String sourceFilePath, Analysis.AvailableAnalysis analysis,
@@ -34,16 +34,14 @@ public class Warning implements Comparable<Warning> {
     this.columnStart = columnStart;
     this.repair = repair;
     this.relatedInfo = relatedInfo;
+
     try {
       if (IntraJ.vscode) {
-        URL clientURL = new URL(IntraJ.server.getClientUri(
-            new File(sourceFilePath).toURI().toString()));
-        this.position = new ResultPosition(lineStart, lineEnd, columnStart,
-                                           columnEnd, clientURL);
+        this.position = new IJPosition(lineStart, lineEnd, columnStart,
+                                       columnEnd, sourceFilePath);
         this.code = SourceCodeReader.getLinesInString(position);
       }
     } catch (Exception e) {
-
       e.printStackTrace();
     }
   }
@@ -88,7 +86,7 @@ public class Warning implements Comparable<Warning> {
     return relatedInfo;
   }
 
-  public ResultPosition getPosition() { return position; }
+  public IJPosition getPosition() { return position; }
 
   public String getCode() { return code; }
 

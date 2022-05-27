@@ -241,10 +241,9 @@ public
     if (getCompilationUnit() != null && dot != null &&
         (dot.getParent() instanceof ExprStmt)) {
       try {
-        ResultPosition res = new ResultPosition(
-            dot.lineStart(), dot.lineEnd(), dot.columnStart() - 1,
-            dot.columnEnd(),
-            new File(dot.getCompilationUnit().pathName()).toURL());
+        IJPosition res = new IJPosition(dot.lineStart(), dot.lineEnd(),
+                                        dot.columnStart() - 1, dot.columnEnd(),
+                                        dot.getCompilationUnit().pathName());
         return res;
       } catch (Throwable p) {
         p.printStackTrace();

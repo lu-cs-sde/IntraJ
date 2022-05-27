@@ -9,9 +9,10 @@ import java.io.IOException;
 import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import org.extendj.IntraJ;
 import org.extendj.ast.ASTNode;
 
-public class ResultPosition implements Position {
+public class IJPosition implements Position {
   private int firstOffset;
   private int lastOffset;
   private int firstLine;
@@ -22,8 +23,8 @@ public class ResultPosition implements Position {
   private URL urlToSourceFile;
   private String srcPath;
 
-  public ResultPosition(int firstLine, int lastLine, int firstCol, int lastCol,
-                        URL url) {
+  public IJPosition(int firstLine, int lastLine, int firstCol, int lastCol,
+                    String sourcePath) {
     this.firstOffset = Symbol.makePosition(firstLine, firstCol);
     this.lastOffset = Symbol.makePosition(lastLine, lastCol);
 
@@ -32,8 +33,12 @@ public class ResultPosition implements Position {
 
     this.firstCol = firstCol;
     this.lastCol = lastCol;
-
-    urlToSourceFile = url;
+    try {
+      urlToSourceFile =
+          new URL(IntraJ.server.getClientUri("file:" + sourcePath));
+    } catch (MalformedURLException e) {
+      e.printStackTrace();
+    }
   }
 
   @Override

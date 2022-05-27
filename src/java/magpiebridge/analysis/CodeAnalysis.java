@@ -12,8 +12,8 @@ import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.extendj.analysis.Warning;
 import org.extendj.ast.CompilationUnit;
 import org.extendj.magpiebridge.CodeAnalysis;
+import org.extendj.magpiebridge.IJPosition;
 import org.extendj.magpiebridge.Result;
-import org.extendj.magpiebridge.ResultPosition;
 
 public abstract class CodeAnalysis {
   private Collection<AnalysisResult> results = new HashSet<>();

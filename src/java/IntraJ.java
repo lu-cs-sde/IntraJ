@@ -30,6 +30,8 @@
 
 package org.extendj;
 
+import com.ibm.wala.classLoader.Module;
+import com.ibm.wala.classLoader.SourceFileModule;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -39,10 +41,15 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.TreeSet;
+import magpiebridge.core.AnalysisResult;
 import magpiebridge.core.IProjectService;
 import magpiebridge.core.MagpieServer;
 import magpiebridge.core.ServerAnalysis;
@@ -50,6 +57,7 @@ import magpiebridge.core.ServerConfiguration;
 import magpiebridge.core.ToolAnalysis;
 import magpiebridge.projectservice.java.JavaProjectService;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.extendj.IntraJ;
 import org.extendj.JavaChecker;
 import org.extendj.analysis.Analysis;
 import org.extendj.analysis.Warning;
@@ -62,6 +70,7 @@ import org.extendj.ast.Program;
 import org.extendj.ast.SmallSet;
 import org.extendj.flow.utils.IJGraph;
 import org.extendj.flow.utils.Utils;
+import org.extendj.magpiebridge.CodeAnalysis;
 import org.extendj.magpiebridge.StaticServerAnalysis;
 
 /**
@@ -189,22 +198,6 @@ public class IntraJ extends Frontend {
         printProgramStatistics(intraj.getEntryPoint());
       }
     }
-  }
-
-  private static MagpieServer createServer() {
-    ServerConfiguration config = new ServerConfiguration();
-    config.setDoAnalysisBySave(true);
-    config.setDoAnalysisByFirstOpen(true);
-    config.setDoAnalysisByOpen(true);
-    config.setShowConfigurationPage(false, false);
-    server = new MagpieServer(config);
-    String language = "java";
-    IProjectService javaProjectService = new JavaProjectService();
-    server.addProjectService(language, javaProjectService);
-    Either<ServerAnalysis, ToolAnalysis> analysis =
-        Either.forLeft(serverAnalysis);
-    server.addAnalysis(analysis, language);
-    return server;
   }
 
   private static void printProgramStatistics(Program _program) {
@@ -354,5 +347,71 @@ public class IntraJ extends Frontend {
       intraj = new IntraJ();
     }
     return intraj;
+  }
+
+  // MagpieBridge plugin methods
+
+  private Collection<String> vscodeArgs;
+
+  private static MagpieServer createServer() {
+    ServerConfiguration config = new ServerConfiguration();
+    config.setDoAnalysisBySave(true);
+    config.setDoAnalysisByFirstOpen(true);
+    config.setDoAnalysisByOpen(true);
+    config.setShowConfigurationPage(false, false);
+    server = new MagpieServer(config);
+    String language = "java";
+    IProjectService javaProjectService = new JavaProjectService();
+    server.addProjectService(language, javaProjectService);
+    Either<ServerAnalysis, ToolAnalysis> analysis =
+        Either.forLeft(serverAnalysis);
+    server.addAnalysis(analysis, language);
+    return server;
+  }
+
+  public void setup(Collection<? extends Module> files, Set<String> classPath,
+                    Set<String> srcPath, Set<String> libPath,
+                    Set<String> progPath) {
+    // Flushing all the attributes from the previous computations
+    // We are not creating a new IntraJ instance to keep the steady state.
+    if (intraj.getEntryPoint() != null) {
+      intraj.getEntryPoint().flushTreeCache();
+    }
+    vscodeArgs = new LinkedHashSet<String>();
+
+    vscodeArgs.add("-nowarn");
+
+    if (!classPath.isEmpty()) {
+      vscodeArgs.add("-classpath");
+      vscodeArgs.add(computeClassPath(classPath));
+    }
+
+    for (String path : progPath) {
+      vscodeArgs.add(path);
+    }
+  }
+
+  public int run() {
+    return intraj.run(vscodeArgs.toArray(new String[vscodeArgs.size()]));
+  }
+
+  public Collection<AnalysisResult>
+  analyze(SourceFileModule file, URL clientURL, CodeAnalysis analysis) {
+    for (CompilationUnit cu : intraj.getEntryPoint().getCompilationUnits()) {
+      if (cu.getClassSource().sourceName().equals(file.getAbsolutePath())) {
+        analysis.doAnalysis(cu, clientURL);
+      }
+    }
+    return analysis.getResult();
+  }
+
+  protected String computeClassPath(Set<String> classPath) {
+    StringBuilder sb = new StringBuilder();
+    for (String path : classPath) {
+      sb.append(path);
+      sb.append(":");
+    }
+
+    return sb.toString();
   }
 }
