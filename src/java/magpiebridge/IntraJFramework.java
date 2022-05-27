@@ -17,7 +17,12 @@ public class IntraJFramework {
   public void setup(Collection<? extends Module> files, Set<String> classPath,
                     Set<String> srcPath, Set<String> libPath,
                     Set<String> progPath) {
-    jChecker = new IntraJ();
+    jChecker = IntraJ.getInstance();
+    // Flushing all the attributes from the previous computations
+    // We are not creating a new IntraJ instance to keep the steady state.
+    if (jChecker.getEntryPoint() != null) {
+      jChecker.getEntryPoint().flushTreeCache();
+    }
     args = new LinkedHashSet<String>();
 
     args.add("-nowarn");

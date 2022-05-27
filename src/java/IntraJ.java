@@ -87,6 +87,7 @@ public class IntraJ extends Frontend {
       new StaticServerAnalysis();
   public static Analysis analysis = Analysis.getAnalysisInstance();
   public static MagpieServer server;
+  public static IntraJ intraj;
 
   private static String[] setEnv(String[] args) throws FileNotFoundException {
     if (args.length < 1) {
@@ -169,7 +170,7 @@ public class IntraJ extends Frontend {
     if (vscode) {
       createServer().launchOnStdio();
     } else {
-      IntraJ intraj = new IntraJ();
+      IntraJ intraj = getInstance();
       int exitCode = intraj.run(jCheckerArgs);
       DrAST_root_node = intraj.getEntryPoint();
       if (exitCode != 0) {
@@ -195,7 +196,7 @@ public class IntraJ extends Frontend {
     config.setDoAnalysisBySave(true);
     config.setDoAnalysisByFirstOpen(true);
     config.setDoAnalysisByOpen(true);
-    config.setShowConfigurationPage(false, true);
+    config.setShowConfigurationPage(false, false);
     server = new MagpieServer(config);
     String language = "java";
     IProjectService javaProjectService = new JavaProjectService();
@@ -343,5 +344,15 @@ public class IntraJ extends Frontend {
     System.out.println(
         "  -niter=x: runs the analysis `x` times and prints the time necessary to execute an analysis.");
     System.exit(1);
+  }
+
+  /**
+   * @return the active IntraJ instance
+   */
+  public static IntraJ getInstance() {
+    if (intraj == null) {
+      intraj = new IntraJ();
+    }
+    return intraj;
   }
 }

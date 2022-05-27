@@ -150,10 +150,6 @@ public class StaticServerAnalysis implements ServerAnalysis {
     updatePaths(files);
   }
 
-  // public void addAnalysis(CodeAnalysis<?> analysis) {
-  //   activeAnalyses.put(analysis, true);
-  // }
-
   private void updatePaths(Collection<? extends Module> files) {
     progFilesAbsPaths.clear();
     totalClassPath.clear();
