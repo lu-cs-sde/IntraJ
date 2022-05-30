@@ -28,84 +28,109 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-aspect LiveVariableAnalysis {
-public
-  interface UnaryIncDec {}
-  PostfixExpr implements UnaryIncDec;
-  PreIncExpr implements UnaryIncDec;
-  PreDecExpr implements UnaryIncDec;
-
-public
-  interface CompoundAssignment {}
-  AssignBitwiseExpr implements CompoundAssignment;
-  AssignShiftExpr implements CompoundAssignment;
-  AssignMultiplicativeExpr implements CompoundAssignment;
-  AssignAdditiveExpr implements CompoundAssignment;
-
-  /**
-   * For compound assignment the l-value is read therefore is considered a use.
-   * The compound stmt
-   */
-  eq CompoundAssignment.LVA_use() = getVarDeclSet();
+aspect ReachingDefinitions {
 
   /****************************************************************************
    ***************************** DEF sets *************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.LVA_def()  = emptyBitSet();
-  eq VariableDeclarator.LVA_def() = emptyBitSet().singleton(singletonValue());
-  eq AssignExpr.LVA_def() =getVarDeclSet();
-  eq UnaryIncDec.LVA_def() = getVarDeclSet();
-  eq ImplicitAssignment.LVA_def() = emptyBitSet();
+  syn BitSet CFGNode.RDgen() = emptyBitSet();
+  eq VariableDeclarator.RDgen() = emptyBitSet().singleton(this);
+  eq AssignExpr.RDgen() = emptyBitSet().singleton(this);
+  eq UnaryIncDec.RDgen() = emptyBitSet().singleton(this);
+  eq ImplicitAssignment.RDgen() = emptyBitSet().singleton(this);
 
   /****************************************************************************
    ***************************** USE sets *************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.LVA_use()  = emptyBitSet();
-  eq VarAccess.LVA_use() = getVarDeclSet();
-  eq UnaryIncDec.LVA_use() = getVarDeclSet();
- 
+  syn BitSet CFGNode.RDkill() = emptyBitSet();
+  eq VariableDeclarator.RDkill() = getVarDeclSet();
+  eq AssignExpr.RDkill() = getVarDeclSet();
+  eq UnaryIncDec.RDkill() = getVarDeclSet();
+  // eq ImplicitAssignment.RDkill() = getVarDeclSet();
+
   /****************************************************************************
    ***************************** OUT sets *************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.LVA_out() {
+  syn BitSet CFGNode.RDin() {
     BitSet res = emptyBitSet().mutable();
-    for (CFGNode e : succ()) {
-      res.add(e.LVA_in());
+    for (CFGNode e : pred()) {
+      res.add(e.RDout());
     }
     return res;
   }
-
 
   /****************************************************************************
    ***************************** IN sets **************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.LVA_in() circular[emptyBitSet().mutable()] = LVA_out();
-  eq VariableDeclarator.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
-  eq AssignExpr.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
-  eq UnaryIncDec.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
-  eq VarAccess.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
- 
+  syn BitSet CFGNode.RDout() circular[emptyBitSet().mutable()] = RDin();
+  eq VariableDeclarator.RDout() {
+    BitSet res = emptyBitSet().mutable();
+    res = res.union(RDin());
+    Iterator iter1 = RDin().iterator();
+    while (iter1.hasNext()) {
+      Iterator iter2 = RDkill().iterator();
+      CFGNode killDeref = (CFGNode)iter1.next();
+      Variable kill = (Variable)killDeref.getVarDeclSet().iterator().next();
+      while (iter2.hasNext()) {
+        if (iter2.next() == kill) {
+          res = res.compl(killDeref);
+        }
+      }
+    }
+    res = res.union(RDgen());
+    return res;
+  }
+  eq AssignExpr.RDout() {
+    BitSet res = emptyBitSet().mutable();
+    res = res.union(RDin());
+    Iterator iter1 = RDin().iterator();
+    while (iter1.hasNext()) {
+      Iterator iter2 = RDkill().iterator();
+      CFGNode killDeref = (CFGNode)iter1.next();
+      Variable kill = (Variable)killDeref.getVarDeclSet().iterator().next();
+      while (iter2.hasNext()) {
+        if (iter2.next() == kill) {
+          res = res.compl(killDeref);
+        }
+      }
+    }
+    res = res.union(RDgen());
+    return res;
+  }
+
+  eq UnaryIncDec.RDout() {
+    BitSet res = emptyBitSet().mutable();
+    res = res.union(RDin());
+    Iterator iter1 = RDin().iterator();
+    while (iter1.hasNext()) {
+      Iterator iter2 = RDkill().iterator();
+      CFGNode killDeref = (CFGNode)iter1.next();
+      Variable kill = (Variable)killDeref.getVarDeclSet().iterator().next();
+      while (iter2.hasNext()) {
+        if (iter2.next() == kill) {
+          res = res.compl(killDeref);
+        }
+      }
+    }
+    res = res.union(RDgen());
+    return res;
+  }
 
   /****************************************************************************
    ***************************** GETVARDECLSET    *****************************
    ****************************************************************************
    */
 
-  syn BitSet CFGNode.getVarDeclSet() = emptyBitSet();
-  eq VariableDeclarator.getVarDeclSet() =
-      emptyBitSet().singleton(singletonValue());
-  eq VarAccess.getVarDeclSet() =
-      (!isDest()) ? emptyBitSet().singleton(decl()) : emptyBitSet();
-  eq UnaryIncDec.getVarDeclSet() =
-      (getOperand().varDecl() != null)
-          ? emptyBitSet().singleton(getOperand().varDecl())
-          : emptyBitSet();
-  eq AssignExpr.getVarDeclSet() =
-      (getDest().varDecl() != null)
-          ? emptyBitSet().singleton(getDest().varDecl())
-          : emptyBitSet();
+  syn Set<CFGNode> CFGNode.rdin() {
+    Iterator iter = RDin().iterator();
+    Set<CFGNode> res = new HashSet<CFGNode>();
+    while (iter.hasNext()) {
+      res.add((CFGNode)iter.next());
+    }
+    return res;
+  }
 }

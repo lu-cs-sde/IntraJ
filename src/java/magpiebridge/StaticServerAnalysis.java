@@ -52,6 +52,7 @@ public class StaticServerAnalysis implements ServerAnalysis {
     activeAnalyses.put(new StringEqAnalysis(), true);
     activeAnalyses.put(new DAAnalysis(), true);
     activeAnalyses.put(new NPAnalysis(), true);
+    activeAnalyses.put(new IMPDAAnalysis(), true);
     progFilesAbsPaths = new HashSet<>();
     totalClassPath = new HashSet<>();
     last = new ArrayList<>(activeAnalyses.size());

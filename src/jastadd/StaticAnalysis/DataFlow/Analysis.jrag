@@ -45,6 +45,9 @@ aspect Analysis {
   coll Set<Warning> CompilationUnit.NPA()[new TreeSet<Warning>()] with add root
       CompilationUnit;
 
+  coll Set<Warning> CompilationUnit.IMPDAA()[new TreeSet<Warning>()] with add
+      root CompilationUnit;
+
   coll Set<CFGRoot> Program.CFGRoots()[new LinkedHashSet<>()] with add root
       Program;
   CFGRoot contributes this to Program.CFGRoots();

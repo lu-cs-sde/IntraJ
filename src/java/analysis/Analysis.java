@@ -49,6 +49,7 @@ public class Analysis {
     PURE,
     DAA,
     STREQ,
+    IMPDAA,
     NPA;
 
     // CFG;

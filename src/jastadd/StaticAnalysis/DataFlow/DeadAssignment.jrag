@@ -56,7 +56,7 @@ aspect DAA {
   eq AssignExpr.DAA_isDeadAssign() {
     return !LVA_def().isEmpty() &&           // The assignment is a definition
            !getDest().varDecl().isFinal() && // The L-value is not final
-                   (getDeclaration().isLocalVariable() || // The def is a local vriable
+           (getDeclaration().isLocalVariable() || // The def is a local vriable
             (getDeclaration().isMethodParameter() &&
              getDeclaration().type().isPrimitiveType())) &&
            isDead();

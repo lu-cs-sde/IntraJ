@@ -1,0 +1,81 @@
+aspect ImplicitDeadAssignment {
+
+  coll Set<CFGNode> CFGNode.daaAllUses()[new HashSet<>()] with add;
+
+   UnaryIncDec contributes this to CFGNode.daaAllUses() for each rdin();
+   VariableDeclarator contributes this to CFGNode.daaAllUses() for each rdin();
+   AssignExpr contributes this to CFGNode.daaAllUses() for each rdin();
+
+   syn boolean CFGNode.isImplicitlyDead() {
+     if (daaAllUses().isEmpty() || this.DAA_isDeadAssign())
+       return false;
+
+     for (CFGNode candidate : daaAllUses()) {
+       if (candidate != this && !candidate.DAA_isDeadAssign() &&
+           !candidate.isImplicitlyDead()) {
+         return false;
+       }
+     }
+     return true;
+   }
+
+   syn ArrayList<Pair<Position, String>> AssignExpr.getImplicitMotivations() {
+     ArrayList<Pair<Position, String>> res = new ArrayList<>();
+     for (CFGNode node : daaAllUses()) {
+       ASTNode astnode = (ASTNode)node;
+       res.add(
+           Pair.make(astnode.getPosition(),
+                     astnode.prettyPrint() + (node.isImplicitlyDead()
+                                                  ? " is an implicitly dead"
+                                                  : " is a dead assignment")));
+     }
+     return res;
+   }
+
+   syn ArrayList<Pair<Position, String>> VariableDeclarator
+       .getImplicitMotivations() {
+     ArrayList<Pair<Position, String>> res = new ArrayList<>();
+     for (CFGNode node : daaAllUses()) {
+       ASTNode astnode = (ASTNode)node;
+       res.add(
+           Pair.make(astnode.getPosition(),
+                     astnode.prettyPrint() + (node.isImplicitlyDead()
+                                                  ? " is an implicitly dead"
+                                                  : " is a dead assignment")));
+     }
+     return res;
+   }
+
+   syn ArrayList<Pair<Position, String>> UnaryIncDec.getImplicitMotivations() {
+     ArrayList<Pair<Position, String>> res = new ArrayList<>();
+     for (CFGNode node : daaAllUses()) {
+       ASTNode astnode = (ASTNode)node;
+       res.add(Pair.make(astnode.getPosition(),
+                         astnode.prettyPrint() + (node.isImplicitlyDead()
+                                                      ? " is implicitly dead"
+                                                      : " is dead")));
+     }
+     return res;
+   }
+
+   AssignExpr contributes warning(
+       getCompilationUnit().pathName(),
+       "The value stored in '" + getDest().varDecl().name() +
+           "' is read in the feature, but it is implicitly dead.",
+       Analysis.AvailableAnalysis.IMPDAA, null, getImplicitMotivations()) when
+   isImplicitlyDead() to CompilationUnit.IMPDAA();
+
+   VariableDeclarator contributes warning(
+       getCompilationUnit().pathName(),
+       "The value stored in '" + singletonValue().name() +
+           "' is read in the feature, but it is implicitly dead.",
+       Analysis.AvailableAnalysis.IMPDAA, null, getImplicitMotivations()) when
+   isImplicitlyDead() to CompilationUnit.IMPDAA();
+
+   UnaryIncDec contributes warning(
+       getCompilationUnit().pathName(),
+       "The value stored in '" + getOperand().varDecl().name() +
+           "' is read in the feature, but it is implicitly dead.",
+       Analysis.AvailableAnalysis.IMPDAA, null, getImplicitMotivations()) when
+   isImplicitlyDead() to CompilationUnit.IMPDAA();
+}
