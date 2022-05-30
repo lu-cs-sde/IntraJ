@@ -42,7 +42,7 @@ public class Warning implements Comparable<Warning> {
         this.code = SourceCodeReader.getLinesInString(position);
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      // e.printStackTrace();
     }
   }
 

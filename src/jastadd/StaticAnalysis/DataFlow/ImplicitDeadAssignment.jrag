@@ -2,22 +2,35 @@ aspect ImplicitDeadAssignment {
 
   coll Set<CFGNode> CFGNode.daaAllUses()[new HashSet<>()] with add;
 
-   UnaryIncDec contributes this to CFGNode.daaAllUses() for each rdin();
-   VariableDeclarator contributes this to CFGNode.daaAllUses() for each rdin();
-   AssignExpr contributes this to CFGNode.daaAllUses() for each rdin();
+  VarAccess contributes enclosingAssignment() when enclosingAssignment() !=null   to CFGNode.daaAllUses() for each myUses();
 
-   syn boolean CFGNode.isImplicitlyDead() {
-     if (daaAllUses().isEmpty() || this.DAA_isDeadAssign())
-       return false;
+  syn Set<CFGNode> VarAccess.myUses() {
+    Set<CFGNode> res = new HashSet<CFGNode>();
+    for (CFGNode e : RDin()) {
+      if (e.getVarDecl() == decl())
+        res.add(e);
+    }
+    return res;
+  }
 
-     for (CFGNode candidate : daaAllUses()) {
-       if (candidate != this && !candidate.DAA_isDeadAssign() &&
-           !candidate.isImplicitlyDead()) {
-         return false;
-       }
-     }
-     return true;
-   }
+  inh CFGNode VarAccess.enclosingAssignment();
+  eq AssignExpr.getSource().enclosingAssignment() = this;
+  eq UnaryIncDec.getChild().enclosingAssignment() = this;
+  eq VariableDeclarator.getInit().enclosingAssignment() = this;
+  eq Program.getChild().enclosingAssignment() = null;
+
+  syn boolean CFGNode.isImplicitlyDead() {
+    if (daaAllUses().isEmpty() || this.DAA_isDeadAssign())
+      return false;
+
+    for (CFGNode candidate : daaAllUses()) {
+      if (candidate != this && !candidate.DAA_isDeadAssign() &&
+          !candidate.isImplicitlyDead()) {
+        return false;
+      }
+    }
+    return true;
+  }
 
    syn ArrayList<Pair<Position, String>> AssignExpr.getImplicitMotivations() {
      ArrayList<Pair<Position, String>> res = new ArrayList<>();

@@ -63,11 +63,11 @@ public class IMPDAA {
                            Analysis.AvailableAnalysis.IMPDAA, 2);
   }
 
-  // @Test
-  // public void DAA02() {
-  //   UtilTest.checkWarnings(TEST_DIRECTORY, "DAA02.java",
-  //                          Analysis.AvailableAnalysis.DAA, 3);
-  // }
+  @Test
+  public void IMPDAA02() {
+    UtilTest.checkWarnings(TEST_DIRECTORY, "IMPDAA02.java",
+                           Analysis.AvailableAnalysis.DAA, 1);
+  }
 
   // @Test
   // public void DAA03() {

@@ -37,7 +37,7 @@ public class IJPosition implements Position {
       urlToSourceFile =
           new URL(IntraJ.server.getClientUri("file:" + sourcePath));
     } catch (MalformedURLException e) {
-      e.printStackTrace();
+      // e.printStackTrace();
     }
   }
 

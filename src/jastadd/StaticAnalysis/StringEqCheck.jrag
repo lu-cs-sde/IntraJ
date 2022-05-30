@@ -22,12 +22,12 @@ aspect STREQ {
 
   syn Position ASTNode.getPosition() {
     try {
+
       IJPosition res =
           new IJPosition(lineStart(), lineEnd(), columnStart() - 1, columnEnd(),
                          getCompilationUnit().pathName());
       return res;
     } catch (Throwable t) {
-      t.printStackTrace();
     }
     return null;
   }
@@ -39,7 +39,6 @@ aspect STREQ {
                          getCompilationUnit().pathName());
       return res;
     } catch (Throwable t) {
-      t.printStackTrace();
     }
     return null;
   }

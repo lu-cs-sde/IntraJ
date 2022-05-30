@@ -30,34 +30,28 @@
 
 aspect ReachingDefinitions {
 
-  /****************************************************************************
-   ***************************** DEF sets *************************************
-   ****************************************************************************
-   */
-  syn BitSet CFGNode.RDgen() = emptyBitSet();
-  eq VariableDeclarator.RDgen() = emptyBitSet().singleton(this);
-  eq AssignExpr.RDgen() = emptyBitSet().singleton(this);
-  eq UnaryIncDec.RDgen() = emptyBitSet().singleton(this);
-  eq ImplicitAssignment.RDgen() = emptyBitSet().singleton(this);
+  syn CFGNode CFGNode.RDgen() = null;
+  eq VariableDeclarator.RDgen() = this;
+  eq AssignExpr.RDgen() = this;
+  eq UnaryIncDec.RDgen() = this;
 
   /****************************************************************************
    ***************************** USE sets *************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.RDkill() = emptyBitSet();
-  eq VariableDeclarator.RDkill() = getVarDeclSet();
-  eq AssignExpr.RDkill() = getVarDeclSet();
-  eq UnaryIncDec.RDkill() = getVarDeclSet();
-  // eq ImplicitAssignment.RDkill() = getVarDeclSet();
+  syn CFGNode CFGNode.RDkill() = null;
+  eq VariableDeclarator.RDkill() = getVarDecl();
+  eq AssignExpr.RDkill() = getVarDecl();
+  eq UnaryIncDec.RDkill() = getVarDecl();
 
   /****************************************************************************
    ***************************** OUT sets *************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.RDin() {
-    BitSet res = emptyBitSet().mutable();
+  syn Set<CFGNode> CFGNode.RDin() {
+    Set<CFGNode> res = new HashSet<CFGNode>();
     for (CFGNode e : pred()) {
-      res.add(e.RDout());
+      res.addAll(e.RDout());
     }
     return res;
   }
@@ -66,57 +60,42 @@ aspect ReachingDefinitions {
    ***************************** IN sets **************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.RDout() circular[emptyBitSet().mutable()] = RDin();
+  syn Set<CFGNode> CFGNode.RDout() circular[new HashSet<>()] = RDin();
   eq VariableDeclarator.RDout() {
-    BitSet res = emptyBitSet().mutable();
-    res = res.union(RDin());
-    Iterator iter1 = RDin().iterator();
-    while (iter1.hasNext()) {
-      Iterator iter2 = RDkill().iterator();
-      CFGNode killDeref = (CFGNode)iter1.next();
-      Variable kill = (Variable)killDeref.getVarDeclSet().iterator().next();
-      while (iter2.hasNext()) {
-        if (iter2.next() == kill) {
-          res = res.compl(killDeref);
-        }
+    Set<CFGNode> res = new HashSet<>();
+    res.addAll(RDin());
+    for (CFGNode iter1 : RDin()) {
+      Variable kill = iter1.getVarDecl();
+      if (RDkill() == kill) {
+        res.remove(iter1);
       }
     }
-    res = res.union(RDgen());
+    res.add(RDgen());
     return res;
   }
   eq AssignExpr.RDout() {
-    BitSet res = emptyBitSet().mutable();
-    res = res.union(RDin());
-    Iterator iter1 = RDin().iterator();
-    while (iter1.hasNext()) {
-      Iterator iter2 = RDkill().iterator();
-      CFGNode killDeref = (CFGNode)iter1.next();
-      Variable kill = (Variable)killDeref.getVarDeclSet().iterator().next();
-      while (iter2.hasNext()) {
-        if (iter2.next() == kill) {
-          res = res.compl(killDeref);
-        }
+    Set<CFGNode> res = new HashSet<>();
+    res.addAll(RDin());
+    for (CFGNode iter1 : RDin()) {
+      Variable kill = iter1.getVarDecl();
+      if (RDkill() == kill) {
+        res.remove(iter1);
       }
     }
-    res = res.union(RDgen());
+    res.add(RDgen());
     return res;
   }
 
   eq UnaryIncDec.RDout() {
-    BitSet res = emptyBitSet().mutable();
-    res = res.union(RDin());
-    Iterator iter1 = RDin().iterator();
-    while (iter1.hasNext()) {
-      Iterator iter2 = RDkill().iterator();
-      CFGNode killDeref = (CFGNode)iter1.next();
-      Variable kill = (Variable)killDeref.getVarDeclSet().iterator().next();
-      while (iter2.hasNext()) {
-        if (iter2.next() == kill) {
-          res = res.compl(killDeref);
-        }
+    Set<CFGNode> res = new HashSet<>();
+    res.addAll(RDin());
+    for (CFGNode iter1 : RDin()) {
+      Variable kill = iter1.getVarDecl();
+      if (RDkill() == kill) {
+        res.remove(iter1);
       }
     }
-    res = res.union(RDgen());
+    res.add(RDgen());
     return res;
   }
 
@@ -125,12 +104,11 @@ aspect ReachingDefinitions {
    ****************************************************************************
    */
 
-  syn Set<CFGNode> CFGNode.rdin() {
-    Iterator iter = RDin().iterator();
-    Set<CFGNode> res = new HashSet<CFGNode>();
-    while (iter.hasNext()) {
-      res.add((CFGNode)iter.next());
-    }
-    return res;
-  }
+  syn Variable CFGNode.getVarDecl() = null;
+  eq VariableDeclarator.getVarDecl() = singletonValue();
+  eq VarAccess.getVarDecl() = (!isDest()) ? decl() : null;
+  eq UnaryIncDec.getVarDecl() =
+      (getOperand().varDecl() != null) ? getOperand().varDecl() : null;
+  eq AssignExpr.getVarDecl() =
+      (getDest().varDecl() != null) ? getDest().varDecl() : null;
 }
