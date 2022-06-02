@@ -374,9 +374,9 @@ public class IntraJ extends Frontend {
                     Set<String> progPath) {
     // Flushing all the attributes from the previous computations
     // We are not creating a new IntraJ instance to keep the steady state.
-    if (intraj.getEntryPoint() != null) {
-      intraj.getEntryPoint().flushTreeCache();
-    }
+    // if (intraj.getEntryPoint() != null) {
+    //   intraj.getEntryPoint().flushTreeCache();
+    // }
     vscodeArgs = new LinkedHashSet<String>();
 
     vscodeArgs.add("-nowarn");

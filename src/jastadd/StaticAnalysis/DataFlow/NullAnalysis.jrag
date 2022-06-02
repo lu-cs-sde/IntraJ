@@ -335,7 +335,7 @@ public
     ArrayList<Pair<Position, String>> res =
         getMotivations(new HashSet<CFGNode>(), decl());
     if (res.isEmpty()) {
-      res.add(Pair.make(getPosition(), "No motivation found"));
+      // res.add(Pair.make(getPosition(), "No motivation found"));
     }
     return res;
   }
