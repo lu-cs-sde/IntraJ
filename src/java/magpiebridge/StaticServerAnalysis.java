@@ -33,12 +33,15 @@ import org.extendj.magpiebridge.analysis.*;
 
 public class StaticServerAnalysis implements ServerAnalysis {
 
-  public Set<String> srcPath;
-  public Set<String> libPath;
-  public Set<Path> classPath;
+  public Set<String> srcPath = null;
+  // public Set<String> libPath = new HashSet<>();
+  // public Set<Path> classPath = new HashSet<>();
 
-  public Set<String> progFilesAbsPaths;
-  public Set<String> totalClassPath;
+  public Set<String> progFilesAbsPaths = new HashSet<>();
+  public Set<String> totalClassPath = new HashSet<>();
+  public Set<Path> libPath = null;
+  public Set<Path> classPath = null;
+  public Optional<Path> rootPath;
   public ExecutorService exeService;
   public Collection<Future<?>> last;
 
@@ -66,6 +69,7 @@ public class StaticServerAnalysis implements ServerAnalysis {
   @Override
   public void analyze(Collection<? extends Module> files,
                       AnalysisConsumer consumer, boolean rerun) {
+
     if (rerun) {
       doSingleAnalysisIteration(files, consumer);
     }
@@ -73,13 +77,24 @@ public class StaticServerAnalysis implements ServerAnalysis {
 
   private boolean doSingleAnalysisIteration(Collection<? extends Module> files,
                                             AnalysisConsumer consumer) {
+
     MagpieServer server = (MagpieServer)consumer;
-    setClassPath(server, files);
+    JavaProjectService ps =
+        (JavaProjectService)server.getProjectService("java").get();
+    // setClassPath(server, files);
+    if (classPath == null || libPath == null || rootPath == null ||
+        srcPath == null) {
 
+      classPath = ps.getClassPath();
+      libPath = ps.getLibraryPath();
+      rootPath = ps.getRootPath();
+    }
     // Setup analysis framework and run
-    framework.setup(files, totalClassPath, srcPath, libPath, progFilesAbsPaths);
-    int exitCode = framework.run();
+    framework.setup(files, ps.getSourcePath(), classPath, libPath, rootPath);
 
+    // Construct the AST
+    int exitCode = framework.run();
+    System.err.println("IntraJ finished with exit code " + exitCode);
     // ANALYZE
 
     // Clean up previous analysis results and ongoing analyses
@@ -95,12 +110,20 @@ public class StaticServerAnalysis implements ServerAnalysis {
     for (CodeAnalysis analysis : activeAnalyses.keySet()) {
       if (!activeAnalyses.get(analysis))
         continue;
-      last.add(exeService.submit(new Runnable() {
-        @Override
-        public void run() {
-          doAnalysisThread(files, server, analysis);
+      Collection<AnalysisResult> results = new ArrayList<>();
+      for (Module file : files) {
+        if (file instanceof SourceFileModule) {
+          SourceFileModule sourceFile = (SourceFileModule)file;
+          try {
+            final URL clientURL =
+                new URL(server.getClientUri(sourceFile.getURL().toString()));
+            results.addAll(framework.analyze(sourceFile, clientURL, analysis));
+          } catch (MalformedURLException e) {
+            e.printStackTrace();
+          }
         }
-      }));
+      }
+      server.consume(results, source());
     }
 
     return true;
@@ -122,94 +145,6 @@ public class StaticServerAnalysis implements ServerAnalysis {
       }
     }
     server.consume(results, source());
-  }
-
-  public void setClassPath(MagpieServer server,
-                           Collection<? extends Module> files) {
-    if (srcPath == null) {
-      Optional<IProjectService> opt = server.getProjectService("java");
-      if (opt.isPresent()) {
-        JavaProjectService ps =
-            (JavaProjectService)server.getProjectService("java").get();
-        Set<Path> sourcePath = ps.getSourcePath();
-
-        if (libPath == null) {
-          libPath = new HashSet<>();
-          ps.getLibraryPath().stream().forEach(
-              path -> libPath.add(path.toString()));
-        }
-        if (!sourcePath.isEmpty()) {
-          Set<String> temp = new HashSet<>();
-          sourcePath.stream().forEach(path -> temp.add(path.toString()));
-          srcPath = temp;
-        }
-
-        classPath = ps.getClassPath();
-      }
-    }
-
-    updatePaths(files);
-  }
-
-  private void updatePaths(Collection<? extends Module> files) {
-    progFilesAbsPaths.clear();
-    totalClassPath.clear();
-    totalClassPath.add(".");
-
-    Set<String> requestedFiles = new HashSet<>();
-    for (Module file : files) {
-      if (file instanceof SourceFileModule) {
-        SourceFileModule sourceFile = (SourceFileModule)file;
-        progFilesAbsPaths.add(sourceFile.getAbsolutePath());
-        requestedFiles.add(sourceFile.getClassName() + ".java");
-      }
-    }
-
-    if (srcPath != null) {
-      Iterator<String> srcIt = srcPath.iterator();
-
-      // BUILD FROM SRC
-      while (srcIt.hasNext()) {
-        String src = srcIt.next();
-        Collection<String> srcJavas =
-            getJavaFilesForFolder(new File(src), ".java");
-        for (String javaPath : srcJavas) {
-          if (!requestedFiles.contains(getFileNameFromPath(javaPath)) &&
-              !progFilesAbsPaths.contains(javaPath))
-            progFilesAbsPaths.add(javaPath);
-        }
-
-        Collection<String> srcJars =
-            getJavaFilesForFolder(new File(src), ".jar");
-        for (String jarPath : srcJars) {
-          totalClassPath.add(jarPath);
-        }
-      }
-    }
-
-    if (!libPath.isEmpty()) {
-      Iterator<String> libIt = libPath.iterator();
-      while (libIt.hasNext()) {
-        String lib = libIt.next();
-        Set<String> libJars =
-            new HashSet<>(getJavaFilesForFolder(new File(lib), ".jar"));
-        for (String jarPath : libJars) {
-          totalClassPath.add(jarPath);
-        }
-
-        Collection<String> libJavas =
-            getJavaFilesForFolder(new File(lib), ".java");
-        for (String javaPath : libJavas) {
-          if (!requestedFiles.contains(getFileNameFromPath(javaPath)) &&
-              !progFilesAbsPaths.contains(javaPath))
-            progFilesAbsPaths.add(javaPath);
-        }
-      }
-    }
-
-    for (Path p : classPath) {
-      totalClassPath.add(p.toString());
-    }
   }
 
   @Override

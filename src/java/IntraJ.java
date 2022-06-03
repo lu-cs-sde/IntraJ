@@ -41,12 +41,19 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URL;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import magpiebridge.core.AnalysisResult;
@@ -180,8 +187,10 @@ public class IntraJ extends Frontend {
       createServer().launchOnStdio();
     } else {
       IntraJ intraj = getInstance();
-      int exitCode = intraj.run(jCheckerArgs);
+      intraj.program = new Program();
       DrAST_root_node = intraj.getEntryPoint();
+      int exitCode = intraj.run(jCheckerArgs);
+
       if (exitCode != 0) {
         System.exit(exitCode);
       }
@@ -369,26 +378,32 @@ public class IntraJ extends Frontend {
     return server;
   }
 
-  public void setup(Collection<? extends Module> files, Set<String> classPath,
-                    Set<String> srcPath, Set<String> libPath,
-                    Set<String> progPath) {
+  public void setup(Collection<? extends Module> files, Set<Path> sourcePath,
+                    Set<Path> classPath, Set<Path> libPath,
+                    Optional<Path> rootPath) {
+    super.program = new Program();
     // Flushing all the attributes from the previous computations
     // We are not creating a new IntraJ instance to keep the steady state.
-    // if (intraj.getEntryPoint() != null) {
-    //   intraj.getEntryPoint().flushTreeCache();
-    // }
+
     vscodeArgs = new LinkedHashSet<String>();
 
     vscodeArgs.add("-nowarn");
 
-    if (!classPath.isEmpty()) {
+    String path = computeClassPath(sourcePath, classPath, libPath, rootPath);
+    System.err.println("Classpath: " + path + " isEmpty ? " + path.isEmpty());
+    if (!path.isEmpty()) {
       vscodeArgs.add("-classpath");
-      vscodeArgs.add(computeClassPath(classPath));
-    }
-
-    for (String path : progPath) {
       vscodeArgs.add(path);
     }
+
+    for (Module file : files) {
+      if (file instanceof SourceFileModule) {
+        SourceFileModule sourceFileModule = (SourceFileModule)file;
+
+        vscodeArgs.add(sourceFileModule.getURL().getPath());
+      }
+    }
+    System.err.println("vscodeArgs: " + vscodeArgs);
   }
 
   public int run() {
@@ -405,11 +420,46 @@ public class IntraJ extends Frontend {
     return analysis.getResult();
   }
 
-  protected String computeClassPath(Set<String> classPath) {
+  protected String computeClassPath(Set<Path> classPath, Set<Path> srcPath,
+                                    Set<Path> libPath,
+                                    Optional<Path> rootPath) {
     StringBuilder sb = new StringBuilder();
-    for (String path : classPath) {
-      sb.append(path);
+
+    for (Path path : classPath) {
+      sb.append(path.toAbsolutePath().toString());
       sb.append(":");
+    }
+    System.err.println("classPath: " + classPath);
+
+    for (Path path : srcPath) {
+      sb.append(path.toAbsolutePath().toString());
+      sb.append(":");
+    }
+    System.err.println("srcPath: " + srcPath);
+
+    for (Path path : libPath) {
+      sb.append(path.toAbsolutePath().toString());
+      sb.append(":");
+    }
+    System.err.println("libPath: " + libPath);
+
+    if (rootPath.isPresent()) {
+      // Iterate recusively over the rootPath and add to sb all jar files
+      try {
+        Files.walkFileTree(rootPath.get(), new SimpleFileVisitor<Path>() {
+          @Override
+          public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+              throws IOException {
+            if (file.toString().endsWith(".jar")) {
+              sb.append(file.toAbsolutePath().toString());
+              sb.append(":");
+            }
+            return FileVisitResult.CONTINUE;
+          }
+        });
+      } catch (Throwable t) {
+        System.err.println("Error while iterating over the rootPath");
+      }
     }
 
     return sb.toString();

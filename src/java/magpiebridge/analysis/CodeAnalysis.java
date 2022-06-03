@@ -21,13 +21,14 @@ public abstract class CodeAnalysis {
     results.clear();
     for (Warning wm : getWarnings(cu)) {
       results.add(new Result(Kind.Diagnostic, wm.getPosition(), wm.getErrMsg(),
-                             wm.getRelatedInfo(), DiagnosticSeverity.Warning,
-                             wm.getRepair(), wm.getCode()));
+                             wm.getRelatedInfo(), getKind(), wm.getRepair(),
+                             wm.getCode()));
     }
   }
 
   public Collection<AnalysisResult> getResult() { return results; }
   public abstract String getName();
+  public DiagnosticSeverity getKind() { return DiagnosticSeverity.Warning; }
 
   protected abstract Set<Warning> getWarnings(CompilationUnit cu);
 }

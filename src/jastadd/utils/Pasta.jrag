@@ -1,0 +1,36 @@
+aspect PASTA {
+  String Program.generateMagicProblemString(String type, Problem p) {
+    int col = p.column;
+    if (col == -1) {
+      col = 0;
+    }
+    int packedStart = (p.line << 12) + col;
+
+    int packedEnd;
+    if (p.endLine == -1) {
+      packedEnd = ((p.line + 1) << 12) - 1;
+    } else {
+      int endCol = p.endColumn;
+      if (endCol == -1) {
+        endCol = 0xFFF;
+      }
+      packedEnd = ((p.endLine << 12) + endCol);
+    }
+    System.out.printf("%s@%d;%d;%s\n", type, packedStart, packedEnd, p.message);
+    return String.format("[%d:%d..%d:%d]: %s", p.line, p.column, p.endLine,
+                         p.endColumn, p.message);
+  }
+
+  syn java.util.List<String> Program.showProblems() {
+    java.util.List<String> ret = new java.util.ArrayList<>();
+    for (CompilationUnit unit : getCompilationUnits()) {
+      for (Problem p : unit.errors()) {
+        ret.add(generateMagicProblemString("ERR", p));
+      }
+      for (Problem p : unit.warnings()) {
+        ret.add(generateMagicProblemString("WARN", p));
+      }
+    }
+    return ret;
+  }
+}
