@@ -82,8 +82,7 @@ public class StaticServerAnalysis implements ServerAnalysis {
     JavaProjectService ps =
         (JavaProjectService)server.getProjectService("java").get();
     // setClassPath(server, files);
-    if (classPath == null || libPath == null || rootPath == null ||
-        srcPath == null) {
+    if (classPath == null || libPath == null || rootPath == null) {
 
       classPath = ps.getClassPath();
       libPath = ps.getLibraryPath();
@@ -101,7 +100,7 @@ public class StaticServerAnalysis implements ServerAnalysis {
     server.cleanUp();
     for (Future<?> f : last) {
       if (f != null && !f.isDone()) {
-        f.cancel(false);
+        f.cancel(true);
       }
     }
     last.clear();
@@ -110,22 +109,13 @@ public class StaticServerAnalysis implements ServerAnalysis {
     for (CodeAnalysis analysis : activeAnalyses.keySet()) {
       if (!activeAnalyses.get(analysis))
         continue;
-      Collection<AnalysisResult> results = new ArrayList<>();
-      for (Module file : files) {
-        if (file instanceof SourceFileModule) {
-          SourceFileModule sourceFile = (SourceFileModule)file;
-          try {
-            final URL clientURL =
-                new URL(server.getClientUri(sourceFile.getURL().toString()));
-            results.addAll(framework.analyze(sourceFile, clientURL, analysis));
-          } catch (MalformedURLException e) {
-            e.printStackTrace();
-          }
+      last.add(exeService.submit(new Runnable() {
+        @Override
+        public void run() {
+          doAnalysisThread(files, server, analysis);
         }
-      }
-      server.consume(results, source());
+      }));
     }
-
     return true;
   }
 
@@ -143,8 +133,8 @@ public class StaticServerAnalysis implements ServerAnalysis {
           e.printStackTrace();
         }
       }
+      server.consume(results, source());
     }
-    server.consume(results, source());
   }
 
   @Override
@@ -173,31 +163,5 @@ public class StaticServerAnalysis implements ServerAnalysis {
         }
       }
     }
-  }
-
-  // Helper methods for classpaths:
-  public static Collection<String> getJavaFilesForFolder(final File folder,
-                                                         String ext) {
-    Collection<String> files = new HashSet<>();
-    if (folder.isDirectory()) {
-      for (final File fileEntry : folder.listFiles()) {
-        if (fileEntry.isDirectory()) {
-          files.addAll(getJavaFilesForFolder(fileEntry, ext));
-        } else if (fileEntry.getName().endsWith(ext)) {
-          files.add(fileEntry.getAbsolutePath());
-        }
-      }
-    } else if (folder.getName().endsWith(ext)) {
-      files.add(folder.getAbsolutePath());
-    }
-
-    return files;
-  }
-
-  public static String getFileNameFromPath(String path) {
-    File f = new File(path);
-    if (f.isFile())
-      return f.getName();
-    return "";
   }
 }
