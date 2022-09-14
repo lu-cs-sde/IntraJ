@@ -1,0 +1,46 @@
+import org.extendj.feature.Feature;
+
+aspect Features {
+
+  // Main collection attribute that contains all the features
+  coll Set<Feature> Program.features()[new HashSet<Feature>()] root Program;
+
+  ClassDecl contributes new Feature("JAVA1", "InnerClass", getPathName()) when
+  isInnerClass() to Program.features();
+
+  VarAccess contributes new Feature("JAVA1", "Reflection", getPathName())
+      when this.hostPackageIs("java.lang.reflect") to Program.features();
+
+  MethodAccess contributes new Feature("JAVA1", "Reflection", getPathName())
+      when this.hostPackageIs("java.lang.reflect") to Program.features();
+
+  MethodAccess contributes new Feature("JAVA1", "Reflection", getPathName())
+      when this.hostPackageIs("java.lang.reflect") to Program.features();
+
+  VariableDeclarator contributes new Feature("JAVA1", "Reflection",
+                                             getPathName())
+      when this.hostPackageIs("java.lang.reflect") to Program.features();
+
+  VarAccess contributes new Feature("JAVA1", "Concurrency", getPathName())
+      when this.hostPackageIs("java.util.concurrent") to Program.features();
+
+  MethodAccess contributes new Feature("JAVA1", "Concurrency", getPathName())
+      when this.hostPackageIs("java.util.concurrent") to Program.features();
+
+  VariableDeclarator contributes new Feature("JAVA1", "Concurrency",
+                                             getPathName())
+      when this.hostPackageIs("java.util.concurrent") to Program.features();
+
+  //   JAVA2
+  Modifiers contributes new Feature("JAVA2", "Strictfp", getPathName()) when
+  isStrictfp() to Program.features();
+
+  // JAVA4
+  AssertStmt contributes new Feature("JAVA4", "AssertStmt", getPathName())
+      to Program.features();
+
+  Declarator contributes new Feature("JAVA4", "RegEx", getPathName()) when
+  type()
+      .hostPackage()
+      .contains("java.util.regex") to Program.features();
+}

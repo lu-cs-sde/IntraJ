@@ -1,0 +1,18 @@
+aspect Java8Features {
+  ConstructorReference contributes new Feature(
+      "JAVA8", "ConstructorReference", getPathName()) to Program.features();
+  ConstructorReferenceAccess contributes new Feature(
+      "JAVA8", "ConstructorReferenceAccess", getPathName())
+      to Program.features();
+  IntersectionCastExpr contributes new Feature(
+      "JAVA8", "IntersectionCastExpr", getPathName()) to Program.features();
+  LambdaExpr contributes new Feature("JAVA8", "Lambda", getPathName())
+      to Program.features();
+  MethodReference contributes new Feature("JAVA8", "MethodReference",
+                                          getPathName()) to Program.features();
+  MethodReferenceAccess contributes new Feature(
+      "JAVA8", "MethodReferenceAccess", getPathName()) to Program.features();
+  MethodDecl contributes new Feature("JAVA8", "DefaultMethod", getPathName())
+      when
+      isDefault() to Program.features();
+}

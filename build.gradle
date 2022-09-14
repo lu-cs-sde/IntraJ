@@ -48,6 +48,7 @@ sourceSets.main {
     srcDir 'src/java'
   }
   resources {
+    srcDir 'src/java/magpiebridge/resources'
     srcDir 'extendj/src/res'
     srcDir jastadd.buildInfoDir
   }
@@ -64,6 +65,8 @@ dependencies{
     testImplementation 'junit:junit:4.12'
     implementation 'junit:junit:4.12'
     implementation 'com.github.magpiebridge:magpiebridge:0.1.5'
+    implementation 'com.sun.net.httpserver:http:20070405'
+    implementation group: 'org.freemarker', name: 'freemarker', version: '2.3.29'
 }
 
 sourceSets.test{

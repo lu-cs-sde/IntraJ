@@ -1,0 +1,41 @@
+aspect Java5Features {
+  // JAVA5
+  AnnotationDecl contributes new Feature("JAVA5", "AnnotationDecl",
+                                         getPathName()) to Program.features();
+
+  EnhancedForStmt contributes new Feature("JAVA5", "EnhancedForStmt",
+                                          getPathName()) to Program.features();
+
+  AnnotationMethodDecl contributes new Feature(
+      "JAVA5", "AnnotationMethodDecl", getPathName()) to Program.features();
+
+  Annotation contributes type().toString().equals("Override")
+      ? new Feature("JAVA6", "Override", getPathName())
+      : new Feature("JAVA5", "Annotation", getPathName()) to Program.features();
+
+  GenericClassDecl contributes new Feature("JAVA5", "GenericClassDecl",
+                                           getPathName()) to Program.features();
+
+  GenericInterfaceDecl contributes new Feature(
+      "JAVA5", "GenericInterfaceDecl", getPathName()) to Program.features();
+
+  GenericMethodDecl contributes new Feature(
+      "JAVA5", "GenericMethodDecl", getPathName()) to Program.features();
+
+  GenericConstructorDecl contributes new Feature(
+      "JAVA5", "GenericConstructorDecl", getPathName()) to Program.features();
+
+  StaticImportDecl contributes new Feature("JAVA5", "StaticImportDecl",
+                                           getPathName()) to Program.features();
+
+  VariableArityParameterDeclaration contributes new Feature(
+      "JAVA5", "VarArgs", getPathName()) to Program.features();
+
+  VarAccess contributes new Feature("JAVA5", "EnumUse", getPathName()) when
+  isEnumConstant() to Program.features();
+
+  EnumDecl contributes new Feature("JAVA5", "EnumDecl", getPathName())
+      to Program.features();
+  EnumConstantDecl contributes new Feature("JAVA5", "EnumConstantDecl",
+                                           getPathName()) to Program.features();
+}

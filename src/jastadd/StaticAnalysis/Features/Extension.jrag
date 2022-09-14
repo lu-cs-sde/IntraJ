@@ -1,0 +1,11 @@
+aspect Extension {
+  // See paper Section IV (Overloading extension)
+  MethodDecl contributes new Feature("JAVA1", "TotalMethodDecl", getPathName())
+      to Program.features();
+
+  MethodDecl contributes new Feature("JAVA1", "Overloading", getPathName()) when
+  isOverloading() to Program.features();
+
+  syn boolean MethodDecl.isOverloading() =
+      hostType().methodsNameMap().get(getID()).size() > 1;
+}

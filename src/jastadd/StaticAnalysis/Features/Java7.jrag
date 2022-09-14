@@ -1,0 +1,21 @@
+aspect Java7Features {
+  AnnotatedCompilationUnit contributes new Feature(
+      "JAVA5", "AnnotatedCompilationUnit", pathName()) to Program.features();
+  BasicTWR contributes new Feature("JAVA7", "BasicTWR", getPathName())
+      to Program.features();
+
+  DiamondAccess contributes new Feature("JAVA7", "DiamondAccess", getPathName())
+      to Program.features();
+  MultiCatch contributes new Feature("JAVA7", "MultiCatch", getPathName())
+      to Program.features();
+  TryWithResources contributes new Feature("JAVA7", "TryWithResources",
+                                           getPathName()) to Program.features();
+  ResourceDeclaration contributes new Feature(
+      "JAVA7", "ResourceDeclaration", getPathName()) to Program.features();
+
+  SwitchStmt contributes new Feature("JAVA7", "StringInSwitch", getPathName())
+      when
+      getExpr()
+          .type()
+          .isString() to Program.features();
+}

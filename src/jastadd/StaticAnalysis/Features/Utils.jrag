@@ -1,0 +1,33 @@
+aspect FeatureUtils {
+  syn boolean VariableDeclarator.hostPackageIs(String packageName) {
+    try {
+      return type().hostPackage().contains(packageName);
+    } catch (Throwable e) {
+      System.err.println("Error Var " + this + " :: " + compilationUnit() +
+                         ":" + getLine(getStart()));
+      return false;
+    }
+  }
+
+  syn boolean Expr.hostPackageIs(String packageName) {
+    try {
+      return type().hostPackage().contains(packageName);
+    } catch (Throwable e) {
+      System.err.println("Error " + this + " :: " + compilationUnit() + ":" +
+                         getLine(getStart()));
+      e.printStackTrace();
+      return false;
+    }
+  }
+
+  syn String ASTNode.getPathName() {
+    String res = "";
+    try {
+      res = compilationUnit().pathName();
+    } catch (Exception e) {
+      System.err.println("Error in getPathName " + this + " :: " +
+                         compilationUnit() + ":" + getLine(getStart()));
+    }
+    return res;
+  }
+}

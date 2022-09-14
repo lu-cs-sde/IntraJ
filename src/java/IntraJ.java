@@ -79,6 +79,7 @@ import org.extendj.flow.utils.IJGraph;
 import org.extendj.flow.utils.Utils;
 import org.extendj.magpiebridge.CodeAnalysis;
 import org.extendj.magpiebridge.StaticServerAnalysis;
+import org.extendj.magpiebridge.server.IntraJHttpServer;
 
 /**
  * Perform static semantic checks on a Java program.
@@ -101,6 +102,7 @@ public class IntraJ extends Frontend {
   public static boolean vscode = false;
   private static StaticServerAnalysis serverAnalysis =
       new StaticServerAnalysis();
+
   public static Analysis analysis = Analysis.getAnalysisInstance();
   public static MagpieServer server;
   public static IntraJ intraj;
@@ -364,17 +366,22 @@ public class IntraJ extends Frontend {
 
   private static MagpieServer createServer() {
     ServerConfiguration config = new ServerConfiguration();
+
     config.setDoAnalysisBySave(true);
     config.setDoAnalysisByFirstOpen(true);
     config.setDoAnalysisByOpen(true);
-    config.setShowConfigurationPage(false, false);
+    config.setShowConfigurationPage(true, false);
+    config.setUseMagpieHTTPServer(false);
+
     server = new MagpieServer(config);
+
     String language = "java";
     IProjectService javaProjectService = new JavaProjectService();
     server.addProjectService(language, javaProjectService);
     Either<ServerAnalysis, ToolAnalysis> analysis =
         Either.forLeft(serverAnalysis);
     server.addAnalysis(analysis, language);
+    server.addHttpServer(new IntraJHttpServer(serverAnalysis).start());
     return server;
   }
 
@@ -458,10 +465,15 @@ public class IntraJ extends Frontend {
           }
         });
       } catch (Throwable t) {
+        t.printStackTrace();
         System.err.println("Error while iterating over the rootPath");
       }
     }
 
     return sb.toString();
+  }
+
+  public int numCompilationUnits(ArrayList<CompilationUnit> compilationUnits) {
+    return compilationUnits.size();
   }
 }
