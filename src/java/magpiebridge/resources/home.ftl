@@ -11,193 +11,12 @@
     <title>${projectName}</title>
     <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
     <#--  Add css file stored locally in  "src/java/magpiebridge/resources/static/app.css"-->
+    <link rel="stylesheet" type="text/css" href="static/app.css">
     
     <style>
 
 
 
-body{
-    overflow: visible;
-
-}
-
-nav{
-    height: 5rem;
-    width: 100vw;
-    display: flex;
-    z-index: 10;
-    background-color: #053742;
-    box-shadow: 0 3px 20px rgba(0,0,0,0.2);
-}
-
-/* Styling Logo*/
-
-.logo{
-    text-align: left;
-    padding-left: 20px;
-}
-
-.logo img{
-    height: auto;
-    width: 5em;
-    left-padding: 20px;
-}
-
-/* Styling Navigation Links*/
-
-.nav-links{
-    width: 80vw;
-    display: flex;
-    padding: 0 0.7vw;
-    justify-content: space-evenly;
-    align-items: center;
-    text-transform: uppercase;
-    list-style: none;
-    font-weight: 600;
-}
-
-.nav-links li a{
-    margin: 0 0.7vw;
-    text-decoration: none;
-    color: #ffffff;
-    transition: all ease-in-out 350ms;
-    padding: 10px;
-}
-
-.nav-links li a:hover{
-    color:#000;
-    background-color: #fff;
-    padding: 10px;
-    border-radius: 50px;
-}
-
-.nav-links li{
-    position:relative;
-}
-
-.nav-links li a:hover::before{
-    width: 80%;
-}
-
-
-
-
-/*Responsive Adding Media Queries*/
-
-@media screen and (max-width: 800px){
-    nav{
-        position: fixed;
-        z-index: 3;
-    }
-    .hamburger{
-        display:block;
-        position: absolute;
-        cursor: pointer;
-        right: 5%;
-        top: 50%;
-        transform: translate(-5%, -50%);
-        z-index: 2;
-        transition: all 0.7s ease;
-    }
-    .nav-links{
-        background: #053742;
-        position: fixed;
-        opacity: 1;
-        height: 100vh;
-        width: 100%;
-        flex-direction: column;
-        clip-path: circle(50px at 90% -20%);
-        -webkit-clip-path: circle(50px at 90% -10%);
-        transition: all 1s ease-out;
-        pointer-events: none;
-    }
-    .nav-links.open{
-        clip-path: circle(1000px at 90% -10%);
-        -webkit-clip-path: circle(1000px at 90% -10%);
-        pointer-events: all;
-    }
-    .nav-links li{
-        opacity: 0;
-    }
-    .nav-links li:nth-child(1){
-        transition: all 0.5s ease 0.2s;
-    }
-    .nav-links li:nth-child(2){
-        transition: all 0.5s ease 0.4s;
-    }
-    .nav-links li:nth-child(3){
-        transition: all 0.5s ease 0.6s;
-    }
-    .nav-links li:nth-child(4){
-        transition: all 0.5s ease 0.7s;
-    }
-    .nav-links li:nth-child(5){
-        transition: all 0.5s ease 0.8s;
-    }
-    .nav-links li:nth-child(6){
-        transition: all 0.5s ease 0.9s;
-        margin: 0;
-    }
-    .nav-links li:nth-child(7){
-        transition: all 0.5s ease 1s;
-        margin: 0;
-    }
-
-    li.fade{
-        opacity: 1;
-    }
-
-    /* Navigation Bar Icon on Click*/
-
-        .toggle .bars1{
-            transform: rotate(-45deg) translate(-5px, 6px);
-        }
-
-        .toggle .bars2{
-            transition: all 0s ease;
-            width: 0;
-        }
-
-        .toggle .bars3{
-            transform: rotate(45deg) translate(-5px, -6px);
-        }
-
-}
-
-     
-      .danger {
-        background-color: #DDDDDD;
-        border-left: 3px solid #555555;
-        padding-left: 10px;
-      }
-      .jumbotron {
-          background-color: #2E2D88;
-          color: white;
-          padding: 1px 1px 1px 1px;
-          text-align: center;
-      }
-      /* Adds borders for tabs */
-      .tab-content {
-          border-left: 1px solid #ddd;
-          border-right: 1px solid #ddd;
-          border-bottom: 1px solid #ddd;
-          padding: 10px;
-      }
-      .nav-tabs {
-          margin-bottom: 0;
-      }
-
-      .float-container {
-     
-        padding: 20px;
-      }
-
-    .float-child {
-      width: 50%;
-      float: left;
-      padding: 20px;
-   
-    }  
     </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -232,26 +51,20 @@ const links = document.querySelectorAll(".nav-links li");
 
 
 <div class="container" style="word-wrap: break-word;">
+  <div class="float-container">
 
-
- 
-<div class="float-container">
-
-<div class="float-child">
-  <canvas height="350vh" id="pieChart" ></canvas>
+    <div class="float-child">
+      <canvas height="350vh" id="pieChart" ></canvas>
+    </div>
+      
+    <div class="float-child" >
+      <canvas height="250vh" id="barChart" ></canvas>
+    </div>
+  </div>
 </div>
-  
-<div class="float-child" >
-  <canvas height="250vh" id="barChart" ></canvas>
-</div>
 
+<div class="container" style="word-wrap: break-word;">
 
-
-  <#--  <details>
-    <summary class="danger"> <strong> Project Name </strong> </summary>
-    <p class="danger"> ${projectName} </p>
-  </details>
-  
   <#--  libPath  -->
   <details>
     <summary class="danger"> <strong> Library Path </strong> </summary>
@@ -274,7 +87,7 @@ const links = document.querySelectorAll(".nav-links li");
   <#--  numCFG  -->
   <details>
     <summary class="danger"> <strong> Number of CFGs under analysis:</strong> ${numCFG} </summary>
-  </details>  -->
+  </details> 
 
   
 </div>

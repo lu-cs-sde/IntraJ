@@ -26,8 +26,10 @@ public class ResourceUtility {
     try (InputStream inputStream =
              ResourceUtility.class.getClassLoader().getResourceAsStream(path)) {
       String result = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+      System.err.println("ResourceUtility OK: " + result);
       return result;
     } catch (IOException e) {
+      System.err.println("ResourceUtility: " + e.getMessage());
       e.printStackTrace();
     }
     return "";

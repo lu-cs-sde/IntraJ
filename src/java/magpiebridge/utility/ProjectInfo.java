@@ -24,7 +24,6 @@ public class ProjectInfo {
 
   public String getProjectFetureSummary() {
     Set<Feature> features = mpServer.framework.getEntryPoint().features();
-    // Count occurrences of JAVA 1,2,3,4, 5, 7, 8
     int[] counts = new int[8];
     for (Feature f : features) {
       if (f.getCluster().equals("JAVA1")) {

@@ -48,6 +48,7 @@ public class RootHandler implements HttpHandler {
       break;
     case "/static/app.css":
       response = ResourceUtility.getResourceAsString("static/app.css");
+      System.err.println("RootHandler OK: " + response);
       t.sendResponseHeaders(HTTP_OK_STATUS, response.getBytes().length);
       os.write(response.getBytes());
       os.close();
@@ -57,6 +58,9 @@ public class RootHandler implements HttpHandler {
       t.sendResponseHeaders(HTTP_OK_STATUS, imageFile.length());
       Files.copy(imageFile.toPath(), os);
       os.close();
+      break;
+    default:
+      System.err.println("RootHandler default: " + path);
       break;
     }
   }
