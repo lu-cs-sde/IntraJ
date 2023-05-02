@@ -64,7 +64,7 @@ sourceSets.main {
 dependencies{
     testImplementation 'junit:junit:4.12'
     implementation 'junit:junit:4.12'
-    implementation 'com.github.magpiebridge:magpiebridge:0.1.5'
+    implementation files('tools/magpiebridge-0.1.6-SNAPSHOT-jar-with-dependencies.jar')
     implementation 'com.sun.net.httpserver:http:20070405'
     implementation group: 'org.freemarker', name: 'freemarker', version: '2.3.29'
 }
@@ -138,7 +138,7 @@ task intraj(type: Jar) {
 }
 
 artifacts {
-    archives  vscode, intraj;
+  archives vscode, intraj
 }
 //jar.manifest.attributes 'Main-Class': 'org.extendj.JavaCompiler'
 jar.destinationDirectory = projectDir

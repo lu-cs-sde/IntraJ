@@ -59,6 +59,14 @@ public class RootHandler implements HttpHandler {
       Files.copy(imageFile.toPath(), os);
       os.close();
       break;
+    case "/static/script.js":
+      response = ResourceUtility.getResourceAsString("static/script.js");
+      System.err.println("RootHandler OK: " + response);
+      t.sendResponseHeaders(HTTP_OK_STATUS, response.getBytes().length);
+      os.write(response.getBytes());
+      os.close();
+      break;
+
     default:
       System.err.println("RootHandler default: " + path);
       break;

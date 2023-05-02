@@ -37,6 +37,7 @@ public class FreeMarkerUtility {
       templateData.put("classPath", info.getClassPath());
       templateData.put("labels", info.getLabels());
       templateData.put("data", info.getProjectFetureSummary());
+      templateData.put("faetures", info.getFaeturesAsJSON());
       templateData.put("barChartLabels", info.getFeatureLabels());
       for (int i = 0; i < 8; i++) {
         templateData.put("barChartData" + (i + 1),

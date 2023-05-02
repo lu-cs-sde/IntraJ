@@ -4,6 +4,14 @@ import com.ibm.wala.classLoader.Module;
 import com.ibm.wala.classLoader.SourceFileModule;
 import java.io.*;
 import java.io.File;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.Files;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.net.*;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -40,7 +48,6 @@ public class StaticServerAnalysis implements ServerAnalysis {
   public Set<Path> libPath = null;
   public Set<Path> classPath = null;
   public Optional<Path> rootPath = null;
-  ;
   public ExecutorService exeService;
   public Collection<Future<?>> last;
   private IntraJHttpServer httpServer;
@@ -160,4 +167,47 @@ public class StaticServerAnalysis implements ServerAnalysis {
       }
     }
   }
+
+
+  static public String computeClassPath(Set<Path> classPath, Set<Path> srcPath, Set<Path> libPath, Optional<Path> rootPath) {
+    StringBuilder sb = new StringBuilder();
+
+    appendPathsToStringBuilder(sb, classPath);
+    System.err.println("classPath: " + classPath);
+
+    appendPathsToStringBuilder(sb, srcPath);
+    System.err.println("srcPath: " + srcPath);
+
+    appendPathsToStringBuilder(sb, libPath);
+    System.err.println("libPath: " + libPath);
+
+    if (rootPath.isPresent()) {
+        try {
+            Files.walkFileTree(rootPath.get(), new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                        throws IOException {
+                    if (file.toString().endsWith(".jar")) {
+                        sb.append(file.toAbsolutePath().toString());
+                        sb.append(":");
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("Error while iterating over the rootPath");
+        }
+    }
+
+    return sb.toString();
+}
+
+static private void appendPathsToStringBuilder(StringBuilder sb, Set<Path> paths) {
+    for (Path path : paths) {
+        sb.append(path.toAbsolutePath().toString());
+        sb.append(":");
+    }
+}
+
 }

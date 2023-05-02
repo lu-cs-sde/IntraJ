@@ -322,33 +322,26 @@ public class IntraJ extends Frontend {
   }
 
   static void printOptionsUsage() {
-    System.out.println("IntraJ");
-    System.out.println("Available options:");
-    System.out.println("  -help: prints all the available options.");
-    System.out.println(
-        "  -genpdf: generates a pdf with AST structure of all the methods in the analysed files. It can be used combined with `-succ`,`-pred`.");
-    System.out.println(
-        "  -succ: generates a pdf with the successor relation for all the methods in the analysed files. It can be used combined with `-pred`.");
-    System.out.println(
-        "  -pred: generates a pdf with the predecessor relation for all the methods in the analysed files. It can be used combined with `-succ`.");
-    System.out.println(
-        "  -statistics: prints the number of CFGRoots, CFGNodes and CFGEdges in the analysed files.");
-    System.out.println("  -nowarn: the warning messages are not printed.");
+      System.out.println("IntraJ");
+      System.out.println("Available options:");
+      System.out.println("  -help: prints all the available options.");
+      System.out.println("  -genpdf: generates a pdf with AST structure of all the methods in the analysed files. It can be used combined with `-succ`,`-pred`.");
+      System.out.println("  -succ: generates a pdf with the successor relation for all the methods in the analysed files. It can be used combined with `-pred`.");
+      System.out.println("  -pred: generates a pdf with the predecessor relation for all the methods in the analysed files. It can be used combined with `-succ`.");
+      System.out.println("  -statistics: prints the number of CFGRoots, CFGNodes and CFGEdges in the analysed files.");
+      System.out.println("  -nowarn: the warning messages are not printed.");
 
-    System.out.println("-------------- ANALYSIS OPTIONS --------------------");
-    System.out.println("Available analysis (ID):");
-    System.out.println("  DAA: Detects unused `dead` assignments");
-    System.out.println(
-        "  NPA: Detects occurrences of Null Pointer Dereferenciation");
-    System.out.println(
-        "  -WID: enable the analysis with the respective ID, e.g., -WDAA");
-    System.out.println("  -Wall: enables all the available analysis");
-    System.out.println(
-        "  -Wexcept=ID: enable all the available analysis except ID.");
-    System.out.println(
-        "  -niter=x: runs the analysis `x` times and prints the time necessary to execute an analysis.");
-    System.exit(1);
+      System.out.println("-------------- ANALYSIS OPTIONS --------------------");
+      System.out.println("Available analysis (ID):");
+      System.out.println("  DAA: Detects unused `dead` assignments");
+      System.out.println("  NPA: Detects occurrences of Null Pointer Dereferenciation");
+      System.out.println("  -WID: enable the analysis with the respective ID, e.g., -WDAA");
+      System.out.println("  -Wall: enables all the available analysis");
+      System.out.println("  -Wexcept=ID: enable all the available analysis except ID.");
+      System.out.println("  -niter=x: runs the analysis `x` times and prints the time necessary to execute an analysis.");
+      System.exit(1);
   }
+
 
   /**
    * @return the active IntraJ instance
@@ -360,120 +353,95 @@ public class IntraJ extends Frontend {
     return intraj;
   }
 
-  // MagpieBridge plugin methods
 
-  private Collection<String> vscodeArgs;
-
+    private Collection<String> vscodeArgs;
+    
+   /**
+     * Creates and configures a new instance of the MagpieServer.
+     *
+     * @return The configured MagpieServer instance.
+     */
   private static MagpieServer createServer() {
-    ServerConfiguration config = new ServerConfiguration();
+      ServerConfiguration config = new ServerConfiguration();
 
-    config.setDoAnalysisBySave(true);
-    config.setDoAnalysisByFirstOpen(true);
-    config.setDoAnalysisByOpen(true);
-    config.setShowConfigurationPage(true, false);
-    config.setUseMagpieHTTPServer(false);
+      config.setDoAnalysisBySave(true);
+      config.setDoAnalysisByFirstOpen(true);
+      config.setDoAnalysisByOpen(true);
+      config.setShowConfigurationPage(false, false);
+      config.setUseMagpieHTTPServer(false);
 
-    server = new MagpieServer(config);
+      server = new MagpieServer(config);
 
-    String language = "java";
-    IProjectService javaProjectService = new JavaProjectService();
-    server.addProjectService(language, javaProjectService);
-    Either<ServerAnalysis, ToolAnalysis> analysis =
-        Either.forLeft(serverAnalysis);
-    server.addAnalysis(analysis, language);
-    server.addHttpServer(new IntraJHttpServer(serverAnalysis).start());
-    return server;
+      String language = "java";
+      IProjectService javaProjectService = new JavaProjectService();
+      server.addProjectService(language, javaProjectService);
+      Either<ServerAnalysis, ToolAnalysis> analysis = Either.forLeft(serverAnalysis);
+      server.addAnalysis(analysis, language);
+      server.addHttpServer(new IntraJHttpServer(serverAnalysis).start());
+      return server;
   }
 
+
+ /**
+     * Sets up the IntraJ program with the specified files and paths.
+     *
+     * @param files     The collection of modules (files) to analyze.
+     * @param sourcePath The set of paths to source files.
+     * @param classPath  The set of paths to class files.
+     * @param libPath    The set of paths to library files.
+     * @param rootPath   The optional root path.
+     */
   public void setup(Collection<? extends Module> files, Set<Path> sourcePath,
                     Set<Path> classPath, Set<Path> libPath,
                     Optional<Path> rootPath) {
-    super.program = new Program();
-    // Flushing all the attributes from the previous computations
-    // We are not creating a new IntraJ instance to keep the steady state.
+      super.program = new Program();
+      vscodeArgs = new LinkedHashSet<>();
 
-    vscodeArgs = new LinkedHashSet<String>();
+      vscodeArgs.add("-nowarn");
 
-    vscodeArgs.add("-nowarn");
-
-    String path = computeClassPath(sourcePath, classPath, libPath, rootPath);
-    System.err.println("Classpath: " + path + " isEmpty ? " + path.isEmpty());
-    if (!path.isEmpty()) {
-      vscodeArgs.add("-classpath");
-      vscodeArgs.add(path);
-    }
-
-    for (Module file : files) {
-      if (file instanceof SourceFileModule) {
-        SourceFileModule sourceFileModule = (SourceFileModule)file;
-
-        vscodeArgs.add(sourceFileModule.getURL().getPath());
+      String classPathStr = StaticServerAnalysis.computeClassPath(sourcePath, classPath, libPath, rootPath);
+      System.err.println("Classpath: " + classPathStr + " isEmpty ? " + classPathStr.isEmpty());
+      if (!classPathStr.isEmpty()) {
+          vscodeArgs.add("-classpath");
+          vscodeArgs.add(classPathStr);
       }
-    }
-    System.err.println("vscodeArgs: " + vscodeArgs);
-  }
 
-  public int run() {
-    return intraj.run(vscodeArgs.toArray(new String[vscodeArgs.size()]));
-  }
-
-  public Collection<AnalysisResult>
-  analyze(SourceFileModule file, URL clientURL, CodeAnalysis analysis) {
-    for (CompilationUnit cu : intraj.getEntryPoint().getCompilationUnits()) {
-      if (cu.getClassSource().sourceName().equals(file.getAbsolutePath())) {
-        analysis.doAnalysis(cu, clientURL);
-      }
-    }
-    return analysis.getResult();
-  }
-
-  protected String computeClassPath(Set<Path> classPath, Set<Path> srcPath,
-                                    Set<Path> libPath,
-                                    Optional<Path> rootPath) {
-    StringBuilder sb = new StringBuilder();
-
-    for (Path path : classPath) {
-      sb.append(path.toAbsolutePath().toString());
-      sb.append(":");
-    }
-    System.err.println("classPath: " + classPath);
-
-    for (Path path : srcPath) {
-      sb.append(path.toAbsolutePath().toString());
-      sb.append(":");
-    }
-    System.err.println("srcPath: " + srcPath);
-
-    for (Path path : libPath) {
-      sb.append(path.toAbsolutePath().toString());
-      sb.append(":");
-    }
-    System.err.println("libPath: " + libPath);
-
-    if (rootPath.isPresent()) {
-      // Iterate recusively over the rootPath and add to sb all jar files
-      try {
-        Files.walkFileTree(rootPath.get(), new SimpleFileVisitor<Path>() {
-          @Override
-          public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-              throws IOException {
-            if (file.toString().endsWith(".jar")) {
-              sb.append(file.toAbsolutePath().toString());
-              sb.append(":");
-            }
-            return FileVisitResult.CONTINUE;
+      for (Module file : files) {
+          if (file instanceof SourceFileModule) {
+              SourceFileModule sourceFileModule = (SourceFileModule) file;
+              vscodeArgs.add(sourceFileModule.getURL().getPath());
           }
-        });
-      } catch (Throwable t) {
-        t.printStackTrace();
-        System.err.println("Error while iterating over the rootPath");
       }
-    }
-
-    return sb.toString();
+      System.err.println("vscodeArgs: " + vscodeArgs);
   }
 
-  public int numCompilationUnits(ArrayList<CompilationUnit> compilationUnits) {
-    return compilationUnits.size();
+  /**
+     * Runs the IntraJ program.
+     *
+     * @return The result of the program execution.
+     */
+  public int run() {
+      return intraj.run(vscodeArgs.toArray(new String[vscodeArgs.size()]));
   }
+
+
+    /**
+     * Analyzes the specified source file module.
+     *
+     * @param file       The source file module to analyze.
+     * @param clientURL  The URL of the client.
+     * @param analysis   The code analysis instance.
+     * @return The collection of analysis results.
+     */
+  public Collection<AnalysisResult> analyze(SourceFileModule file, URL clientURL, CodeAnalysis analysis) {
+      for (CompilationUnit cu : intraj.getEntryPoint().getCompilationUnits()) {
+          if (cu.getClassSource().sourceName().equals(file.getAbsolutePath())) {
+              analysis.doAnalysis(cu, clientURL);
+          }
+      }
+      return analysis.getResult();
+  }
+
+
+
 }

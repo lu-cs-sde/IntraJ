@@ -149,6 +149,24 @@ public class ProjectInfo {
     return result;
   }
 
+  public String getFaeturesAsJSON() {
+    List<Map.Entry<String, Set<Feature>>> list = getFeatureSummary();
+    String result = "[";
+    for (int i = 0; i < list.size(); i++) {
+      result += "{";
+      result += "\"featureID\": \"" + list.get(i).getKey() + "\",";
+      result += "\"cluster\": \"" +
+                list.get(i).getValue().iterator().next().getCluster() + "\",";
+      result += "\"count\": " + list.get(i).getValue().size();
+      result += "}";
+      if (i < list.size() - 1) {
+        result += ",";
+      }
+    }
+    result += "]";
+    return result;
+  }
+
   public String getFeatureLabels() {
     List<Map.Entry<String, Set<Feature>>> list = getFeatureSummary();
     String result = "[";

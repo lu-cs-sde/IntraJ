@@ -18,6 +18,7 @@ public class IntraJHttpServer {
       httpServer.createContext("/index", rootHandler);
       httpServer.createContext("/static/app.css", rootHandler);
       httpServer.createContext("/img/logo.png", rootHandler);
+      httpServer.createContext("/imgs/script.js", rootHandler);
       httpServer.setExecutor(null);
     } catch (IOException e) {
       e.printStackTrace();

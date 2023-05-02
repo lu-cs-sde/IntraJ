@@ -54,8 +54,13 @@ public class Feature {
 
   @Override
   public String toString() {
-    return "Feature{"
+    return "Feature {"
         + "cluster= " + cluster + ", featureID=" + featureID + ", url='" + url +
         '\'' + '}';
+  }
+
+  public String toJson() {
+    return "{ \"cluster\": \"" + cluster + "\", \"featureID\": \"" + featureID +
+        "\", \"url\": \"" + url + "\"}";
   }
 }
