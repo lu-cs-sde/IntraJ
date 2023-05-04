@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
+import org.extendj.ast.SmallSet;
 aspect LiveVariableAnalysis {
 public
   interface UnaryIncDec {}
@@ -52,17 +52,17 @@ public
    ***************************** DEF sets *************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.LVA_def()  = emptyBitSet();
-  eq VariableDeclarator.LVA_def() = emptyBitSet().singleton(singletonValue());
+  syn SmallSet CFGNode.LVA_def()  = SmallSet.empty();
+  eq VariableDeclarator.LVA_def() = SmallSet.singleton(singletonValue());
   eq AssignExpr.LVA_def() =getVarDeclSet();
   eq UnaryIncDec.LVA_def() = getVarDeclSet();
-  eq ImplicitAssignment.LVA_def() = emptyBitSet();
+  eq ImplicitAssignment.LVA_def() = SmallSet.empty();
 
   /****************************************************************************
    ***************************** USE sets *************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.LVA_use()  = emptyBitSet();
+  syn SmallSet CFGNode.LVA_use()  = SmallSet.empty();
   eq VarAccess.LVA_use() = getVarDeclSet();
   eq UnaryIncDec.LVA_use() = getVarDeclSet();
  
@@ -70,24 +70,28 @@ public
    ***************************** OUT sets *************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.LVA_out() {
-    BitSet res = emptyBitSet().mutable();
+  syn SmallSet CFGNode.LVA_out() {
+    SmallSet res = SmallSet.<CFGNode>empty().mutable();
     for (CFGNode e : succ()) {
       res.add(e.LVA_in());
     }
     return res;
   }
 
+  inh CompilationUnit CFGNode.enclosingCompilationUnit();
+  eq CompilationUnit.getChild().enclosingCompilationUnit() = this;
+  eq Program.getChild().enclosingCompilationUnit() = null;
+
 
   /****************************************************************************
    ***************************** IN sets **************************************
    ****************************************************************************
    */
-  syn BitSet CFGNode.LVA_in() circular[emptyBitSet().mutable()] = LVA_out();
-  eq VariableDeclarator.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
-  eq AssignExpr.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
-  eq UnaryIncDec.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
-  eq VarAccess.LVA_in() = LVA_use().union(LVA_out().compl(LVA_def()));
+  syn SmallSet CFGNode.LVA_in() circular[SmallSet.empty().mutable()] = LVA_out();
+  eq VariableDeclarator.LVA_in() =  SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
+  eq AssignExpr.LVA_in() = SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
+  eq UnaryIncDec.LVA_in() = SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
+  eq VarAccess.LVA_in() = SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
  
 
   /****************************************************************************
@@ -95,17 +99,17 @@ public
    ****************************************************************************
    */
 
-  syn BitSet CFGNode.getVarDeclSet() = emptyBitSet();
+  syn SmallSet CFGNode.getVarDeclSet() = SmallSet.empty();
   eq VariableDeclarator.getVarDeclSet() =
-      emptyBitSet().singleton(singletonValue());
+      SmallSet.singleton(singletonValue());
   eq VarAccess.getVarDeclSet() =
-      (!isDest()) ? emptyBitSet().singleton(decl()) : emptyBitSet();
+      (!isDest()) ? SmallSet.singleton(decl()) : SmallSet.empty();
   eq UnaryIncDec.getVarDeclSet() =
       (getOperand().varDecl() != null)
-          ? emptyBitSet().singleton(getOperand().varDecl())
-          : emptyBitSet();
+          ? SmallSet.singleton(getOperand().varDecl())
+          : SmallSet.empty();
   eq AssignExpr.getVarDeclSet() =
       (getDest().varDecl() != null)
-          ? emptyBitSet().singleton(getDest().varDecl())
-          : emptyBitSet();
+          ? SmallSet.singleton(getDest().varDecl())
+          : SmallSet.empty();
 }

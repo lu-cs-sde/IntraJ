@@ -267,27 +267,27 @@ public class IntraJ extends Frontend {
    * Called for each from-source compilation unit with no errors.
    */
   protected void processNoErrors(CompilationUnit unit) {
-    Integer nbrWrn = 0;
-    for (Analysis.AvailableAnalysis a : analysis.getActiveAnalyses()) {
-      try {
-        long startTime = System.currentTimeMillis();
-        TreeSet<Warning> wmgs = (TreeSet<Warning>)unit.getClass()
-                                    .getDeclaredMethod(a.toString())
-                                    .invoke(unit);
-        for (Warning wm : wmgs) {
-          if (analysis.getActiveAnalyses().contains(wm.getAnalysisType())) {
-            wm.print(System.out);
-            nbrWrn++;
-          }
-        }
-        long dt = System.currentTimeMillis() - startTime;
-        totalTime += dt;
-      } catch (Throwable t) {
-        t.printStackTrace();
-        System.exit(1);
-      }
-    }
-    numb_warning += nbrWrn;
+    // Integer nbrWrn = 0;
+    // for (Analysis.AvailableAnalysis a : analysis.getActiveAnalyses()) {
+    //   try {
+    //     long startTime = System.currentTimeMillis();
+    //     TreeSet<Warning> wmgs = (TreeSet<Warning>)unit.getClass()
+    //                                 .getDeclaredMethod(a.toString())
+    //                                 .invoke(unit);
+    //     for (Warning wm : wmgs) {
+    //       if (analysis.getActiveAnalyses().contains(wm.getAnalysisType())) {
+    //         wm.print(System.out);
+    //         nbrWrn++;
+    //       }
+    //     }
+    //     long dt = System.currentTimeMillis() - startTime;
+    //     totalTime += dt;
+    //   } catch (Throwable t) {
+    //     t.printStackTrace();
+    //     System.exit(1);
+    //   }
+    // }
+    // numb_warning += nbrWrn;
   }
 
   @Override
@@ -391,16 +391,12 @@ public class IntraJ extends Frontend {
      * @param libPath    The set of paths to library files.
      * @param rootPath   The optional root path.
      */
-  public void setup(Collection<? extends Module> files, Set<Path> sourcePath,
-                    Set<Path> classPath, Set<Path> libPath,
-                    Optional<Path> rootPath) {
+  public void setup(Collection<? extends Module> files, String classPathStr) {
       super.program = new Program();
       vscodeArgs = new LinkedHashSet<>();
 
-      vscodeArgs.add("-nowarn");
 
-      String classPathStr = StaticServerAnalysis.computeClassPath(sourcePath, classPath, libPath, rootPath);
-      System.err.println("Classpath: " + classPathStr + " isEmpty ? " + classPathStr.isEmpty());
+      vscodeArgs.add("-nowarn");
       if (!classPathStr.isEmpty()) {
           vscodeArgs.add("-classpath");
           vscodeArgs.add(classPathStr);
@@ -439,6 +435,7 @@ public class IntraJ extends Frontend {
               analysis.doAnalysis(cu, clientURL);
           }
       }
+
       return analysis.getResult();
   }
 

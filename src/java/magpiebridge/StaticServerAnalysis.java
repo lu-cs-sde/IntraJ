@@ -49,88 +49,167 @@ public class StaticServerAnalysis implements ServerAnalysis {
   public Set<Path> classPath = null;
   public Optional<Path> rootPath = null;
   public ExecutorService exeService;
-  public Collection<Future<?>> last;
+  public List<Future<Void>> futures;
   private IntraJHttpServer httpServer;
 
   public IntraJ framework = IntraJ.getInstance();
 
   public Map<CodeAnalysis, Boolean> activeAnalyses;
 
+  /**
+   * Constructs a new instance of StaticServerAnalysis.
+   * Initializes the executor service, active analyses, and other instance variables.
+   */
   public StaticServerAnalysis() {
     exeService = Executors.newSingleThreadExecutor();
-    activeAnalyses = new LinkedHashMap<CodeAnalysis, Boolean>();
-    activeAnalyses.put(new StringEqAnalysis(), true);
-    activeAnalyses.put(new DAAnalysis(), true);
-    activeAnalyses.put(new NPAnalysis(), true);
-    activeAnalyses.put(new IMPDAAnalysis(), true);
-    last = new ArrayList<>(activeAnalyses.size());
+    activeAnalyses = initializeActiveAnalyses();
+    futures = new ArrayList<>(activeAnalyses.size());
+  }
+
+  /**
+   * Initializes the active analyses map with the desired code analyses.
+   * @return The initialized active analyses map.
+   */
+  private Map<CodeAnalysis, Boolean> initializeActiveAnalyses() {
+    Map<CodeAnalysis, Boolean> analyses = new LinkedHashMap<>();
+    analyses.put(new StringEqAnalysis(), true);
+    analyses.put(new DAAnalysis(), true);
+    analyses.put(new NPAnalysis(), true);
+    analyses.put(new IMPDAAnalysis(), true);
+    return analyses;
   }
 
   @Override
-  public String source() {
-    return "IntraJ";
+  public String source() {return "IntraJ";
   }
 
+  /**
+   * Performs the analysis on the provided collection of files.
+   * 
+   * @param files    the collection of files to analyze
+   * @param consumer the analysis consumer
+   * @param rerun    specifies whether to rerun the analysis
+   */
   @Override
-  public void analyze(Collection<? extends Module> files,
-                      AnalysisConsumer consumer, boolean rerun) {
-    MagpieServer server = (MagpieServer)consumer;
-    JavaProjectService ps =
-        (JavaProjectService)server.getProjectService("java").get();
-    if (classPath == null || libPath == null || rootPath == null ||
-        srcPath == null) {
-      classPath = ps.getClassPath();
-      libPath = ps.getLibraryPath();
-      rootPath = ps.getRootPath();
-      srcPath = ps.getSourcePath();
+  public void analyze(Collection<? extends Module> files, AnalysisConsumer consumer, boolean rerun) {
+    MagpieServer server = (MagpieServer) consumer;
+    JavaProjectService ps = (JavaProjectService) server.getProjectService("java").get();
+
+
+    if (classPath == null || libPath == null || rootPath == null || srcPath == null) {
+      retrievePaths(ps);
     }
-    System.err.println("Running analysis");
-    // Setup analysis framework and run
-    framework.setup(files, srcPath, classPath, libPath, rootPath);
+
+    String classPathStr = computeClassPath(classPath, srcPath, libPath, rootPath);
+    framework.setup(files, classPathStr);
+
     if (rerun) {
       doSingleAnalysisIteration(files, consumer);
     }
   }
 
-  private boolean doSingleAnalysisIteration(Collection<? extends Module> files,
-                                            AnalysisConsumer consumer) {
-    MagpieServer server = (MagpieServer)consumer;
+  /**
+   * Retrieves the paths (class path, library path, root path, source path) from the JavaProjectService.
+   *
+   * @param ps the JavaProjectService to retrieve the paths from
+   */
+  private void retrievePaths(JavaProjectService ps) {
+    classPath = ps.getClassPath();
+    libPath = ps.getLibraryPath();
+    rootPath = ps.getRootPath();
+    srcPath = ps.getSourcePath();
+  }
+
+  /**
+   * Filters the given collection of modules to include only Java source files.
+   *
+   * @param files the collection of modules to filter
+   * @return a collection of Java source file modules
+   */
+  private Collection<Module> filterJavaFiles(Collection<? extends Module> files) {
+      ArrayList<Module> javaFiles = new ArrayList<>();
+      for (Module file : files) {
+          if (file instanceof SourceFileModule) {
+              SourceFileModule sourceFileModule = (SourceFileModule) file;
+              if(sourceFileModule.getURL().getPath().endsWith(".java")){
+                  javaFiles.add(sourceFileModule);
+              }
+          }
+      }
+      return javaFiles;
+  }
+
+
+  /**
+   * Performs a single analysis iteration on the provided collection of files.
+   * 
+   * @param files    the collection of files to analyze
+   * @param consumer the analysis consumer
+   * @return true if the analysis iteration was performed successfully, false otherwise
+   */
+  private boolean doSingleAnalysisIteration(Collection<? extends Module> files, AnalysisConsumer consumer) {
+    MagpieServer server = (MagpieServer) consumer;
+    
     // Construct the AST
     int exitCode = framework.run();
     System.err.println("IntraJ finished with exit code " + exitCode);
-
+    
     // Clean up previous analysis results and ongoing analyses
-    server.cleanUp();
-    for (Future<?> f : last) {
-      if (f != null && !f.isDone()) {
-        f.cancel(true);
-      }
-    }
-    last.clear();
-
-    // Initiate analyses on seperate threads and set them running
-    for (CodeAnalysis analysis : activeAnalyses.keySet()) {
-      if (!activeAnalyses.get(analysis))
-        continue;
-      last.add(exeService.submit(new Runnable() {
-        @Override
-        public void run() {
-          doAnalysisThread(files, server, analysis);
-        }
-      }));
-    }
+    // server.cleanUp();
+    cancelOngoingAnalyses(futures);
+    
+    // Initiate analyses on separate threads and set them running
+    futures = executeAnalyses(files, server);
+    
     return true;
   }
 
-  public void doAnalysisThread(Collection<? extends Module> files,
-                               MagpieServer server, CodeAnalysis analysis) {
+  /**
+   * Cancels ongoing analysis threads.
+   */
+    private void cancelOngoingAnalyses(List<Future<Void>> futures) {
+        for (Future<Void> future : futures) {
+            future.cancel(true);
+        }
+    }
+
+
+  /**
+   * Executes the analyses on separate threads.
+   * 
+   * @param files    the collection of files to analyze
+   * @param server   the MagpieServer instance
+   */
+    private List<Future<Void>> executeAnalyses(Collection<? extends Module> files, MagpieServer server) {
+        List<Future<Void>> futures = new ArrayList<>();
+
+        for (CodeAnalysis analysis : activeAnalyses.keySet()) {
+            if (!activeAnalyses.get(analysis))
+                continue;
+
+            Future<Void> future = exeService.submit(() -> {
+                doAnalysisThread(files, server, analysis);
+                return null;
+            });
+            futures.add(future);
+        }
+        return futures;
+    }
+
+  /**
+   * Performs the analysis on a single file using a specific analysis.
+   * 
+   * @param files     the collection of files to analyze
+   * @param server    the MagpieServer instance
+   * @param analysis  the analysis to perform
+   */
+  public void doAnalysisThread(Collection<? extends Module> files, MagpieServer server, CodeAnalysis analysis) {
     Collection<AnalysisResult> results = new ArrayList<>();
     for (Module file : files) {
       if (file instanceof SourceFileModule) {
-        SourceFileModule sourceFile = (SourceFileModule)file;
+        SourceFileModule sourceFile = (SourceFileModule) file;
         try {
-          final URL clientURL =
-              new URL(server.getClientUri(sourceFile.getURL().toString()));
+          final URL clientURL = new URL(server.getClientUri(sourceFile.getURL().toString()));
           results.addAll(framework.analyze(sourceFile, clientURL, analysis));
         } catch (MalformedURLException e) {
           e.printStackTrace();
@@ -140,74 +219,78 @@ public class StaticServerAnalysis implements ServerAnalysis {
     }
   }
 
-  @Override
-  public List<ConfigurationOption> getConfigurationOptions() {
-    List<ConfigurationOption> options = new ArrayList<>();
-    ConfigurationOption analyses =
-        new ConfigurationOption("Analyses", OptionType.container);
-    for (CodeAnalysis a : activeAnalyses.keySet()) {
-      analyses.addChild(
-          new ConfigurationOption(a.getName(), OptionType.checkbox, "true"));
-    }
-    options.add(analyses);
-    return options;
-  }
 
-  @Override
-  public void configure(List<ConfigurationOption> configuration) {
-    for (ConfigurationOption o : configuration) {
-      if (o.getName().equals("Analyses")) {
-        for (ConfigurationOption c : o.getChildren()) {
-          for (CodeAnalysis a : activeAnalyses.keySet()) {
-            if (a.getName().equals(c.getName())) {
-              activeAnalyses.put(a, c.getValueAsBoolean());
-            }
-          }
-        }
-      }
-    }
-  }
-
-
+    /**
+   * Computes the class path string by combining the provided class paths, source paths,
+   * library paths, and optional root path.
+   *
+   * @param classPath  the set of class paths
+   * @param srcPath    the set of source paths
+   * @param libPath    the set of library paths
+   * @param rootPath   the optional root path
+   * @return the computed class path string
+   */
   static public String computeClassPath(Set<Path> classPath, Set<Path> srcPath, Set<Path> libPath, Optional<Path> rootPath) {
-    StringBuilder sb = new StringBuilder();
+      StringBuilder sb = new StringBuilder();
 
-    appendPathsToStringBuilder(sb, classPath);
-    System.err.println("classPath: " + classPath);
+      appendPathsToStringBuilder(sb, classPath);
+      appendPathsToStringBuilder(sb, srcPath);
+      appendPathsToStringBuilder(sb, libPath);
 
-    appendPathsToStringBuilder(sb, srcPath);
-    System.err.println("srcPath: " + srcPath);
+      if (rootPath.isPresent()) {
+          try {
+              Files.walkFileTree(rootPath.get(), new SimpleFileVisitor<Path>() {
+                  @Override
+                  public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                          throws IOException {
+                      if (file.toString().endsWith(".jar")) {
+                          sb.append(file.toAbsolutePath().toString());
+                          sb.append(":");
+                      }
+                      return FileVisitResult.CONTINUE;
+                  }
+              });
+          } catch (IOException e) {
+              e.printStackTrace();
+              System.err.println("Error while iterating over the rootPath");
+          }
+      }
 
-    appendPathsToStringBuilder(sb, libPath);
-    System.err.println("libPath: " + libPath);
 
-    if (rootPath.isPresent()) {
-        try {
-            Files.walkFileTree(rootPath.get(), new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                        throws IOException {
-                    if (file.toString().endsWith(".jar")) {
-                        sb.append(file.toAbsolutePath().toString());
-                        sb.append(":");
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Error while iterating over the rootPath");
-        }
+      return sb.toString();
+  }
+
+  /**
+   * Appends the paths from the set to the provided StringBuilder.
+   *
+   * @param sb     the StringBuilder to append the paths to
+   * @param paths  the set of paths to append
+   */
+  static private void appendPathsToStringBuilder(StringBuilder sb, Set<Path> paths) {
+      for (Path path : paths) {
+          sb.append(path.toAbsolutePath().toString());
+          sb.append(":");
+      }
+  }
+
+  @Override
+  public void cleanUp(){
+    futures.forEach(future -> future.cancel(true));
+    exeService.shutdown();
+
+  }
+
+
+  @Override
+  protected void finalize() throws Throwable {
+    try {
+      cleanUp();
+      // Perform additional cleanup operations here
+      // Write to a file or perform any necessary actions
+    } finally {
+      super.finalize();
     }
+  }
 
-    return sb.toString();
-}
-
-static private void appendPathsToStringBuilder(StringBuilder sb, Set<Path> paths) {
-    for (Path path : paths) {
-        sb.append(path.toAbsolutePath().toString());
-        sb.append(":");
-    }
-}
 
 }
