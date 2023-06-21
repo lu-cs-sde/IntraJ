@@ -23,12 +23,24 @@ public abstract class CodeAnalysis {
       results.add(new Result(Kind.Diagnostic, wm.getPosition(), wm.getErrMsg(),
                              wm.getRelatedInfo(), getKind(), wm.getRepair(),
                              wm.getCode()));
+     if(wm.getRepair()!=null){
+      results.add(new Result(Kind.CodeLens, wm.getPosition(), wm.getErrMsg(),
+                              wm.getRelatedInfo(), getKind(), wm.getRepair(),
+                              wm.getCode()));
+     }
+
+     results.add(new Result(Kind.CodeLens, wm.getPosition(), wm.getErrMsg(),
+                             wm.getRelatedInfo(), getKind(), null,
+                             "https://idrissrio.github.io/intraj/docs/"+reportKind()+"/"+getName()));
+
     }
   }
 
   public Collection<AnalysisResult> getResult() { return results; }
   public abstract String getName();
-  public DiagnosticSeverity getKind() { return DiagnosticSeverity.Warning; }
+  public DiagnosticSeverity getKind() { return DiagnosticSeverity.Error; }
 
   protected abstract Set<Warning> getWarnings(CompilationUnit cu);
+  protected String reportKind(){return "checks";}
+
 }

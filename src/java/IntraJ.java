@@ -199,7 +199,7 @@ public class IntraJ extends Frontend {
 
       if (pdf)
         intraj.generatePDF();
-
+  
       if (statistics) {
         Utils.printStatistics(
             System.out, "Elapsed time (CFG + Dataflow): " + totalTime / 1000 +
@@ -267,6 +267,7 @@ public class IntraJ extends Frontend {
    * Called for each from-source compilation unit with no errors.
    */
   protected void processNoErrors(CompilationUnit unit) {
+    System.err.println("Processing: " + unit.pathName()); //TODO: remove me
     // Integer nbrWrn = 0;
     // for (Analysis.AvailableAnalysis a : analysis.getActiveAnalyses()) {
     //   try {

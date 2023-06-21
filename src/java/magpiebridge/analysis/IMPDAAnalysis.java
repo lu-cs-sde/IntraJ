@@ -7,7 +7,7 @@ import org.extendj.ast.CompilationUnit;
 import org.extendj.magpiebridge.CodeAnalysis;
 
 public class IMPDAAnalysis extends CodeAnalysis {
-  public String getName() { return "IMPDAAnalysis"; }
+  public String getName() { return "idaa"; }
   @Override
   public DiagnosticSeverity getKind() {
     return DiagnosticSeverity.Information;

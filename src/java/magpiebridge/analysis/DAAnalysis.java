@@ -6,6 +6,6 @@ import org.extendj.ast.CompilationUnit;
 import org.extendj.magpiebridge.CodeAnalysis;
 
 public class DAAnalysis extends CodeAnalysis {
-  public String getName() { return "DAAnalysis"; }
+  public String getName() { return "daa"; }
   protected Set<Warning> getWarnings(CompilationUnit cu) { return cu.DAA(); }
 }

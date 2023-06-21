@@ -105,4 +105,5 @@ public class Warning implements Comparable<Warning> {
   }
 
   public Analysis.AvailableAnalysis getAnalysisType() { return analysis; }
+
 }

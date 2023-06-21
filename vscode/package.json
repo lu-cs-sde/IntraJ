@@ -4,7 +4,7 @@
 	"author": "Idriss Riouak",
 	"license": "EPL-2.0",
 	"icon": "logo.png",
-	"version": "0.0.7",
+	"version": "0.0.9",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/lu-cs-sde/IntraJ.git"
@@ -44,7 +44,57 @@
 					],
 					"default": "off",
 					"description": "Traces the communication between VS Code and the language server."
+				},
+				"intraj.checks.DAA": {
+					"type": "boolean",
+					"description": "Unused Assignment",
+					"link": "https://idrissrio.github.io/intraj/docs/checks/daa/",
+					"default": true,
+					"scope": "resource"
+				},
+				"intraj.checks.NPA": {
+					"type": "boolean",
+					"description": "Null Pointer Access",
+					"link": "https://idrissrio.github.io/intraj/docs/checks/npe/",
+					"default": true,
+					"scope": "resource"
+				},
+				"intraj.checks.AUMG": {
+					"type": "boolean",
+					"description": "Avoid Using Magic Numbers",
+					"link": "https://idrissrio.github.io/intraj/docs/codesmells/avoidusingmagicnumbers/",
+					"default": true,
+					"scope": "resource"
+				},
+				"intraj.checks.STREQ": {
+					"type": "boolean",
+					"description": "Avoid Using `==` to Compare Strings",
+					"link": "N/A",
+					"default": true,
+					"scope": "resource"
+				},
+				"intraj.checks.IMPDAA": {
+					"type": "boolean",
+					"description": "Implicit Unused Assignment",
+					"link": "https://idrissrio.github.io/intraj/docs/checks/idaa/",
+					"default": true,
+					"scope": "resource"
+				},
+				"intraj.checks.EMPTYIF": {
+					"type": "boolean",
+					"description": "Empty If Statement",
+					"link": "https://idrissrio.github.io/intraj/docs/codesmells/emptyif/",
+					"default": true,
+					"scope": "resource"
+				},
+				"intraj.checks.EMPTYWHILE": {
+					"type": "boolean",
+					"description": "Empty While Statement",
+					"link": "https://idrissrio.github.io/intraj/docs/codesmells/emptywhile/",
+					"default": true,
+					"scope": "resource"
 				}
+				
 			}
 		}
 	},

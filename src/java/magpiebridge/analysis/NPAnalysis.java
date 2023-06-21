@@ -6,6 +6,6 @@ import org.extendj.ast.CompilationUnit;
 import org.extendj.magpiebridge.CodeAnalysis;
 
 public class NPAnalysis extends CodeAnalysis {
-  public String getName() { return "NPAnalysis"; }
+  public String getName() { return "npe"; }
   protected Set<Warning> getWarnings(CompilationUnit cu) { return cu.NPA(); }
 }

@@ -5,6 +5,8 @@ import com.ibm.wala.util.collections.Pair;
 import magpiebridge.core.AnalysisResult;
 import magpiebridge.core.Kind;
 import org.eclipse.lsp4j.DiagnosticSeverity;
+import org.eclipse.lsp4j.Command;
+import java.util.ArrayList;
 
 public class Result implements AnalysisResult {
 
@@ -15,6 +17,7 @@ public class Result implements AnalysisResult {
   private final DiagnosticSeverity severity;
   private final Pair<Position, String> repair;
   private final String code;
+  private final Command command=null;
 
   public Result(Kind kind, Position pos, String msg,
                 Iterable<Pair<Position, String>> relatedInfo,
@@ -27,6 +30,7 @@ public class Result implements AnalysisResult {
     this.severity = severity;
     this.repair = repair;
     this.code = code;
+    // this.command = command;
   }
 
   public Kind kind() { return this.kind; }
@@ -52,4 +56,7 @@ public class Result implements AnalysisResult {
   public String code() {
     return code;
   }
+
+
 }
+

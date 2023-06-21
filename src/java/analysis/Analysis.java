@@ -42,14 +42,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+
 public class Analysis {
 
   // Enum that specifies all the available AvailableAnalysis
   public enum AvailableAnalysis {
     PURE,
     DAA,
+    AUMG,
     STREQ,
     IMPDAA,
+    EMPTYIF,
+    EMPTYWHILE,
+    SWITCHDEFAULT,
     NPA;
 
     // CFG;
@@ -60,6 +65,7 @@ public class Analysis {
           .replace(" ", "")
           .split(",");
     }
+
   }
 
   private static Analysis analysis_instance = null;
@@ -97,3 +103,4 @@ public class Analysis {
     active_analysis.remove(analysis);
   }
 }
+

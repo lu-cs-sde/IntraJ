@@ -1,0 +1,8 @@
+aspect SwitchDefault {
+
+    SwitchStmt contributes warning(
+        getCompilationUnit().pathName(),
+        "Switch statement should have a default case." ,
+        Analysis.AvailableAnalysis.SWITCHDEFAULT, null, null) when
+        noDefaultLabel() to CompilationUnit.SWITCHDEFAULT();
+}

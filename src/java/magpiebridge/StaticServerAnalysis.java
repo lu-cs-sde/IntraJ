@@ -41,6 +41,10 @@ import org.extendj.IntraJ;
 import org.extendj.magpiebridge.CodeAnalysis;
 import org.extendj.magpiebridge.analysis.*;
 import org.extendj.magpiebridge.server.IntraJHttpServer;
+import org.eclipse.lsp4j.ConfigurationItem;
+import org.eclipse.lsp4j.ConfigurationParams;
+
+import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 
 public class StaticServerAnalysis implements ServerAnalysis {
 
@@ -76,12 +80,58 @@ public class StaticServerAnalysis implements ServerAnalysis {
     analyses.put(new DAAnalysis(), true);
     analyses.put(new NPAnalysis(), true);
     analyses.put(new IMPDAAnalysis(), true);
+    analyses.put(new EmptyIf(), true);
+    analyses.put(new EmptyWhile(), true);
+    analyses.put(new AvoidUsingMagicNumbers(), true);
+    analyses.put(new SwitchDefault(), true);
     return analyses;
   }
 
   @Override
   public String source() {return "IntraJ";
   }
+
+
+//    @Override
+//     public CompletableFuture<List<Object>> configuration(ConfigurationParams params) {
+//         List<Object> result = new ArrayList<>();
+
+//         for (ConfigurationItem item : params.getItems()) {
+//             // Retrieve the configuration item from the client
+//             // and add it to the result list
+//             Object config = retrieveConfiguration(item.getSection());
+//             result.add(config);
+//         }
+
+//         return CompletableFuture.completedFuture(result);
+//     }
+
+// private Object retrieveConfiguration(String section) {
+//     if (section.startsWith("intraj.checks.")) {
+//         String check = section.substring("intraj.checks.".length());
+
+//         switch (check) {
+//             case "DAA":
+//                 return true; // Retrieve the actual value from your storage
+//             case "NPA":
+//                 return true; // Retrieve the actual value from your storage
+//             case "AUMG":
+//                 return true; // Retrieve the actual value from your storage
+//             case "STREQ":
+//                 return true; // Retrieve the actual value from your storage
+//             case "IMPDAA":
+//                 return true; // Retrieve the actual value from your storage
+//             case "EMPTYIF":
+//                 return true; // Retrieve the actual value from your storage
+//             case "EMPTYWHILE":
+//                 return true; // Retrieve the actual value from your storage
+//             default:
+//                 break;
+//         }
+//     }
+
+//     return null; // Configuration section not found
+// }
 
   /**
    * Performs the analysis on the provided collection of files.
@@ -102,6 +152,7 @@ public class StaticServerAnalysis implements ServerAnalysis {
 
     String classPathStr = computeClassPath(classPath, srcPath, libPath, rootPath);
     framework.setup(files, classPathStr);
+    System.err.println("Files: " + files);
 
     if (rerun) {
       doSingleAnalysisIteration(files, consumer);
@@ -160,7 +211,6 @@ public class StaticServerAnalysis implements ServerAnalysis {
     
     // Initiate analyses on separate threads and set them running
     futures = executeAnalyses(files, server);
-    
     return true;
   }
 

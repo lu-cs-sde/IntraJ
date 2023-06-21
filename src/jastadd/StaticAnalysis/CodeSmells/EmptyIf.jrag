@@ -1,0 +1,24 @@
+aspect EmptyIf {
+
+	IfStmt contributes warning(
+      getCompilationUnit().pathName(),
+      "Empty 'then' branch in 'if' statement may indicate unintended behavior." ,
+      Analysis.AvailableAnalysis.EMPTYIF, null, null) when
+      getThen().getNumberStatements()==0 to CompilationUnit.EMPTYIF();
+	
+	IfStmt contributes warning(
+      getCompilationUnit().pathName(),
+      "Empty 'else' branch in 'if' statement may indicate unintended behavior." ,
+      Analysis.AvailableAnalysis.EMPTYIF, null, null) when
+      hasElse() && getElse().getNumberStatements()==0 to CompilationUnit.EMPTYIF();
+
+	syn Integer Stmt.getNumberStatements() = 1;
+	eq Block.getNumberStatements(){
+            int sum = 0;
+            for (Stmt s : getStmts()) {
+                sum += s.getNumberStatements();
+            }
+            return sum;
+      }
+	eq EmptyStmt.getNumberStatements() = 0;
+}
