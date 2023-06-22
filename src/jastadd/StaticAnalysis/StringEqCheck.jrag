@@ -1,0 +1,11 @@
+aspect STREQ {
+  EQExpr contributes warning(
+      getCompilationUnit().pathName(),
+      "Use of '==' to compare strings is discouraged. Use 'equals()' instead.",
+      Analysis.AvailableAnalysis.STREQ, null, null) when
+      left()
+          .type()
+          .isString() &&
+      right().type().isString() to CompilationUnit.STREQ();
+
+}

@@ -1,0 +1,57 @@
+aspect ImplicitDeadAssignment {
+
+  coll Set<CFGNode> CFGNode.daaAllUses()[new HashSet<>()] with add;
+
+  VarAccess contributes enclosingAssignment() when enclosingAssignment() !=null   to CFGNode.daaAllUses() for each myUses();
+
+  syn Set<CFGNode> VarAccess.myUses() {
+    Set<CFGNode> res = new HashSet<CFGNode>();
+    for (CFGNode e : RDin()) {
+      if (e.getVarDecl() == decl())
+        res.add(e);
+    }
+    return res;
+  }
+
+  inh CFGNode VarAccess.enclosingAssignment();
+  eq AssignExpr.getSource().enclosingAssignment() = this;
+  eq UnaryIncDec.getChild().enclosingAssignment() = this;
+  eq VariableDeclarator.getInit().enclosingAssignment() = this;
+  eq Program.getChild().enclosingAssignment() = null;
+
+  syn boolean CFGNode.isImplicitlyDead() {
+    if (daaAllUses().isEmpty() || this.DAA_isDeadAssign())
+      return false;
+
+    for (CFGNode candidate : daaAllUses()) {
+      if (candidate != this && !candidate.DAA_isDeadAssign() &&
+          !candidate.isImplicitlyDead()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  
+
+   AssignExpr contributes warning(
+       getCompilationUnit().pathName(),
+       "The value stored in '" + getDest().varDecl().name() +
+           "' is read in the feature, but it is implicitly dead.",
+       Analysis.AvailableAnalysis.IMPDAA, null, null) when
+   isImplicitlyDead() to CompilationUnit.IMPDAA();
+
+   VariableDeclarator contributes warning(
+       getCompilationUnit().pathName(),
+       "The value stored in '" + singletonValue().name() +
+           "' is read in the feature, but it is implicitly dead.",
+       Analysis.AvailableAnalysis.IMPDAA, null, null) when
+   isImplicitlyDead() to CompilationUnit.IMPDAA();
+
+   UnaryIncDec contributes warning(
+       getCompilationUnit().pathName(),
+       "The value stored in '" + getOperand().varDecl().name() +
+           "' is read in the feature, but it is implicitly dead.",
+       Analysis.AvailableAnalysis.IMPDAA, null, null) when
+   isImplicitlyDead() to CompilationUnit.IMPDAA();
+}

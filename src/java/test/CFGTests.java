@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import org.extendj.IntraJ;
+import org.extendj.analysis.Warning;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.ConstructorDecl;

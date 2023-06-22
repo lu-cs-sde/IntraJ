@@ -1,3 +1,5 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
 plugins {
   id 'java'
   id 'org.jastadd' version '1.13.3'
@@ -46,6 +48,7 @@ sourceSets.main {
     srcDir 'src/java'
   }
   resources {
+    srcDir 'src/java/magpiebridge/resources'
     srcDir 'extendj/src/res'
     srcDir jastadd.buildInfoDir
   }
@@ -61,6 +64,9 @@ sourceSets.main {
 dependencies{
     testImplementation 'junit:junit:4.12'
     implementation 'junit:junit:4.12'
+    implementation files('tools/magpiebridge-0.1.6-SNAPSHOT-jar-with-dependencies.jar')
+    implementation 'com.sun.net.httpserver:http:20070405'
+    implementation group: 'org.freemarker', name: 'freemarker', version: '2.3.29'
 }
 
 sourceSets.test{
@@ -72,26 +78,34 @@ sourceSets.test{
 test {
    useJUnit()
 
-  // testLogging.events 'passed', 'failed'
-
-  // testLogging.exceptionFormat = 'full'
 
   dependsOn 'cleanTest'
 }
 
-// Use JavaCompiler if you need bytecode generation.
-jar {
-  manifest {
-    attributes(
-      'Main-Class': !project.hasProperty("className") ? 'org.extendj.IntraJ': project.getProperty("className").toString())
-  }
+
+
+task intraj(type: Jar) { 
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } } {
+        exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    }
+    from sourceSets.main.output
+    manifest {
+        attributes 'Main-Class': 'org.extendj.IntraJ'
+    }
+    baseName = 'intraj'
+    destinationDir = projectDir
 }
 
+artifacts {
+  archives intraj
+}
 //jar.manifest.attributes 'Main-Class': 'org.extendj.JavaCompiler'
 jar.destinationDirectory = projectDir
 
 // Java -source and -target version.
-sourceCompatibility = targetCompatibility = '1.7'
+sourceCompatibility = targetCompatibility = '1.8'
 
 task sourceZip(type: Zip) {
   description 'Builds a Zip file with the entire repisotory (including the ExtendJ submodule).'

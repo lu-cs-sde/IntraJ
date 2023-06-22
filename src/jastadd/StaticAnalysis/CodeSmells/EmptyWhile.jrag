@@ -1,0 +1,9 @@
+aspect EmptyWhile{
+	
+	WhileStmt contributes warning(
+	  getCompilationUnit().pathName(),
+	  "Empty 'while' statement may indicate unintended behavior." ,
+	  Analysis.AvailableAnalysis.EMPTYWHILE, null, null) when
+	  getStmt().getNumberStatements()==0 to CompilationUnit.EMPTYWHILE();
+
+}

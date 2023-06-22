@@ -1,0 +1,20 @@
+aspect AvoidUsingMagicNumbers{
+
+	syn lazy Set<Integer> Program.notMagicNumbers(){
+		Set<Integer> res = new HashSet<>();
+		res.add(0);
+		res.add(1);
+		res.add(-1);
+		return res;
+	}
+	syn boolean Expr.isMagicNumber() = false;
+	eq IntegerLiteral.isMagicNumber() = !program().notMagicNumbers().contains(Integer.parseInt(getLITERAL()));
+
+	IntegerLiteral contributes warning(
+      getCompilationUnit().pathName(),
+      "Magic numbers should not be used. " ,
+      Analysis.AvailableAnalysis.AUMG, null, null) when
+      isMagicNumber() to CompilationUnit.AUMG();
+	
+
+}

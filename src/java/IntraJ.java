@@ -30,6 +30,8 @@
 
 package org.extendj;
 
+import com.ibm.wala.classLoader.Module;
+import com.ibm.wala.classLoader.SourceFileModule;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -38,21 +40,35 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
 import java.util.TreeSet;
-import org.extendj.JavaChecker;
-import org.extendj.ast.Analysis;
+import org.extendj.analysis.Analysis;
+import org.extendj.analysis.Warning;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
 import org.extendj.ast.Frontend;
-import org.extendj.ast.MethodDecl;
+
 import org.extendj.ast.Program;
 import org.extendj.ast.SmallSet;
-import org.extendj.ast.WarningMsg;
 import org.extendj.flow.utils.IJGraph;
 import org.extendj.flow.utils.Utils;
+
+
 
 /**
  * Perform static semantic checks on a Java program.
@@ -62,23 +78,19 @@ public class IntraJ extends Frontend {
   public enum FlowProfiling { BACKWARD, FORWARD, COLLECTION, NONE, ALL }
   private static Boolean pred = false;
   private static Boolean succ = false;
-  private static Boolean debug = false;
   private static Boolean pdf = false;
-  private static Boolean multipleFiles = false;
   public static Boolean excludeLiteralsAndNull = false;
   private static IJGraph graph;
   private static String filename;
   public static Object DrAST_root_node;
   private static Integer numb_warning = 0;
-  private static int n_iter = 0;
-  private static boolean printTime = false;
   private static boolean statistics = false;
   private static long totalTime = 0;
-  public static boolean toTxt = false;
 
-  public static ArrayList<Analysis> analysis = new ArrayList<>();
+  public static Analysis analysis = Analysis.getAnalysisInstance();
+  public static IntraJ intraj;
 
-  private String[] setEnv(String[] args) throws FileNotFoundException {
+  private static String[] setEnv(String[] args) throws FileNotFoundException {
     if (args.length < 1) {
       System.err.println("You must specify a source file on the command line!");
       printOptionsUsage();
@@ -96,31 +108,15 @@ public class IntraJ extends Frontend {
       if (opt.equals("-help")) {
         printOptionsUsage();
       } else if (opt.startsWith("-Wall")) {
-        for (Analysis a : Analysis.values())
-          analysis.add(a);
-        continue;
-      } else if (opt.equals("-txt-output")) {
-        toTxt = true;
-        continue;
+        analysis.enableAllAnalyses();
       } else if (opt.startsWith("-Wexcept=")) {
         String an = opt.substring(9, opt.length());
-        if (Arrays.asList(Analysis.names()).contains(an)) {
-          analysis.remove(Analysis.valueOf(an));
-          continue;
-        }
-        System.err.println("There is no analsis with name '" + an +
-                           "' -wExcept");
-        printOptionsUsage();
-
+        analysis.disableAnalysis(analysis.getAnalysis(an));
+        continue;
       } else if (opt.startsWith("-W")) {
         String an = opt.substring(2, opt.length());
-
-        if (Arrays.asList(Analysis.names()).contains(an)) {
-          analysis.add(Analysis.valueOf(an));
-          continue;
-        }
-        System.err.println("There is no analsis with name '" + an + "' -W");
-        printOptionsUsage();
+        analysis.addAnalysis(analysis.getAnalysis(an));
+        continue;
       }
       switch (opt) {
       case "-succ":
@@ -133,12 +129,6 @@ public class IntraJ extends Frontend {
       case "-pred":
         pdf = true;
         pred = true;
-        break;
-      case "-debug":
-        debug = true;
-        break;
-      case "-helpfrontend":
-        FEOptions.add("-help");
         break;
       case "-statistics":
         statistics = true;
@@ -159,10 +149,8 @@ public class IntraJ extends Frontend {
       default:
         System.err.println("Unrecognized option: " + opt);
         printOptionsUsage();
+        break;
       }
-    }
-    if (FEOptions.size() > 2) {
-      multipleFiles = true;
     }
     return FEOptions.toArray(new String[FEOptions.size()]);
   }
@@ -173,30 +161,29 @@ public class IntraJ extends Frontend {
    */
   public static void main(String args[])
       throws FileNotFoundException, InterruptedException, IOException {
-    IntraJ intraj = new IntraJ();
+    String[] jCheckerArgs = setEnv(args);
+ 
+      IntraJ intraj = getInstance();
+      intraj.program = new Program();
+      DrAST_root_node = intraj.getEntryPoint();
+      int exitCode = intraj.run(jCheckerArgs);
 
-    String[] jCheckerArgs = intraj.setEnv(args);
-    int exitCode = intraj.run(jCheckerArgs);
-    if (exitCode != 0) {
-      System.exit(exitCode);
-    }
-    DrAST_root_node = intraj.getEntryPoint();
-    if (pdf) {
-      intraj.generatePDF();
-    }
-    if (debug)
-      intraj.debug();
+      if (exitCode != 0) {
+        System.exit(exitCode);
+      }
 
-    if (statistics) {
-      Utils.printStatistics(
-          System.out, "Elapsed time (CFG + Dataflow): " + totalTime / 1000 +
-                          "." + totalTime % 1000 + "s");
-    }
-    Utils.printStatistics(System.out,
-                          "Total number of warnings: " + numb_warning);
-    if (statistics) {
-      printProgramStatistics(intraj.getEntryPoint());
-    }
+      if (pdf){
+        intraj.generatePDF();
+      }
+  
+      if (statistics) {
+        Utils.printStatistics(
+            System.out, "Elapsed time (CFG + Dataflow): " + totalTime / 1000 +
+                            "." + totalTime % 1000 + "s");
+        Utils.printStatistics(System.out,
+                              "Total number of warnings: " + numb_warning);
+        printProgramStatistics(intraj.getEntryPoint());
+      }
   }
 
   private static void printProgramStatistics(Program _program) {
@@ -256,14 +243,14 @@ public class IntraJ extends Frontend {
    */
   protected void processNoErrors(CompilationUnit unit) {
     Integer nbrWrn = 0;
-    for (Analysis a : analysis) {
+    for (Analysis.AvailableAnalysis a : analysis.getActiveAnalyses()) {
       try {
         long startTime = System.currentTimeMillis();
-        TreeSet<WarningMsg> wmgs = (TreeSet<WarningMsg>)unit.getClass()
-                                       .getDeclaredMethod(a.toString())
-                                       .invoke(unit);
-        for (WarningMsg wm : wmgs) {
-          if (analysis.contains(wm.getAnalysisType())) {
+        TreeSet<Warning> wmgs = (TreeSet<Warning>)unit.getClass()
+                                    .getDeclaredMethod(a.toString())
+                                    .invoke(unit);
+        for (Warning wm : wmgs) {
+          if (analysis.getActiveAnalyses().contains(wm.getAnalysisType())) {
             wm.print(System.out);
             nbrWrn++;
           }
@@ -290,18 +277,6 @@ public class IntraJ extends Frontend {
 
   public Program getEntryPoint() { return program; }
 
-  private void debug() {
-    for (CFGRoot root : getEntryPoint().CFGRoots()) {
-      root.entry().printSuccSets(System.out,
-                                 SmallSet.<CFGNode>empty().<CFGNode>mutable());
-    }
-    System.out.println("-----------");
-    for (CFGRoot root : getEntryPoint().CFGRoots()) {
-      root.exit().printPredSets(System.out,
-                                SmallSet.<CFGNode>empty().<CFGNode>mutable());
-    }
-  }
-
   private void generatePDF() throws IOException, InterruptedException {
     graph = new IJGraph(pred, succ);
     program.graphLayout(graph);
@@ -321,32 +296,36 @@ public class IntraJ extends Frontend {
     Utils.printInfo(System.out, "PDF file generated correctly");
   }
 
-  void printOptionsUsage() {
-    System.out.println(name() + " - Version:" + version());
-    System.out.println("Available options:");
-    System.out.println("  -help: prints all the available options.");
-    System.out.println(
-        "  -genpdf: generates a pdf with AST structure of all the methods in the analysed files. It can be used combined with `-succ`,`-pred`.");
-    System.out.println(
-        "  -succ: generates a pdf with the successor relation for all the methods in the analysed files. It can be used combined with `-pred`.");
-    System.out.println(
-        "  -pred: generates a pdf with the predecessor relation for all the methods in the analysed files. It can be used combined with `-succ`.");
-    System.out.println(
-        "  -statistics: prints the number of CFGRoots, CFGNodes and CFGEdges in the analysed files.");
-    System.out.println("  -nowarn: the warning messages are not printed.");
+  static void printOptionsUsage() {
+      System.out.println("IntraJ");
+      System.out.println("Available options:");
+      System.out.println("  -help: prints all the available options.");
+      System.out.println("  -genpdf: generates a pdf with AST structure of all the methods in the analysed files. It can be used combined with `-succ`,`-pred`.");
+      System.out.println("  -succ: generates a pdf with the successor relation for all the methods in the analysed files. It can be used combined with `-pred`.");
+      System.out.println("  -pred: generates a pdf with the predecessor relation for all the methods in the analysed files. It can be used combined with `-succ`.");
+      System.out.println("  -statistics: prints the number of CFGRoots, CFGNodes and CFGEdges in the analysed files.");
+      System.out.println("  -nowarn: the warning messages are not printed.");
 
-    System.out.println("-------------- ANALYSIS OPTIONS --------------------");
-    System.out.println("Available analysis (ID):");
-    System.out.println("  DAA: Detects unused `dead` assignments");
-    System.out.println(
-        "  NPA: Detects occurrences of Null Pointer Dereferenciation");
-    System.out.println(
-        "  -WID: enable the analysis with the respective ID, e.g., -WDAA");
-    System.out.println("  -Wall: enables all the available analysis");
-    System.out.println(
-        "  -Wexcept=ID: enable all the available analysis except ID.");
-    System.out.println(
-        "  -niter=x: runs the analysis `x` times and prints the time necessary to execute an analysis.");
-    System.exit(1);
+      System.out.println("-------------- ANALYSIS OPTIONS --------------------");
+      System.out.println("Available analysis (ID):");
+      System.out.println("  DAA: Detects unused `dead` assignments");
+      System.out.println("  NPA: Detects occurrences of Null Pointer Dereferenciation");
+      System.out.println("  -WID: enable the analysis with the respective ID, e.g., -WDAA");
+      System.out.println("  -Wall: enables all the available analysis");
+      System.out.println("  -Wexcept=ID: enable all the available analysis except ID.");
+      System.out.println("  -niter=x: runs the analysis `x` times and prints the time necessary to execute an analysis.");
+      System.exit(1);
   }
+
+
+  /**
+   * @return the active IntraJ instance
+   */
+  public static IntraJ getInstance() {
+    if (intraj == null) {
+      intraj = new IntraJ();
+    }
+    return intraj;
+  }
+
 }
