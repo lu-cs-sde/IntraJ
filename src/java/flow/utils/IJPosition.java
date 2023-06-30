@@ -34,7 +34,7 @@ public class IJPosition implements Position {
 
     this.firstCol = firstCol;
     this.lastCol = lastCol;
-   
+    this.srcPath = sourcePath;
   }
 
   @Override
@@ -69,6 +69,11 @@ public class IJPosition implements Position {
 
   @Override
   public URL getURL() {
+    try {
+      return new URL("file:"+srcPath);
+    } catch (MalformedURLException e) {
+      e.printStackTrace();
+    }
     return null;
   }
 
