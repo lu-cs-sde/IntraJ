@@ -47,7 +47,6 @@ public class Analysis {
 
   // Enum that specifies all the available AvailableAnalysis
   public enum AvailableAnalysis {
-    PURE,
     DAA,
     AUMG,
     STREQ,

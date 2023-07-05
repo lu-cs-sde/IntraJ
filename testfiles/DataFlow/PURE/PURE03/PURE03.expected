@@ -1,6 +1,0 @@
-Variable: Integer x
-		Abs(x)
-Variable: Integer z
-		Abs(z)
-Variable: y
-		Abs(z)

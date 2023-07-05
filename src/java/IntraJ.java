@@ -109,6 +109,7 @@ public class IntraJ extends Frontend {
         printOptionsUsage();
       } else if (opt.startsWith("-Wall")) {
         analysis.enableAllAnalyses();
+        continue;
       } else if (opt.startsWith("-Wexcept=")) {
         String an = opt.substring(9, opt.length());
         analysis.disableAnalysis(analysis.getAnalysis(an));
@@ -308,12 +309,16 @@ public class IntraJ extends Frontend {
 
       System.out.println("-------------- ANALYSIS OPTIONS --------------------");
       System.out.println("Available analysis (ID):");
-      System.out.println("  DAA: Detects unused `dead` assignments");
-      System.out.println("  NPA: Detects occurrences of Null Pointer Dereferenciation");
+      System.out.println("  DAA:  Detects unused `dead` assignments");
+      System.out.println("  NPA:  Detects occurrences of Null Pointer Dereferenciation");
+      System.out.println("STREQ:  Detects occurrences of String equality with `==`");
+      System.out.println("IMPDAA: Detects occurrences of implict dead assignments");
+      System.out.println("EMPTYIF: Detects occurrences of empty if statements");
+      System.out.println("EMPTYWHILE: Detects occurrences of empty while statements");
+      System.out.println("SWITCHDEFAULT: Detects occurrences of switch statements without default case");
       System.out.println("  -WID: enable the analysis with the respective ID, e.g., -WDAA");
       System.out.println("  -Wall: enables all the available analysis");
       System.out.println("  -Wexcept=ID: enable all the available analysis except ID.");
-      System.out.println("  -niter=x: runs the analysis `x` times and prints the time necessary to execute an analysis.");
       System.exit(1);
   }
 

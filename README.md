@@ -16,11 +16,13 @@
 
 With **IntraJ** you can:
 - construct intra-procedural **Control Flow Graph**,
-- (*DAA*) detect **Dead assignments** in your codebase, and
+- (*DAA*) detect **Dead assignments** in your codebase,
+- (*IMPDAA*) detect **Implicit dead assignments** in your codebase, and
 - (*NPA*) detect occurences of **NullPointerException**.
 
 
-You can run IntraJ on other Java codebases (in Java-4, Java-5, Java-6, and Java-7) in order to construct CFGs and get DAA and NPA analysis results.
+
+You can run IntraJ on other Java codebases (in Java-4, Java-5, Java-6, Java-7 and Java-8 (WIP)) in order to construct CFGs and get DAA and NPA analysis results.
 
 
 
@@ -29,7 +31,7 @@ You can run IntraJ on other Java codebases (in Java-4, Java-5, Java-6, and Java-
 
 We have run IntraJ on the following Java version:
 
-*  **Java SDK version 7**. (tested with  SDK 7.0.292-zulu. See [sdkman](https://sdkman.io)).
+*  **Java SDK version 8**. (tested with  Java OpenJDK 1.8.0_275. See [sdkman](https://sdkman.io)).
 
 It is possible to generate PDFs that show the CFGs visually. For this you need:
 1) **Dot** (graphiz) - _PDF generation_
@@ -45,7 +47,7 @@ It is possible to generate PDFs that show the CFGs visually. For this you need:
 
 The evaluation script uses `sdkman`.
 To run the evaluation you need:
-* The scripts `eval.sh` and `evaluation/run_eval.sh` uses `sdkman`. If you don't have `sdkman` installed but have Java SDK 7 installed, you can comment all the lines starting with `sdk` in `eval.sh` and in `evaluation/run_eval.sh`. You install `sdkman` by running the following commands:
+* The scripts `eval.sh` and `evaluation/run_eval.sh` uses `sdkman`. If you don't have `sdkman` installed but have Java SDK 8 installed, you can comment all the lines starting with `sdk` in `eval.sh` and in `evaluation/run_eval.sh`. You install `sdkman` by running the following commands:
 
   ```
   curl -s "https://get.sdkman.io" | bash
@@ -234,10 +236,13 @@ And the following PDF is generated:
 
 ---
 # Related repository repositories/links 🔗
+ - 🗄 **[IntraJ-LSP](https://github.com/IdrissRio/IntraJ-LSP.git): repository for the Language Server Protocol (LSP) implementation of IntraJ.
+ - 🗄 **[CodeProber](https://github.com/Kevlanche/codeprober-playground): live inspection of IntraJ's attributes in CodeProber.
  - 🗄 **[IntraJSCAM2021](https://github.com/lu-cs-sde/IntraJSCAM2021)**: repository submitted for Artifact Evaluation (SCAM2021) (control-flow analysis for Java)
  - 🗄 **[IntraCFG](https://github.com/lu-cs-sde/IntraCFG)**: main repository for IntraCFG (language-independent framework for control-flow analysis)
  - 🔗 **[JastAdd](https://jastadd.org)**: meta-compilation system that supports Reference Attribute Grammars. We used a custom [JastAdd](https://bitbucket.org/jastadd/jastadd2/src/f00c118684f4cc9b42931b5a491046e41d68b6bf/) version which better supports interfaces.
  - 🔗 **[ExtendJ](https://extendj.org)**: extensible Java compiler built using JastAdd. We built **IntraJ** as an Static Analysis Extension of ExtendJ. More can be found [here](https://bitbucket.org/extendj/analysis-template/src/master/). 
  - 🔗 **[SonarQube](https://www.sonarqube.org/downloads/)**: platform developed by SonarSource for continuous inspection of code quality
  - 🗄 **[JastAddJ-Intraflow](https://bitbucket.org/jastadd/jastaddj-intraflow/src/master/)**: An earlier approach to implementing intra-procedural control flow, dataflow, and dead assignment analysis for Java, also using JastAdd.
+ 
 

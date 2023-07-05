@@ -84,24 +84,35 @@ test {
 
 
 
-task intraj(type: Jar) { 
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+// task intraj(type: Jar) { 
+//     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } } {
-        exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
-    }
-    from sourceSets.main.output
+//     from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } } {
+//         exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+//     }
+//     from sourceSets.main.output
+//     manifest {
+//         attributes 'Main-Class': 'org.extendj.IntraJ'
+//     }
+//     baseName = 'intraj'
+//     destinationDir = projectDir
+// }
+
+// artifacts {
+//   archives intraj
+// }
+
+jar {
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
     manifest {
         attributes 'Main-Class': 'org.extendj.IntraJ'
     }
+    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
     baseName = 'intraj'
-    destinationDir = projectDir
 }
 
-artifacts {
-  archives intraj
-}
-//jar.manifest.attributes 'Main-Class': 'org.extendj.JavaCompiler'
+
 jar.destinationDirectory = projectDir
 
 // Java -source and -target version.
