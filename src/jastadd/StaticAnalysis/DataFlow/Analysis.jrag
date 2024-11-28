@@ -63,8 +63,12 @@ aspect Analysis {
   coll Set<CFGRoot> Program.CFGRoots()[new LinkedHashSet<>()] with add root
       Program;
   CFGRoot contributes this to Program.CFGRoots();
-  ClassDecl contributes nta staticInitialization() to Program.CFGRoots();
-  ClassDecl contributes nta instanceInitialization() to Program.CFGRoots();
+
+  coll Set<CFGRoot> CompilationUnit.CFGRoots()[new LinkedHashSet<>()] with add
+      root CompilationUnit;
+  CFGRoot contributes this to CompilationUnit.CFGRoots();
+  //   ClassDecl contributes nta staticInitialization() to Program.CFGRoots();
+  //   ClassDecl contributes nta instanceInitialization() to Program.CFGRoots();
 
   /**This class contains all the information related to a specific warning:
    * Location: file path.

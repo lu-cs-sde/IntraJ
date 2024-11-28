@@ -454,8 +454,14 @@ public
       res.add(getStmt(index).nextNodesTT());
       res.add(getStmt(index).nextNodesFF());
     } else {
-      res.add((getNumStmt() - 1 == index) ? nextNodes()
-                                          : getStmt(index + 1).firstNodes());
+      if (getNumStmt() - 1 == index) {
+        res.add(nextNodes());
+      } else if (getStmt(index + 1).isConstCase() &&
+                 getStmt(index + 2) != null) {
+        res.add(getStmt(index + 2).firstNodes());
+      } else {
+        res.add(getStmt(index + 1).firstNodes());
+      }
     }
     return res;
   }
@@ -521,8 +527,8 @@ public
   MethodAccess contributes nta getFinallyList() to CFGNode.predColl();
   ConstructorDecl contributes nta getImplicitConstructorInvocation()
       to CFGNode.predColl();
-  ClassDecl contributes nta instanceInitialization() to CFGNode.predColl();
-  ClassDecl contributes nta staticInitialization() to CFGNode.predColl();
+  // ClassDecl contributes nta instanceInitialization() to CFGNode.predColl();
+  // ClassDecl contributes nta staticInitialization() to CFGNode.predColl();
   ForStmt contributes nta implicitCondition() to CFGNode.predColl();
   ReturnStmt contributes {
     if (hasFinally())

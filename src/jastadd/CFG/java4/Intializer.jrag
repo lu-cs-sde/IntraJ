@@ -59,72 +59,73 @@ aspect Initializer {
 
   /*************************** IMPLICIT CALLS *********************************/
 
-  eq ClassDecl.staticInitialization().nextNodes() {
-    for (int i = 0; i < getNumBodyDecl(); ++i) {
-      if (!getBodyDecl(i).isStaticInit() ||
-          getBodyDecl(i).isConstructorOrMethod())
-        continue;
-      return getBodyDecl(i).firstNodes();
-    }
-    return staticInitialization().exit().firstNodes();
-  }
+  // eq ClassDecl.staticInitialization().nextNodes() {
+  //   for (int i = 0; i < getNumBodyDecl(); ++i) {
+  //     if (!getBodyDecl(i).isStaticInit() ||
+  //         getBodyDecl(i).isConstructorOrMethod())
+  //       continue;
+  //     return getBodyDecl(i).firstNodes();
+  //   }
+  //   return staticInitialization().exit().firstNodes();
+  // }
 
-  eq ClassDecl.instanceInitialization().nextNodes() {
-    for (int i = 0; i < getNumBodyDecl(); ++i) {
-      if (getBodyDecl(i).isStaticInit() ||
-          getBodyDecl(i).isConstructorOrMethod())
-        continue;
-      return getBodyDecl(i).firstNodes();
-    }
-    return instanceInitialization().exit().firstNodes();
-  }
+  // eq ClassDecl.instanceInitialization().nextNodes() {
+  //   for (int i = 0; i < getNumBodyDecl(); ++i) {
+  //     if (getBodyDecl(i).isStaticInit() ||
+  //         getBodyDecl(i).isConstructorOrMethod())
+  //       continue;
+  //     return getBodyDecl(i).firstNodes();
+  //   }
+  //   return instanceInitialization().exit().firstNodes();
+  // }
 
-  eq ClassDecl.getBodyDecl(int index).nextNodes() {
-    BodyDecl current = getBodyDecl(index);
-    if (current.isStaticInit()) {
-      for (int i = index + 1; i < getNumBodyDecl(); ++i) {
-        if (!getBodyDecl(i).isStaticInit() ||
-            getBodyDecl(i).isConstructorOrMethod())
-          continue;
-        return getBodyDecl(i).firstNodes();
-      }
-      return staticInitialization().exit().firstNodes();
-    }
-    if (!current.isStaticInit() && !current.isConstructorOrMethod()) {
-      for (int i = index + 1; i < getNumBodyDecl(); ++i) {
-        if (getBodyDecl(i).isStaticInit() ||
-            getBodyDecl(i).isConstructorOrMethod())
-          continue;
-        return getBodyDecl(i).firstNodes();
-      }
-      return instanceInitialization().exit().firstNodes();
-    }
-    return SmallSet.<CFGNode>empty();
-  }
+  // eq ClassDecl.getBodyDecl(int index).nextNodes() {
+  //   BodyDecl current = getBodyDecl(index);
+  //   if (current.isStaticInit()) {
+  //     for (int i = index + 1; i < getNumBodyDecl(); ++i) {
+  //       if (!getBodyDecl(i).isStaticInit() ||
+  //           getBodyDecl(i).isConstructorOrMethod())
+  //         continue;
+  //       return getBodyDecl(i).firstNodes();
+  //     }
+  //     return staticInitialization().exit().firstNodes();
+  //   }
+  //   if (!current.isStaticInit() && !current.isConstructorOrMethod()) {
+  //     for (int i = index + 1; i < getNumBodyDecl(); ++i) {
+  //       if (getBodyDecl(i).isStaticInit() ||
+  //           getBodyDecl(i).isConstructorOrMethod())
+  //         continue;
+  //       return getBodyDecl(i).firstNodes();
+  //     }
+  //     return instanceInitialization().exit().firstNodes();
+  //   }
+  //   return SmallSet.<CFGNode>empty();
+  // }
 
-  syn nta InstanceInitialization ClassDecl.instanceInitialization() =
-      new InstanceInitialization(new Modifiers(new List()),
-                                 new TypeAccess("", ""), "Instance", new List(),
-                                 new List(), new Opt());
+  // syn nta InstanceInitialization ClassDecl.instanceInitialization() =
+  //     new InstanceInitialization(new Modifiers(new List()),
+  //                                new TypeAccess("", ""), "Instance", new
+  //                                List(), new List(), new Opt());
 
-  syn nta InstanceInitialization ClassDecl.staticInitialization() =
-      new InstanceInitialization(new Modifiers(new List()),
-                                 new TypeAccess("", ""), "Static", new List(),
-                                 new List(), new Opt());
+  // syn nta InstanceInitialization ClassDecl.staticInitialization() =
+  //     new InstanceInitialization(new Modifiers(new List()),
+  //                                new TypeAccess("", ""), "Static", new
+  //                                List(), new List(), new Opt());
 
-  eq ClassDecl.getBodyDecl(int index).entry() {
-    if (getBodyDecl(index).isStaticInitializer() ||
-        getBodyDecl(index).isStaticFieldDecl()) {
-      return staticInitialization().entry();
-    } else
-      return instanceInitialization().entry();
-  }
+  // eq ClassDecl.getBodyDecl(int index).entry() {
+  //   if (getBodyDecl(index).isStaticInitializer() ||
+  //       getBodyDecl(index).isStaticFieldDecl()) {
+  //     return staticInitialization().entry();
+  //   } else
+  //     return instanceInitialization().entry();
+  // }
 
-  eq InstanceInitialization.firstNodes() = SmallSet.<CFGNode>singleton(entry());
-  eq InstanceInitialization.exit().nextNodes() = SmallSet.<CFGNode>empty();
-  eq InstanceInitialization.getChild().nextNodes() = SmallSet.<CFGNode>empty();
-  eq InstanceInitialization.entry().nextNodes() = nextNodes();
+  // eq InstanceInitialization.firstNodes() =
+  // SmallSet.<CFGNode>singleton(entry()); eq
+  // InstanceInitialization.exit().nextNodes() = SmallSet.<CFGNode>empty(); eq
+  // InstanceInitialization.getChild().nextNodes() = SmallSet.<CFGNode>empty();
+  // eq InstanceInitialization.entry().nextNodes() = nextNodes();
 
-  eq InstanceInitializer.firstNodes() = getBlock().firstNodes();
-  eq StaticInitializer.firstNodes() = getBlock().firstNodes();
+  // eq InstanceInitializer.firstNodes() = getBlock().firstNodes();
+  // eq StaticInitializer.firstNodes() = getBlock().firstNodes();
 }

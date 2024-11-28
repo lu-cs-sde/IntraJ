@@ -63,13 +63,13 @@ aspect PrintGraph {
   syn ASTNode ASTNode.lastNode() = prevNode(getNumChild());
   syn ASTNode ASTNode.prevNode(int i) =
       i > 0 ? getChild(i - 1).lastNode() : this;
-  eq ClassDecl.instanceInitialization().prevNode() = this;
-  eq ClassDecl.staticInitialization().prevNode() =
-      instanceInitialization().lastNode();
-  eq ClassDecl.getChild(int i).prevNode() =
-      i > 0 ? getChild(i - 1).lastNode() : staticInitialization().lastNode();
-  eq InstanceInitialization.entry().prevNode() = this;
-  eq InstanceInitialization.exit().prevNode() = entry().lastNode();
+  // eq ClassDecl.instanceInitialization().prevNode() = this;
+  // eq ClassDecl.staticInitialization().prevNode() =
+  //     instanceInitialization().lastNode();
+  // eq ClassDecl.getChild(int i).prevNode() =
+  //     i > 0 ? getChild(i - 1).lastNode() : staticInitialization().lastNode();
+  // eq InstanceInitialization.entry().prevNode() = this;
+  // eq InstanceInitialization.exit().prevNode() = entry().lastNode();
 
   eq MethodAccess.lastNode() { return getFinallyList().lastNode(); }
 
@@ -390,22 +390,22 @@ public
       astnode.graphLayout(graph);
       graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
     }
-    instanceInitialization().graphLayout(graph);
-    staticInitialization().graphLayout(graph);
-    graph.addEdge(this.CFGName(), instanceInitialization().CFGName(),
-                  FlowRelation.NONE);
-    graph.addEdge(this.CFGName(), staticInitialization().CFGName(),
-                  FlowRelation.NONE);
+    // instanceInitialization().graphLayout(graph);
+    // staticInitialization().graphLayout(graph);
+    // graph.addEdge(this.CFGName(), instanceInitialization().CFGName(),
+    //               FlowRelation.NONE);
+    // graph.addEdge(this.CFGName(), staticInitialization().CFGName(),
+    //               FlowRelation.NONE);
   }
 
-public
-  void InstanceInitialization.graphLayout(IJGraph graph) {
-    IJNode node = graph.addNode(this);
-    graph.addNode(entry());
-    graph.addEdge(CFGName(), entry().CFGName(), FlowRelation.NONE);
-    graph.addNode(exit());
-    graph.addEdge(CFGName(), exit().CFGName(), FlowRelation.NONE);
-  }
+  // public
+  //   void InstanceInitialization.graphLayout(IJGraph graph) {
+  //     IJNode node = graph.addNode(this);
+  //     graph.addNode(entry());
+  //     graph.addEdge(CFGName(), entry().CFGName(), FlowRelation.NONE);
+  //     graph.addNode(exit());
+  //     graph.addEdge(CFGName(), exit().CFGName(), FlowRelation.NONE);
+  //   }
 
 public
   void MethodDecl.graphLayout(IJGraph graph) {
@@ -642,8 +642,8 @@ public
       getClass().getSimpleName() + "[" + absIndex() + "]";
   syn String CFGNode.CFGName() =
       getClass().getSimpleName() + "[" + absIndex() + "]";
-  eq InstanceInitialization.CFGName() =
-      getClass().getSimpleName() + "[" + absIndex() + "]";
+  // eq InstanceInitialization.CFGName() =
+  //     getClass().getSimpleName() + "[" + absIndex() + "]";
   eq Entry.CFGName() = getClass().getSimpleName() + "[" + absIndex() + "]";
   eq Exit.CFGName() = getClass().getSimpleName() + "[" + absIndex() + "]";
   inh String Entry.getID();
@@ -701,7 +701,7 @@ public
     }
     return null;
   }
-  
+
 public
   String ASTNode.genOrder(ArrayList<String> l) {
     if (l.size() <= 1)
@@ -732,12 +732,12 @@ public
     return genOrder(ord);
   }
 
-  eq InstanceInitialization.nodeOrder() {
-    ArrayList<String> ord = new ArrayList<>();
-    ord.add(entry().CFGName());
-    ord.add(exit().CFGName());
-    return genOrder(ord);
-  }
+  // eq InstanceInitialization.nodeOrder() {
+  //   ArrayList<String> ord = new ArrayList<>();
+  //   ord.add(entry().CFGName());
+  //   ord.add(exit().CFGName());
+  //   return genOrder(ord);
+  // }
 
   eq ConstructorDecl.nodeOrder() {
     ArrayList<String> ord = new ArrayList<>();
@@ -751,8 +751,8 @@ public
 
   eq ClassDecl.nodeOrder() {
     ArrayList<String> ord = new ArrayList<>();
-    ord.add(staticInitialization().CFGName());
-    ord.add(instanceInitialization().CFGName());
+    // ord.add(staticInitialization().CFGName());
+    // ord.add(instanceInitialization().CFGName());
     for (int i = 0; i < getNumChild(); ++i) {
       ord.add(getChild(i).CFGName());
     }

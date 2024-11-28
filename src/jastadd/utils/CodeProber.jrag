@@ -33,4 +33,80 @@ aspect PASTA {
     }
     return ret;
   }
+
+public
+  java.util.List<Diagnostic> Program.showCFG() {
+    java.util.List<Diagnostic> ret = new java.util.ArrayList<>();
+    for (CompilationUnit unit : getCompilationUnitList()) {
+      for (CFGRoot t : unit.CFGRoots()) {
+        ASTNode node = (ASTNode)t;
+        traverseCFG(t.entry(), new HashSet<CFGNode>(), ret);
+      }
+    }
+    return ret;
+  }
+
+public
+  java.util.List<Diagnostic> MethodDecl.showCFG() {
+    java.util.List<Diagnostic> ret = new java.util.ArrayList<>();
+    traverseCFG(entry(), new HashSet<CFGNode>(), ret);
+    return ret;
+  }
+public
+  void ASTNode.traverseCFG(CFGNode t, Set<CFGNode> nodes,
+                           java.util.List<Diagnostic> ret) {
+    if (nodes.contains(t))
+      return;
+    nodes.add(t);
+    ASTNode node1 = (ASTNode)t;
+    for (CFGNode n : t.succ()) {
+      ASTNode node2 = (ASTNode)n;
+      Random rand = new Random(node1.getStart());
+
+      final int[] components =
+          new int[]{10 + rand.nextInt(6), rand.nextInt(16), rand.nextInt(6)};
+
+      final int off = rand.nextInt(3);
+      final int r = components[off % 3];
+      final int g = components[(off + 1) % 3];
+      final int b = components[(off + 2) % 3];
+      final int col = (r << 12) + (g << 8) + (b << 4) + 0x6;
+      final String colStr = String.format("#%04x", col);
+
+      ret.add(new Diagnostic(java.util.Arrays.asList(),
+                             String.format("LINE-PA@%d;%d;%s", node1.getStart(),
+                                           node2.getStart(), colStr)));
+      traverseCFG(n, nodes, ret);
+    }
+  }
+
+  class Diagnostic {
+    Object humanReadable;
+    String diagnostic;
+
+  public
+    Diagnostic(Object humanReadable, String diagnostic) {
+      this.humanReadable = humanReadable;
+      this.diagnostic = diagnostic;
+    }
+
+  public
+    Object cpr_getOutput() { return humanReadable; }
+  public
+    String cpr_getDiagnostic() { return diagnostic; }
+
+    @Override public String toString() {
+      return humanReadable + "";
+    }
+
+  public
+    boolean equals(Object other) {
+      if (!(other instanceof Diagnostic)) {
+        return false;
+      }
+      Diagnostic o = (Diagnostic)other;
+      return humanReadable.equals(o.humanReadable) &&
+             diagnostic.equals(o.diagnostic);
+    }
+  }
 }
