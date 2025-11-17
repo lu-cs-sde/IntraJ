@@ -35,6 +35,7 @@ jastadd {
   module = 'intraj'
   jastaddOptions = [ "--rewrite=cnta",
                      "--safeLazy",
+                     "--dncConfig=cache-config.csv",
                      "--visitCheck=false",
                      "--optimize-imports"]
   astPackage = 'org.extendj.ast'
