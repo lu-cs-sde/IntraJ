@@ -25,7 +25,6 @@ With **IntraJ** you can:
 You can run IntraJ on other Java codebases (in Java-4, Java-5, Java-6, Java-7 and Java-8 (WIP)) in order to construct CFGs and get DAA and NPA analysis results.
 
 
-
 # Build IntraJ from the source code
 ## Prerequisites
 
@@ -83,6 +82,18 @@ To run all the tests, execute:
 ./gradlew test
 ```
 
+### JastAdd evaluation strategy
+
+This version of IntraJ defaults to the optimised _Relaxed-Stacked_ evaluation method introduced in
+[Riouak et al.: _Efficient Demand Evaluation of Fixed-Point Attributes using Static Analysis_](https://dl.acm.org/doi/10.1145/3687997.3695644).
+
+To build IntraJ with the unoptimised _Basic-Stacked_ evaluation method, you can run:
+
+```
+./gradlew :basic-stacked:jarCopy
+```
+
+
 ### Python Dependencies
 
 To install Python dependencies, you can execute the following instruction:
@@ -105,15 +116,18 @@ The top-level structure of the repository:
     ├── extendj                              # ExtendJ source code
     ├── resources                            # Scripts and logo
     ├── src                                  # IntraJ source code
-    |    ├── jastadd                  
+    |    ├── jastadd
     |    |     ├── CFG                       # CFG spec in Jastadd
     |    |     └── DataFlow                  # Data flow analyses spec
     |    └── java
     |          ├── utils                     # General helpers for visualisation
-    |          └── 
-    # JUnit test spec
+    |          └──
+    ├── basic-stacked                        # Gradle subproject for building IntraJ in basic-stacked mode
+    ├── relaxed-stacked                      # Gradle subproject for building IntraJ in relaxed-stacked mode
     ├── tools                                # IntraJ source code
-    |    └── jastadd-2.3.6-custom            # Custom version of Jastadd
+    |    ├── jastadd2.jar                    # Custom version of Jastadd
+    |    └── cat.jar                         # Callgraph analysis tool
+    # JUnit test spec
     ├── testfiles                            # Automated test files
     |    ├── DataFlow
     |    └── CFG

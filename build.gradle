@@ -1,144 +1,200 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
-  id 'java'
-  id 'org.jastadd' version '1.13.3'
+    id 'java'
+    id 'org.jastadd' version '1.13.3'
 }
 
-defaultTasks 'jar'
+defaultTasks ':relaxed-stacked:jarCopy'
 
 if (!file('extendj/jastadd_modules').exists()) {
-  throw new GradleException('ExtendJ seems to be missing. Please run "git submodule init", then "git submodule update".')
+    throw new GradleException('ExtendJ seems to be missing. Please run "git submodule init", then "git submodule update".')
 }
 
 
+ext {
+    jastaddDefaultOptions = [ "--rewrite=cnta",
+                             "--safeLazy",
+                             "--visitCheck=false",
+                             "--optimize-imports" ]
+    cacheConfigFile = "cache-config.csv"
+    intrajMainEntry = 'org.extendj.IntraJ'
 
-jastadd {
-  configureModuleBuild()
+    makeJastAddPass = { project, root, jarName, extraOptions = [] ->
+        project.with {
+            dependencies {
+                // override JastAdd plugin defaults with local jastadd2.jar:
+                jastadd2 name: "jastadd2"  // ALSO needed in the global dependencies below!
+                // In the future, get this from Maven Central:
+                //jastadd2 "org.jastadd:jastadd:2.5.0"
 
-  modules {
-    include("extendj/jastadd_modules") // Include core ExtendJ modules.
+                implementation 'junit:junit:4.12'
+                implementation files("${rootDir}/tools/magpiebridge-0.1.6-SNAPSHOT-jar-with-dependencies.jar")
+                implementation 'com.sun.net.httpserver:http:20070405'
+                implementation group: 'org.freemarker', name: 'freemarker', version: '2.3.29'
+            }
 
-    module "intraj", {
-      imports "java8 frontend" // ExtendJ dependency for intraj module.
+            jastadd {
+                configureModuleBuild()
+                modules {
+                    include(root.file('extendj/jastadd_modules').absolutePath) // Include core ExtendJ modules.
 
-      jastadd {
-        basedir "src/jastadd/"
-        include "**/*.ast"
-        include "**/*.jadd"
-        include "**/*.jrag"
-      }
+                    module "intraj", {
+                        imports "java8 frontend" // ExtendJ dependency for intraj module.
+
+                        jastadd {
+                            basedir '../src/jastadd'
+                            include "**/*.ast"
+                            include "**/*.jadd"
+                            include "**/*.jrag"
+                        }
+                    }
+                }
+
+                module = 'intraj'
+
+                // Target module to build:
+                jastaddOptions = [ "--rewrite=cnta",
+                                  "--safeLazy",
+                                  "--visitCheck=false",
+                                  "--optimize-imports" ] + extraOptions
+                astPackage = 'org.extendj.ast'
+                parser.name = 'JavaParser'
+                scanner.name = 'OriginalScanner'
+            }
+            sourceSets.main {
+                java {
+                    srcDir "${rootDir}/extendj/src/frontend-main"
+                    srcDir "${rootDir}/src/java"
+                }
+                resources {
+                    srcDir "${rootDir}/src/java/magpiebridge/resources"
+                    srcDir "${rootDir}/extendj/src/res"
+                    srcDir jastadd.buildInfoDir
+                }
+            }
+            sourceSets.test{
+                java{
+                    srcDir "${rootDir}/src/java/test/"
+                }
+            }
+
+            test {
+                useJUnit()
+                dependsOn 'cleanTest'
+                workingDir = rootDir
+            }
+
+            jar {
+                duplicatesStrategy = DuplicatesStrategy.INCLUDE
+                manifest {
+                    attributes 'Main-Class': root.intrajMainEntry
+                }
+                from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+                exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
+                baseName = 'intraj'
+                rename { filename -> jarName }
+            }
+
+            task jarCopy(type: Copy) {
+                dependsOn 'jar'
+                afterEvaluate { println "Copying ${jar.archiveFile} to ${rootDir}" }
+                from jar.archiveFile
+                into rootDir
+                rename { filename -> jarName }
+            }
+
+            sourceCompatibility = targetCompatibility = '1.8'
+
+            //afterEvaluate {  // To debug which jastadd2.jar we're using
+            //    println "jastadd2 conf: ${configurations.jastadd2.files}"
+            //}
+        }
     }
-  }
-
-  // Target module to build:
-  module = 'intraj'
-  jastaddOptions = [ "--rewrite=cnta",
-                     "--safeLazy",
-                     "--dncConfig=cache-config.csv",
-                     "--visitCheck=false",
-                     "--optimize-imports"]
-  astPackage = 'org.extendj.ast'
-  parser.name = 'JavaParser'
-  scanner.name = 'OriginalScanner'
 }
 
-sourceSets.main {
-  java {
-    srcDir 'extendj/src/frontend-main'
-    srcDir 'src/java'
-  }
-  resources {
-    srcDir 'src/java/magpiebridge/resources'
-    srcDir 'extendj/src/res'
-    srcDir jastadd.buildInfoDir
-  }
-  repositories {
+task generateCacheConfig(type: JavaExec) {
+    // We don't strictly need to compile, but let's be safe:
+    dependsOn ':basic-stacked:compileJava'
+
+    def bsBuildDir        = project(':basic-stacked').buildDir
+    def generatedSrcFiles = fileTree("${bsBuildDir}/generated-src")  { include '**/*.java' }
+    def srcFiles          = fileTree("src")                          { include '**/*.java' }
+
+    // Explicit dependencies for Gradle
+    inputs.files generatedSrcFiles
+    inputs.files srcFiles
+    outputs.file file(cacheConfigFile)
+
+    // JVM setup
+    classpath = files(
+        "${rootDir}/tools/cat.jar",
+        "${rootDir}/tools/magpiebridge-0.1.6-SNAPSHOT-jar-with-dependencies.jar"
+    )
+
+    mainClass = "org.extendj.Cat"
+
+    // Arguments to Cat
+    doFirst {
+        // Collect generated .java files into stringifiable form:
+        def javaGenFiles = generatedSrcFiles.files.collect { it.path }
+        def javaFiles = srcFiles.files.collect { it.path }
+
+        args = [
+            '-o', cacheConfigFile,
+            '-attributesOnly',
+            '-rta',
+            '-entryPoint', intrajMainEntry, 'main',
+        ] + javaFiles + javaGenFiles
+    }
+}
+
+
+repositories {
     mavenLocal()
     flatDir { dirs "tools" }
-  }
-  dependencies {
+}
+
+dependencies {
+    // override JastAdd plugin defaults with local jastadd2.jar:
     jastadd2 name: "jastadd2"
-  }
-}
-
-dependencies{
-    testImplementation 'junit:junit:4.12'
-    implementation 'junit:junit:4.12'
-    implementation files('tools/magpiebridge-0.1.6-SNAPSHOT-jar-with-dependencies.jar')
-    implementation 'com.sun.net.httpserver:http:20070405'
-    implementation group: 'org.freemarker', name: 'freemarker', version: '2.3.29'
-}
-
-sourceSets.test{
-  java{
-    srcDir 'src/java/test/'
-  }
-}
-
-test {
-   useJUnit()
-
-
-  dependsOn 'cleanTest'
+    //jastadd2 files("${rootProject.projectDir}/tools/jastadd2.jar")
+    // In the future, get this from Maven Central:
+    //jastadd2 "org.jastadd:jastadd:2.5.0"
 }
 
 
-
-// task intraj(type: Jar) { 
-//     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-//     from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } } {
-//         exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
-//     }
-//     from sourceSets.main.output
-//     manifest {
-//         attributes 'Main-Class': 'org.extendj.IntraJ'
-//     }
-//     baseName = 'intraj'
-//     destinationDir = projectDir
-// }
-
-// artifacts {
-//   archives intraj
-// }
-
-jar {
-  duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    manifest {
-        attributes 'Main-Class': 'org.extendj.IntraJ'
+subprojects {
+    repositories {
+        mavenLocal()
+        flatDir { dirs "${rootProject.projectDir}/tools" }
     }
-    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
-    baseName = 'intraj'
 }
 
+clean.dependsOn ':basic-stacked:clean', ':relaxed-stacked:clean'
+test.dependsOn ':relaxed-stacked:test'
 
-jar.destinationDirectory = projectDir
-
-// Java -source and -target version.
-sourceCompatibility = targetCompatibility = '1.8'
 
 task sourceZip(type: Zip) {
-  description 'Builds a Zip file with the entire repisotory (including the ExtendJ submodule).'
-  destinationDirectory = projectDir
-  archiveFileName = "intraj-src.zip"
+    description 'Builds a Zip file with the entire repisotory (including the ExtendJ submodule).'
+    destinationDirectory = projectDir
+    archiveFileName = "intraj-src.zip"
 
-  from (projectDir) {
-    exclude '**/.git'
-    exclude '**/.gitignore'
-    exclude '**/.gitattributes'
-    exclude '**/.gitmodules'
-    exclude 'build'
-    exclude 'bin'
-    exclude '.gradle'
-    exclude '.classpath'
-    exclude '.settings'
-    exclude '.project'
-    exclude '*.jar'
-    exclude '*.zip'
-    exclude '**/*.swp'
-  }
+    from (projectDir) {
+        exclude '**/.git'
+        exclude '**/.gitignore'
+        exclude '**/.gitattributes'
+        exclude '**/.gitmodules'
+        exclude 'build'
+        exclude 'bin'
+        exclude '.gradle'
+        exclude '.classpath'
+        exclude '.settings'
+        exclude '.project'
+        exclude '*.jar'
+        exclude '*.zip'
+        exclude '**/*.swp'
+    }
 
-  into 'intraj'
+    into 'intraj'
 }
