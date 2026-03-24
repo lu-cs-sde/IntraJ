@@ -390,12 +390,42 @@ public
       astnode.graphLayout(graph);
       graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
     }
-    // instanceInitialization().graphLayout(graph);
-    // staticInitialization().graphLayout(graph);
-    // graph.addEdge(this.CFGName(), instanceInitialization().CFGName(),
-    //               FlowRelation.NONE);
-    // graph.addEdge(this.CFGName(), staticInitialization().CFGName(),
-    //               FlowRelation.NONE);
+  }
+
+  public void FieldDecl.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    graph.addNode(entry());
+    graph.addEdge(CFGName(), entry().CFGName(), FlowRelation.NONE);
+    for (ASTNode astnode : astChildren()) {
+      astnode.graphLayout(graph);
+      graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
+    }
+    graph.addNode(exit());
+    graph.addEdge(CFGName(), exit().CFGName(), FlowRelation.NONE);
+  }
+
+  public void StaticInitializer.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    graph.addNode(entry());
+    graph.addEdge(CFGName(), entry().CFGName(), FlowRelation.NONE);
+    for (ASTNode astnode : astChildren()) {
+      astnode.graphLayout(graph);
+      graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
+    }
+    graph.addNode(exit());
+    graph.addEdge(CFGName(), exit().CFGName(), FlowRelation.NONE);
+  }
+
+  public void InstanceInitializer.graphLayout(IJGraph graph) {
+    IJNode node = graph.addNode(this);
+    graph.addNode(entry());
+    graph.addEdge(CFGName(), entry().CFGName(), FlowRelation.NONE);
+    for (ASTNode astnode : astChildren()) {
+      astnode.graphLayout(graph);
+      graph.addEdge(this.CFGName(), astnode.CFGName(), FlowRelation.NONE);
+    }
+    graph.addNode(exit());
+    graph.addEdge(CFGName(), exit().CFGName(), FlowRelation.NONE);
   }
 
   // public

@@ -50,6 +50,9 @@ aspect CFGJava4 {
 
   MethodDecl implements CFGRoot;
   ConstructorDecl implements CFGRoot;
+  FieldDecl implements CFGRoot;
+  StaticInitializer implements CFGRoot;
+  InstanceInitializer implements CFGRoot;
 
   Stmt implements CFGSupport;
   Expr implements CFGSupport;
@@ -73,16 +76,18 @@ public
 
   /*************************** FIELD ************************************/
   eq FieldDecl.firstNodes() =
-      ((getNumDeclarator() == 0) ? nextNodes() : getDeclarator(0).firstNodes());
+      ((getNumDeclarator() == 0)
+           ? SmallSet.<CFGNode>singleton(exit())
+           : getDeclarator(0).firstNodes());
   eq FieldDecl.getDeclarator(int index).nextNodes() =
       getDeclarator(index).jointTrueFalse();
   eq FieldDecl.getDeclarator(int index).nextNodesFF() =
       ((getNumDeclarator() - 1 == index)
-           ? nextNodes()
+           ? SmallSet.<CFGNode>singleton(exit())
            : getDeclarator(index + 1).firstNodes());
   eq FieldDecl.getDeclarator(int index).nextNodesTT() =
       ((getNumDeclarator() - 1 == index)
-           ? nextNodes()
+           ? SmallSet.<CFGNode>singleton(exit())
            : getDeclarator(index + 1).firstNodes());
   eq FieldDeclarator.firstNodes() =
       hasInit() ? getInit().firstNodes() : SmallSet.<CFGNode>singleton(this);
@@ -538,6 +543,14 @@ public
   MethodAccess contributes nta getFinallyList() to CFGNode.predColl();
   ConstructorDecl contributes nta getImplicitConstructorInvocation()
       to CFGNode.predColl();
+
+  FieldDecl contributes nta entry() to CFGNode.predColl();
+  FieldDecl contributes nta exit() to CFGNode.predColl();
+  StaticInitializer contributes nta entry() to CFGNode.predColl();
+  StaticInitializer contributes nta exit() to CFGNode.predColl();
+  InstanceInitializer contributes nta entry() to CFGNode.predColl();
+  InstanceInitializer contributes nta exit() to CFGNode.predColl();
+
   // ClassDecl contributes nta instanceInitialization() to CFGNode.predColl();
   // ClassDecl contributes nta staticInitialization() to CFGNode.predColl();
   ForStmt contributes nta implicitCondition() to CFGNode.predColl();
