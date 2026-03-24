@@ -181,4 +181,10 @@ public class NPATests {
     UtilTest.checkWarnings(TEST_DIRECTORY, "NPA21.java",
                            Analysis.AvailableAnalysis.NPA, 1);
   }
+
+  @Test
+  public void NPA22() {
+    UtilTest.checkWarnings(TEST_DIRECTORY, "NPA22.java",
+                           Analysis.AvailableAnalysis.NPA, 0);
+  }
 }
