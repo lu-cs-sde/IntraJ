@@ -151,6 +151,8 @@ public class UtilTest {
         }
       }
     } catch (Throwable t) {
+      Throwable cause = t.getCause() != null ? t.getCause() : t;
+      fail("Analysis threw an exception: " + cause);
     }
     return nbrWrn;
   }

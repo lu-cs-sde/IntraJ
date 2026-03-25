@@ -57,6 +57,15 @@ aspect Initializer {
   eq ConstructorDecl.getBlock().nextNodes() =
       SmallSet.<CFGNode>singleton(exit());
 
+  /********************* FIELD / INITIALIZER BLOCK ROOTS ***********************/
+  eq FieldDecl.entry().nextNodes() = firstNodes();
+  eq StaticInitializer.entry().nextNodes() = getBlock().firstNodes();
+  eq StaticInitializer.getBlock().nextNodes() =
+      SmallSet.<CFGNode>singleton(exit());
+  eq InstanceInitializer.entry().nextNodes() = getBlock().firstNodes();
+  eq InstanceInitializer.getBlock().nextNodes() =
+      SmallSet.<CFGNode>singleton(exit());
+
   /*************************** IMPLICIT CALLS *********************************/
 
   // eq ClassDecl.staticInitialization().nextNodes() {

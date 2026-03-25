@@ -1,1 +1,13 @@
+NodeName: Entry[13] Successors: [TypeAccess[18]]
+NodeName: TypeAccess[18] Successors: [VarAccess[19]]
+NodeName: VarAccess[19] Successors: [IntegerLiteral[23]]
+NodeName: IntegerLiteral[23] Successors: [MethodAccess[20]]
+NodeName: MethodAccess[20] Successors: [Exit[13]]
+NodeName: Exit[13] Successors: []
 
+NodeName: Exit[13] Predecessor: [MethodAccess[20]]
+NodeName: MethodAccess[20] Predecessor: [IntegerLiteral[23]]
+NodeName: IntegerLiteral[23] Predecessor: [VarAccess[19]]
+NodeName: VarAccess[19] Predecessor: [TypeAccess[18]]
+NodeName: TypeAccess[18] Predecessor: [Entry[13]]
+NodeName: Entry[13] Predecessor: []
