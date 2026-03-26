@@ -1,6 +1,6 @@
 public class IMPDAA10 {
     void testMixedDAA_IMPDAA() {
-        int a, b, c, d; // @IMPDAA
+        int a = 0, b = 0, c = 0, d = 0; // @IMPDAA
         
         a = 1;
         a = 2;
@@ -13,7 +13,7 @@ public class IMPDAA10 {
     }
     
     void testChainedMixed() {
-        int x, y, z, w;
+        int x = 0, y = 0, z = 0, w = 0;
         
         x = 10; // @IMPDAA
         y = x; // @IMPDAA
@@ -25,7 +25,7 @@ public class IMPDAA10 {
     }
     
     void testBrokenCircular() {
-        int a, b, c; // @IMPDAA
+        int a = 0, b = 0, c = 0; // @IMPDAA
         
         a = b;
         b = c; // @IMPDAA
@@ -35,7 +35,7 @@ public class IMPDAA10 {
     }
     
     void testMultipleCirculars() {
-        int p, q, r, s; // @IMPDAA @IMPDAA
+        int p = 0, q = 0, r = 0, s = 0; // @IMPDAA @IMPDAA
         
         p = q; // @IMPDAA
         q = p;
@@ -45,7 +45,7 @@ public class IMPDAA10 {
     }
     
     void testPartialCircularWithDAA() {
-        int m, n, o; // @IMPDAA @IMPDAA
+        int m = 0, n = 0, o = 0; // @IMPDAA @IMPDAA
         
         m = 1;
         m = n; // @IMPDAA
@@ -54,7 +54,7 @@ public class IMPDAA10 {
     }
     
     void testComplexMixedPattern() {
-        int var1, var2, var3, var4, var5; // @IMPDAA
+        int var1 = 0, var2 = 0, var3 = 0, var4 = 0, var5 = 0; // @IMPDAA
         
         var1 = 100;
         

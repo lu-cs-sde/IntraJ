@@ -1,6 +1,6 @@
 import java.io.IOException;
 
-public class Test {
+public class TryWithResources14 {
   public static void main(String[] args) throws TestCloseable1.CloseException {
   outer:
     while (true) {

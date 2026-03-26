@@ -1,6 +1,6 @@
 public class IMPDAA07 {
     void testNestedForLoops() {
-        int x, y; // @IMPDAA
+        int x = 0, y = 0; // @IMPDAA
         for (int i = 0; i < 5; i++) {
             for (int j = 0; j < 3; j++) {
                 x = y; // @IMPDAA
@@ -10,7 +10,7 @@ public class IMPDAA07 {
     }
     
     void testNestedWhileLoops() {
-        int a, b, c; // @IMPDAA @IMPDAA
+        int a = 0, b = 0, c = 0; // @IMPDAA @IMPDAA
         while (true) {
             while (a < 10) {
                 a = b; // @IMPDAA
@@ -22,7 +22,7 @@ public class IMPDAA07 {
     }
     
     void testMixedNestedLoops() {
-        int p, q; // @IMPDAA
+        int p = 0, q = 0; // @IMPDAA
         for (int i = 0; i < 10; i++) {
             while (p < 5) {
                 p = q; // @IMPDAA
@@ -33,7 +33,7 @@ public class IMPDAA07 {
     }
     
     void testTripleNestedCircular() {
-        int m, n; // @IMPDAA
+        int m = 0, n = 0; // @IMPDAA
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 2; j++) {
                 for (int k = 0; k < 2; k++) {
@@ -45,7 +45,7 @@ public class IMPDAA07 {
     }
     
     void testNestedWithBreakPattern() {
-        int x, y, z; // @IMPDAA @IMPDAA
+        int x = 0, y = 0, z = 0; // @IMPDAA @IMPDAA
         outer: for (int i = 0; i < 10; i++) {
             inner: for (int j = 0; j < 10; j++) {
                 x = y; // @IMPDAA

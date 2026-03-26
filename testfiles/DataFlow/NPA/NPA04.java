@@ -1,4 +1,4 @@
-public class NA04 {
+public class NPA04 {
   void m() {
     Integer tmp = null;
     if (tmp == null) {
