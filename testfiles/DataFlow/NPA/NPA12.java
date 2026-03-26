@@ -6,7 +6,7 @@ class NA12 {
       System.out.println("Test");
     }
     if (p == null) {
-      p.toString();
+      p.toString(); // @NPA
       System.out.println("Test");
     }
   }

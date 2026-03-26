@@ -13,6 +13,6 @@ public class NA09 {
     } else {
       // Nothing
     }
-    System.out.println(x.getName());
+    System.out.println(x.getName()); // @NPA
   }
 }

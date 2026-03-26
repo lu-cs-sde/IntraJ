@@ -3,8 +3,8 @@ class NA15 {
     Integer xml = null;
     Integer xms = null;
     if (xml != null || xms != null) {
-      xml.toString();
-      xms.toString();
+      xml.toString(); // @NPA
+      xms.toString(); // @NPA
     }
   }
 }

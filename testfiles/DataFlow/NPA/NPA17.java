@@ -3,7 +3,7 @@ class NA17 {
     if (p != null) {
       p.toString();
     } else {
-      p.toString();
+      p.toString(); // @NPA
     }
   }
 }

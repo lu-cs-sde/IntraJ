@@ -1,9 +1,9 @@
 public class IMPDAA03 {
     void f() {
-        int i, j;
+        int i, j; // @IMPDAA
         while(true) {
-            j = i;
-            i = j;
+            j = i; // @IMPDAA
+            i = j; // @IMPDAA
         }
     }
 }

@@ -17,8 +17,8 @@ class NA11 {
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
-      stmt.close();
-      conn.close();
+      stmt.close(); // @NPA
+      conn.close(); // @NPA
     }
   }
 }

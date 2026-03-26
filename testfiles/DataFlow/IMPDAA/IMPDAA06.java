@@ -7,29 +7,29 @@ public class IMPDAA06 {
     }
     
     void testCircularWithReturn() {
-        int a, b;
-        a = b;
+        int a, b; // @IMPDAA
+        a = b; // @IMPDAA
         b = a;
     }
     
     void testPartialCircularWithUsage() {
-        int p, q, r;
+        int p, q, r; // @IMPDAA
         p = q;
-        q = r;
+        q = r; // @IMPDAA
         r = q;
         System.out.println(p);
     }
     
     void testCircularWithAssignment() {
-        int m, n, result;
-        m = n;
+        int m, n, result; // @IMPDAA
+        m = n; // @IMPDAA
         n = m;
         result = m;
     }
     
     void testCircularWithConditionalUsage() {
-        int x, y;
-        x = y;
+        int x, y; // @IMPDAA
+        x = y; // @IMPDAA
         y = x;
         
         if (x > 0) {
