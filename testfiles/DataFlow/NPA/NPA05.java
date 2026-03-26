@@ -3,8 +3,8 @@ public class NA05 {
     Integer i = null;
     Integer j = null;
     foo(i);
-    i.toString();
-    j.toString();
+    i.toString(); // @NPA
+    j.toString(); // @NPA
   }
   void foo(Integer i){};
 }

@@ -1,23 +1,23 @@
 public class IMPDAA04 {
     void testBasicCircular() {
-        int x, y;
-        x = y;
+        int x, y; // @IMPDAA
+        x = y; // @IMPDAA
         y = x;
     }
     
     void testCircularInLoop() {
-        int a, b;
+        int a, b; // @IMPDAA
         for (int i = 0; i < 10; i++) {
-            a = b;
-            b = a;
+            a = b; // @IMPDAA
+            b = a; // @IMPDAA
         }
     }
     
     void testCircularInWhile() {
-        int m, n;
+        int m, n; // @IMPDAA
         while (true) {
-            m = n;
-            n = m;
+            m = n; // @IMPDAA
+            n = m; // @IMPDAA
         }
     }
 }

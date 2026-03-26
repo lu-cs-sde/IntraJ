@@ -5,6 +5,6 @@ class Test {
 class Main {
   void m() {
     Test t = null;
-    t.t = 5;
+    t.t = 5; // @NPA
   }
 }

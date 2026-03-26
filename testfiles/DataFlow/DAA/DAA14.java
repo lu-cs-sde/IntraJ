@@ -5,9 +5,9 @@ class Color {
 class DAA14 {
 
   private static Color parseAsJavaAWTColor(boolean b) throws RuntimeException {
-    float red = 0.0f;
-    float green = 0.0f;
-    float blue = 0.0f;
+    float red = 0.0f; // @DAA
+    float green = 0.0f; // @DAA
+    float blue = 0.0f; // @DAA
     try {
       if (b) {
         red = Float.parseFloat("0");

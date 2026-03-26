@@ -3,6 +3,6 @@ public class NA21 {
     if (args == null) {
       System.out.println("Test");
     }
-    args.toString();
+    args.toString(); // @NPA
   }
 }

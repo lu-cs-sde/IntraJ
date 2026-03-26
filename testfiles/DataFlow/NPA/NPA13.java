@@ -4,6 +4,6 @@ class NA13 {
     if (a != null) {
       a = 2;
     }
-    System.out.println(a.toString());
+    System.out.println(a.toString()); // @NPA
   }
 }

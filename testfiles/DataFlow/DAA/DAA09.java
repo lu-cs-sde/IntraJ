@@ -6,11 +6,11 @@ public class DAA09 {
     int m = 0;
     int n = 0;
     qqq++;
-    qqq++;
+    qqq++; // @DAA
     i[--jjj] = 2;
     ++m;
     ++n;
-    ++m;
-    --n;
+    ++m; // @DAA
+    --n; // @DAA
   }
 }
