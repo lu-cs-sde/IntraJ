@@ -48,28 +48,19 @@ public
    */
   eq CompoundAssignment.LVA_use() = getVarDeclSet();
 
-  /****************************************************************************
-   ***************************** DEF sets *************************************
-   ****************************************************************************
-   */
+  /* --- Def sets --- */
   syn SmallSet CFGNode.LVA_def()  = SmallSet.empty();
   eq VariableDeclarator.LVA_def() = SmallSet.singleton(singletonValue());
   eq AssignExpr.LVA_def() =getVarDeclSet();
   eq UnaryIncDec.LVA_def() = getVarDeclSet();
   eq ImplicitAssignment.LVA_def() = SmallSet.empty();
 
-  /****************************************************************************
-   ***************************** USE sets *************************************
-   ****************************************************************************
-   */
+  /* --- Use sets --- */
   syn SmallSet CFGNode.LVA_use()  = SmallSet.empty();
   eq VarAccess.LVA_use() = getVarDeclSet();
   eq UnaryIncDec.LVA_use() = getVarDeclSet();
  
-  /****************************************************************************
-   ***************************** OUT sets *************************************
-   ****************************************************************************
-   */
+  /* --- Out sets --- */
   syn SmallSet CFGNode.LVA_out() {
     SmallSet res = SmallSet.<CFGNode>empty().mutable();
     for (CFGNode e : succ()) {
@@ -83,10 +74,7 @@ public
   eq Program.getChild().enclosingCompilationUnit() = null;
 
 
-  /****************************************************************************
-   ***************************** IN sets **************************************
-   ****************************************************************************
-   */
+  /* --- In sets --- */
   syn SmallSet CFGNode.LVA_in() circular[SmallSet.empty().mutable()] = LVA_out();
   eq VariableDeclarator.LVA_in() =  SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
   eq AssignExpr.LVA_in() = SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
@@ -94,10 +82,7 @@ public
   eq VarAccess.LVA_in() = SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
  
 
-  /****************************************************************************
-   ***************************** GETVARDECLSET    *****************************
-   ****************************************************************************
-   */
+  /* --- getVarDeclSet --- */
 
   syn SmallSet CFGNode.getVarDeclSet() = SmallSet.empty();
   eq VariableDeclarator.getVarDeclSet() =
