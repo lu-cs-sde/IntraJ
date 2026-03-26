@@ -1,4 +1,4 @@
-public class NA03 {
+public class NPA03 {
   void m() {
     Object a = null;
     Object o = a;

@@ -177,10 +177,10 @@ aspect PrintGraph {
 
    eq LambdaExpr.exit().prevNode() { return getChild(getNumChild() - 1).lastNode(); }
 
-  eq ResourceDeclaration.getChild(int i).prevNode() {
+  eq Resource.getChild(int i).prevNode() {
     return i > 0 ? getChild(i - 1).lastNode() : closeAccess().lastNode();
   }
-  eq ResourceDeclaration.closeAccess().prevNode() = this;
+  eq Resource.closeAccess().prevNode() = this;
 
   eq NTACloseResource.lastNode() { return getFinallyList().lastNode(); }
   eq NTACloseResource.getChild(int i).prevNode() {
@@ -472,7 +472,7 @@ public
   }
 
 public
-  void ResourceDeclaration.graphLayout(IJGraph graph) {
+  void Resource.graphLayout(IJGraph graph) {
     IJNode node = graph.addNode(this);
     for (int i = 0; i < getNumChild(); ++i) {
       getChild(i).graphLayout(graph);
@@ -720,7 +720,12 @@ public
   eq ClassReference.CFGDump() = "< " +  toString()+ " >";
 
   inh String MethodAccess.getResourceName();
-  eq ResourceDeclaration.getChild().getResourceName() = getID();
+  eq Resource.getChild().getResourceName() {
+    if (this instanceof ResourceDeclaration) {
+      return ((ResourceDeclaration) this).getVariableDeclarator().getID();
+    }
+    return null;
+  }
   eq CompilationUnit.getChild().getResourceName() = null;
 
   syn MethodDecl LambdaDefinition.getTargetFunction() {

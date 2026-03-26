@@ -1,4 +1,4 @@
-public class NA06 {
+public class NPA06 {
   void m(Boolean b) {
     Integer i = new Integer(2);
     i = foo(i);

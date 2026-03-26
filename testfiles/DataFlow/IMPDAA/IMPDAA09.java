@@ -22,7 +22,7 @@ public class IMPDAA09 {
     }
     
     void testComplexSelfAssignment() {
-        int m, n; // @IMPDAA
+        int m = 0, n = 0; // @IMPDAA
         m = n;
         n = n; // @IMPDAA
         m = n;

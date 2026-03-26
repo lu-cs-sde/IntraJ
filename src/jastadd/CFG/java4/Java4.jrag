@@ -576,7 +576,7 @@ public
   }
   to CFGNode.predColl();
 
-  ResourceDeclaration contributes nta closeAccess() to CFGNode.predColl();
+  Resource contributes nta closeAccess() to CFGNode.predColl();
   ClassInstanceExpr contributes {
     if (hasFinally())
       getFinallyList().collectContributions();

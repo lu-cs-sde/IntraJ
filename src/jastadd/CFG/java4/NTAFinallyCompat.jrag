@@ -1,0 +1,169 @@
+/* Re-adds NTAFinally infrastructure removed in ExtendJ 11.
+ *
+ * ExtendJ 11 removed getFinallyList() from MethodAccess and ClassInstanceExpr,
+ * getFinallyOpt() from ThrowStmt, and the ntaFinallyBlockMethods helper.
+ * IntraJ's CFG modelling relies on these NTAs for exception-flow edges through
+ * finally blocks, so we re-introduce them here.
+ */
+aspect NTAFinallyCompat {
+
+  // Inherited attributes for locating enclosing try-stmts (removed in ExtendJ 11).
+  inh TryStmt CFGNode.getEnclosingTry();
+  inh TryStmt ContinueStmt.getEnclosingTry();
+  inh TryStmt BreakStmt.getEnclosingTry();
+  inh TryStmt FinallyHost.getEnclosingTry();
+  eq TryStmt.UncheckedExceptions().getEnclosingTry() = this;
+  eq TryWithResources.getResource().getEnclosingTry() = this;
+  eq TryWithResources.CatchClause().getEnclosingTry() = getEnclosingTry();
+  eq TryWithResources.getFinally().getEnclosingTry() = getEnclosingTry();
+  eq TryStmt.getBlock().getEnclosingTry() = this;
+  eq TryStmt.CatchClause().getEnclosingTry() = getEnclosingTry();
+  eq TryStmt.getFinally().getEnclosingTry() = getEnclosingTry();
+  eq NTAFinallyBlock.getChild().getEnclosingTry() = null;
+  eq CompilationUnit.getChild().getEnclosingTry() = null;
+
+  inh TryStmt CFGNode.getActualTry();
+  eq TryStmt.CatchClause().getActualTry() = this;
+  eq CompilationUnit.getChild().getActualTry() = null;
+
+  // Exception type associated with this finally block copy (removed in ExtendJ 11).
+  private TypeDecl NTAFinallyBlock.exceptionType;
+  syn TypeDecl NTAFinallyBlock.type() = exceptionType;
+
+  public NTAFinallyBlock.NTAFinallyBlock(FinallyHost finallyHost,
+                                          TypeDecl type) {
+    this.origin = finallyHost;
+    this.exceptionType = type;
+  }
+
+  // Four-argument overload of ntaFinallyBlock (type-aware copy).
+  protected static NTAFinallyBlock ASTNode.ntaFinallyBlock(
+      FinallyHost origin, Stmt branch, Block block, TypeDecl type) {
+    boolean canHandle = false;
+    if (origin instanceof TryStmt) {
+      for (CatchClause cat : ((TryStmt) origin).getCatchClauses()) {
+        if (canHandle = cat.handles(type)) {
+          break;
+        }
+      }
+    }
+    NTAFinallyBlock ntaBlock = new NTAFinallyBlock(origin, type);
+    if (!canHandle) {
+      ntaBlock.addStmt((Block) block.treeCopyNoTransform());
+    } else {
+      if (block.canCompleteNormally()) {
+        FinallyHost enclosing = block.enclosingFinally(branch);
+        if (enclosing != null) {
+          ntaBlock.addStmt(
+              ntaFinallyBlock(enclosing, branch,
+                              enclosing.getFinallyBlock(), type));
+        }
+      }
+      return ntaBlock;
+    }
+    if (block.canCompleteNormally()) {
+      FinallyHost enclosing = block.enclosingFinally(branch);
+      if (enclosing != null) {
+        ntaBlock.addStmt(
+            ntaFinallyBlock(enclosing, branch,
+                            enclosing.getFinallyBlock(), type));
+      }
+    }
+    return ntaBlock;
+  }
+
+  // Helper that walks enclosing try-stmts to build finally-block copies.
+  protected static NTAFinallyBlock ASTNode.ntaFinallyBlockMethods(
+      TryStmt origin, TypeDecl type) {
+    if (origin == null) {
+      return null;
+    }
+    TryStmt enclosingTry = origin.getEnclosingTry();
+    Stmt finallyBlock = origin.getFinally();
+    for (CatchClause cat : origin.getCatchClauses()) {
+      if (cat.handles(type)) {
+        return null;
+      }
+    }
+    NTAFinallyBlock ntaBlock = new NTAFinallyBlock((FinallyHost) origin, type);
+    if (finallyBlock != null) {
+      ntaBlock.addStmt((Block) finallyBlock.treeCopyNoTransform());
+      if (finallyBlock.canCompleteNormally()) {
+        NTAFinallyBlock blk = ntaFinallyBlockMethods(enclosingTry, type);
+        if (blk != null) {
+          ntaBlock.addStmt(blk);
+        }
+        return ntaBlock;
+      }
+    }
+    if (finallyBlock == null) {
+      if (enclosingTry != null) {
+        return ntaFinallyBlockMethods(enclosingTry, type);
+      }
+    }
+    return null;
+  }
+
+  // Type-aware branchFinallyOpt (used by ThrowStmt).
+  public Opt<Block> Stmt.branchFinallyOpt(TypeDecl type) {
+    FinallyHost enclosing = enclosingFinally(this);
+    if (enclosing != null) {
+      return new Opt<Block>(
+          ntaFinallyBlock(enclosing, this, enclosing.getFinallyBlock(), type));
+    } else {
+      return new Opt<Block>();
+    }
+  }
+
+  // ThrowStmt finally NTA (removed in ExtendJ 11).
+  syn lazy Opt<Block> ThrowStmt.getFinallyOpt() {
+    return branchFinallyOpt(getExpr().type());
+  }
+
+  // MethodAccess finally list NTA (removed in ExtendJ 11).
+  syn nta List<Block> MethodAccess.getFinallyList() {
+    List<Block> res = new List<>();
+    TryStmt enclosingTry = getEnclosingTry();
+    for (Access a : decl().getExceptions()) {
+      if (enclosingTry == null) {
+        continue;
+      }
+      for (CatchClause cat : enclosingTry.getCatchClauses()) {
+        if (cat.handles(a.type())) {
+          // handled by catch — no finally copy needed
+        }
+      }
+      Block blk = ntaFinallyBlockMethods(enclosingTry, a.type());
+      if (blk != null) {
+        res.add(blk);
+      }
+    }
+    return res;
+  }
+
+  // ClassInstanceExpr finally list NTA (removed in ExtendJ 11).
+  syn nta List<Block> ClassInstanceExpr.getFinallyList() {
+    List<Block> res = new List<>();
+    TryStmt enclosingTry = getEnclosingTry();
+    for (Access a : decl().getExceptions()) {
+      if (enclosingTry == null) {
+        continue;
+      }
+      for (CatchClause cat : enclosingTry.getCatchClauses()) {
+        if (cat.handles(a.type())) {
+          res.add(new NTAFinallyBlock((FinallyHost) enclosingTry, a.type()));
+          continue;
+        }
+      }
+      Block blk = ntaFinallyBlockMethods(enclosingTry, a.type());
+      if (blk != null) {
+        res.add(blk);
+      }
+    }
+    return res;
+  }
+
+  // majorVersion() is defined in ExtendJ's backend, but BytecodeReader
+  // references it from the frontend module. Provide a frontend-safe definition.
+  syn int TypeDecl.majorVersion() = 55; // Java 11 class file version
+}

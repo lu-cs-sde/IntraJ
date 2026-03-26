@@ -1,6 +1,6 @@
 import java.io.IOException;
 
-public class DAA03 {
+public class DAA05 {
   void m(boolean b) {
     int i = 0;
     try {

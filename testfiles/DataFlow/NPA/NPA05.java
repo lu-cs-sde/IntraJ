@@ -1,4 +1,4 @@
-public class NA05 {
+public class NPA05 {
   void m() {
     Integer i = null;
     Integer j = null;

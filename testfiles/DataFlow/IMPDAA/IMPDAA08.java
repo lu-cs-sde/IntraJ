@@ -1,6 +1,6 @@
 public class IMPDAA08 {
     void testIfElseCircular(boolean condition) {
-        int x, y; // @IMPDAA
+        int x = 0, y = 0; // @IMPDAA
         
         if (condition) {
             x = y; // @IMPDAA
@@ -12,7 +12,7 @@ public class IMPDAA08 {
     }
     
     void testSwitchCircular(int value) {
-        int a, b, c; // @IMPDAA @IMPDAA
+        int a = 0, b = 0, c = 0; // @IMPDAA @IMPDAA
         
         switch (value) {
             case 1:
@@ -30,7 +30,7 @@ public class IMPDAA08 {
     }
     
     void testConditionalInLoop() {
-        int m, n; // @IMPDAA
+        int m = 0, n = 0; // @IMPDAA
         
         for (int i = 0; i < 10; i++) {
             if (i % 2 == 0) {
@@ -41,7 +41,7 @@ public class IMPDAA08 {
     }
     
     void testNestedConditionalCircular(boolean outer, boolean inner) {
-        int p, q, r; // @IMPDAA @IMPDAA
+        int p = 0, q = 0, r = 0; // @IMPDAA @IMPDAA
         
         if (outer) {
             if (inner) {
@@ -55,13 +55,13 @@ public class IMPDAA08 {
     }
     
     void testTernaryCircular(boolean condition) {
-        int x, y, temp; // @IMPDAA @IMPDAA
+        int x = 0, y = 0, temp = 0; // @IMPDAA @IMPDAA
         
         temp = condition ? (x = y) : (y = x);
     }
     
     void testTryCatchCircular() {
-        int a, b; // @IMPDAA
+        int a = 0, b = 0; // @IMPDAA
         
         try {
             a = b; // @IMPDAA

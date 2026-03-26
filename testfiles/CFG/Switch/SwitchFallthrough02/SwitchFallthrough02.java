@@ -1,10 +1,12 @@
 public class SwitchFallthrough02 {
     public void test(String input) {
+        int x = 0;
+        int y = 0;
         switch (input) {
             case "a":
-                int x = 1;
+                x = 1;
             case "b":
-                int y = 2;
+                y = 2;
             case "c":
                 System.out.println(x + y);
                 break;

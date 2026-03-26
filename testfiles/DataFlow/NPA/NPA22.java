@@ -1,3 +1,3 @@
-public interface A {
+interface A {
     int b = Integer.MAX_VALUE;
 }

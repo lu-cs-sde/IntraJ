@@ -1,6 +1,6 @@
 import java.io.IOException;
 
-public class Test {
+public class TWR08 {
   public static void main(String[] args)
       throws TestCloseable2.ConstructorException,
              TestCloseable1.CloseException {
