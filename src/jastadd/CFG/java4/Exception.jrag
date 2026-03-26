@@ -29,7 +29,7 @@
  */
 
 aspect ExceptionJava4 {
-  /****************************** Exception **********************************/
+  /* --- Exception --- */
 
   /**
    * Defines the first TryStmt that can handle the exception t.
@@ -52,7 +52,7 @@ aspect ExceptionJava4 {
   eq CFGRoot.getChild().exceptionLookup(TypeDecl t) =
       SmallSet.<CFGNode>singleton(exit());
 
-  /******************** TRY STMT *********************************/
+  /* --- Try Stmt --- */
   eq TryStmt.getBlock().exceptionLookup(TypeDecl t) =
       firstNodeExceptionHandlerRecursive(t);
 
@@ -91,7 +91,7 @@ aspect ExceptionJava4 {
     return res;
   }
 
-  /******************** UNCHECKED EXCEPTION *********************************/
+  /* --- Unchecked Exception --- */
   syn nta UncheckedExceptions ReturnStmt.UncheckedExceptions() =
       new UncheckedExceptions();
 
@@ -110,7 +110,7 @@ aspect ExceptionJava4 {
   syn nta UncheckedExceptions MethodAccess.UncheckedExceptions() =
       new UncheckedExceptions();
 
-  /*********************** METHOD ACCESS ************************************/
+  /* --- Method Access --- */
 
   syn SmallSet<CFGNode> MethodAccess.exceptionsJumps() {
     SmallSet<CFGNode> res = new SmallSet<CFGNode>();

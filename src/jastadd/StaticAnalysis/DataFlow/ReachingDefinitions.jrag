@@ -35,19 +35,13 @@ aspect ReachingDefinitions {
   eq AssignExpr.RDgen() = this;
   eq UnaryIncDec.RDgen() = this;
 
-  /****************************************************************************
-   ***************************** USE sets *************************************
-   ****************************************************************************
-   */
+  /* --- Use sets --- */
   syn CFGNode CFGNode.RDkill() = null;
   eq VariableDeclarator.RDkill() = getVarDecl();
   eq AssignExpr.RDkill() = getVarDecl();
   eq UnaryIncDec.RDkill() = getVarDecl();
 
-  /****************************************************************************
-   ***************************** OUT sets *************************************
-   ****************************************************************************
-   */
+  /* --- Out sets --- */
   syn Set<CFGNode> CFGNode.RDin() {
     Set<CFGNode> res = new HashSet<CFGNode>();
     for (CFGNode e : pred()) {
@@ -56,10 +50,7 @@ aspect ReachingDefinitions {
     return res;
   }
 
-  /****************************************************************************
-   ***************************** IN sets **************************************
-   ****************************************************************************
-   */
+  /* --- In sets --- */
   syn Set<CFGNode> CFGNode.RDout() circular[new HashSet<>()] = RDin();
   eq VariableDeclarator.RDout() {
     Set<CFGNode> res = new HashSet<>();
@@ -99,10 +90,7 @@ aspect ReachingDefinitions {
     return res;
   }
 
-  /****************************************************************************
-   ***************************** GETVARDECLSET    *****************************
-   ****************************************************************************
-   */
+  /* --- getVarDeclSet --- */
 
   syn Variable CFGNode.getVarDecl() = null;
   eq VariableDeclarator.getVarDecl() = singletonValue();

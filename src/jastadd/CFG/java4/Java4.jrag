@@ -74,7 +74,7 @@ public
     return res;
   }
 
-  /*************************** FIELD ************************************/
+  /* --- Field --- */
   eq FieldDecl.firstNodes() =
       ((getNumDeclarator() == 0)
            ? SmallSet.<CFGNode>singleton(exit())
@@ -99,15 +99,15 @@ public
 
   eq MemberClassDecl.firstNodes() = nextNodes();
 
-  /************************** BINARY EXPRESSION  *******************************
-   * The flow is from left to right flowing thru 'op' node.
+  /** Binary Expression.
+   *  The flow goes from left to right through the 'op' node.
    */
   eq BinExprCFG.firstNodes() = getLeftOperand().firstNodes();
   eq BinExprCFG.getLeftOperand().nextNodes() = getRightOperand().firstNodes();
   eq BinExprCFG.getRightOperand().nextNodes() =
       SmallSet.<CFGNode>singleton(this);
 
-  /************************* SHORT-CIRCUIT-EVALUATION *************************/
+  /* --- Short-circuit-evaluation --- */
   eq AndLogicalExpr.firstNodes() = getLeftOperand().firstNodes();
   eq AndLogicalExpr.getLeftOperand().nextNodesTT() =
       getRightOperand().firstNodes();
@@ -129,7 +129,7 @@ public
   eq LogicalExpr.getRightOperand().nextNodesFF() = nextNodesFF();
   eq LogicalExpr.getRightOperand().nextNodes() =
       getRightOperand().jointTrueFalse();
-  /************************** ACCESS-EVALUATION *******************************/
+  /* --- Access-evaluation --- */
 
   eq Dot.firstNodes() {
     if (getLeft().isVarAccess() && (getRight().isVarAccess() && isAssign())) {
@@ -176,13 +176,13 @@ public
       (getNumArg() - 1 == i) ? SmallSet.<CFGNode>singleton(this)
                              : getArg(i + 1).firstNodes();
 
-  /************************** BRACKET EXPRESSION *******************************
-   * Forwards the flow to the internal expression.
+  /** Bracket Expression.
+   *  Forwards the flow to the internal expression.
    */
   eq ParExpr.firstNodes() = getExpr().firstNodes();
 
-  /****************************** Unary ****************************************
-   * Forwards the flow to the internal expression.
+  /** Unary.
+   *  Forwards the flow to the internal expression.
    */
   eq Unary.getOperand().nextNodes() = SmallSet.<CFGNode>singleton(this);
   eq Unary.firstNodes() = getOperand().firstNodes();
@@ -194,20 +194,20 @@ public
       getOperand().isVarAccess() ? SmallSet.<CFGNode>empty()
                                  : SmallSet.<CFGNode>singleton(this);
 
-  /************************** CAST EXPRESSION **********************************
-   * Forwards the flow to the internal expression.
+  /** Cast Expression.
+   *  Forwards the flow to the internal expression.
    */
   eq CastExpr.firstNodes() = getExpr().firstNodes();
 
-  /************************ INSTANCEOF EXPRESSION ******************************
-   * The flow is TypeAccess -> Expr -> Parent.nextNodes()
+  /** Instanceof Expression.
+   *  The flow is TypeAccess -> Expr -> Parent.nextNodes()
    */
   eq InstanceOfExpr.firstNodes() = getExpr().firstNodes();
   eq InstanceOfExpr.getExpr().nextNodes() = getTypeAccess().firstNodes();
   eq InstanceOfExpr.getTypeAccess().nextNodes() =
       SmallSet.<CFGNode>singleton(this);
 
-  /*************************** ASSIGN EXPRESSION ******************************/
+  /* --- Assign Expression --- */
   eq AssignExpr.firstNodes() = getDest().isVarAccess()
                                    ? getSource().firstNodes()
                                    : getDest().firstNodes();
@@ -216,7 +216,7 @@ public
   eq AssignExpr.getChild().nextNodesTT() = SmallSet.<CFGNode>singleton(this);
   eq AssignExpr.getChild().nextNodesFF() = SmallSet.<CFGNode>singleton(this);
 
-  /***************************** CLASS INSTANCE EXRP***************************/
+  /* --- Class Instance Expr --- */
   eq ClassInstanceExpr.firstNodes() = (getNumArg() != 0)
                                           ? getArg(0).firstNodes()
                                           : SmallSet.<CFGNode>singleton(this);
@@ -224,7 +224,7 @@ public
       (getNumArg() - 1 == index) ? SmallSet.<CFGNode>singleton(this)
                                  : getArg(index + 1).firstNodes();
 
-  /************************** ARRAY INITIALISATION ****************************/
+  /* --- Array Initialization --- */
   eq ArrayInit.firstNodes() =
       (getNumInit() == 0) ? nextNodes() : getInit(0).firstNodes();
   eq ArrayInit.getInit(int index).nextNodes() =
@@ -236,8 +236,8 @@ public
   eq ArrayInit.getInit(int index).nextNodesFF() =
       ((getNumInit() - 1) == index) ? nextNodes()
                                     : getInit(index + 1).firstNodes();
-  /************************** CONDITIONAL EXPRESSION ***************************
-   *Short-Circuited evaluation
+  /** Conditional Expression.
+   *  Short-circuit evaluation.
    */
   eq ConditionalExpr.firstNodes() = getCondition().firstNodes();
   eq ConditionalExpr.getCondition().nextNodesTT() = getTrueExpr().firstNodes();
@@ -252,7 +252,7 @@ public
   eq ConditionalExpr.getFalseExpr().nextNodes() =
       getFalseExpr().jointTrueFalse();
 
-  /************************** ARRAYCREATION EXPR*******************************/
+  /* --- Arraycreation Expr --- */
 
   eq ArrayTypeWithSizeAccess.getExpr().nextNodes() = nextNodes();
   eq ArrayCreationExpr.firstNodes() = getTypeAccess().firstNodes();
@@ -268,11 +268,10 @@ public
           ? (((ArrayTypeWithSizeAccess)getAccess()).getExpr().firstNodes())
           : nextNodes();
 
-  /******************************** STMTs *************************************/
+  /* --- STMTs --- */
 
-  /***************************** IFSTMT ****************************************
-   * Evalaute the condition and the forwarding the flow considering
-   * FollowingTrue() and nextNodesFF() attributes.
+  /** Ifstmt.
+   *  Evaluates the condition, then forwards the flow considering nextNodesTT() and nextNodesFF().
    */
   eq IfStmt.firstNodes() = getCondition().firstNodes();
   eq IfStmt.getCondition().nextNodesTT() = getThen().firstNodes();
@@ -283,14 +282,13 @@ public
   eq Block.firstNodes() =
       (getNumStmt() == 0) ? nextNodes() : getStmt(0).firstNodes();
 
-  /**************************** Expression Stmt *******************************
-   * Forwards the flow to the internal expression.
+  /** Expression Stmt.
+   *  Forwards the flow to the internal expression.
    */
   eq ExprStmt.firstNodes() = getExpr().firstNodes();
 
-  /************************** WhileStmt ****************************************
-   * Evaluate the condition and then forwading the flow considering the
-   * FollowingTrue() and FollowingFalse() attributes.
+  /** WhileStmt.
+   *  Evaluates the condition, then forwards the flow considering nextNodesTT() and nextNodesFF().
    */
   eq WhileStmt.firstNodes() = getCondition().firstNodes();
   eq WhileStmt.getStmt().nextNodes() = getCondition().firstNodes();
@@ -298,14 +296,14 @@ public
   eq WhileStmt.getCondition().nextNodesFF() = nextNodes();
   eq WhileStmt.getCondition().nextNodes() = getCondition().jointTrueFalse();
 
-  /************************** DoStmt ******************************************/
+  /* --- DoStmt --- */
   eq DoStmt.firstNodes() = getStmt().firstNodes();
   eq DoStmt.getStmt().nextNodes() = getCondition().firstNodes();
   eq DoStmt.getCondition().nextNodesTT() = getStmt().firstNodes();
   eq DoStmt.getCondition().nextNodesFF() = nextNodes();
   eq DoStmt.getCondition().nextNodes() = getCondition().jointTrueFalse();
 
-  /**************************** ForStmt ***************************************/
+  /* --- ForStmt --- */
   syn nta BooleanLiteral ForStmt.implicitCondition() =
       new ImplicitCondition("true");
   eq ForStmt.firstNodes() =
@@ -347,9 +345,9 @@ public
           : (hasCondition() ? getCondition().firstNodes()
                             : implicitCondition().firstNodes());
 
-  /**************** VarDeclStmt and VariableDeclarator ***********************
-   * If has a RHS the flow is LHS -> RHS -> Parent.nextNodes()
-   * If doesn't have the RHS the flow is LHS -> Parent.follwing()
+  /** VarDeclStmt and VariableDeclarator.
+   *  If the declarator has an initializer, the flow is Init -> Decl -> Parent.nextNodes().
+   *  Otherwise the flow is Decl -> Parent.nextNodes().
    */
   eq VarDeclStmt.firstNodes() =
       (getNumDeclarator() == 0) ? nextNodes() : getDeclarator(0).firstNodes();
@@ -366,12 +364,9 @@ public
   eq VariableDeclarator.getInit().nextNodesTT() =
       SmallSet.<CFGNode>singleton(this);
 
-  /**************************** ReturnStmt*************************************
-   * If the return statements is provided with an expression then the flow
-   * is
-   * Expr -> Return -> Return.exit()
-   * If doesn't have an expression then the flow is: Return ->
-   * Return.exit()
+  /** ReturnStmt.
+   *  If the return statement has an expression, the flow is Expr -> Return -> exit().
+   *  Otherwise the flow is Return -> exit().
    */
 
   eq ReturnStmt.getFinally().nextNodes() {
@@ -385,7 +380,7 @@ public
   eq ReturnStmt.getResult().nextNodesTT() = SmallSet.<CFGNode>singleton(this);
   eq ReturnStmt.succ() = SmallSet.<CFGNode>singleton(exit());
 
-  /**************************** BreakStmt *************************************/
+  /* --- BreakStmt --- */
   eq LabeledStmt.firstNodes() = getStmt().firstNodes();
 
   eq BreakStmt.getFinally().nextNodes() {
@@ -396,7 +391,7 @@ public
     return res;
   }
 
-  /************************** ContinueStmt ************************************/
+  /* --- ContinueStmt --- */
   syn SmallSet<CFGNode> Stmt.nextContinue() {
     throw new RuntimeException("NEXTContinue called by" + this);
   }
@@ -424,9 +419,8 @@ public
     return res;
   }
 
-  /***************************** SwitchStmt ************************************
-   * CFG according with Java specification
-   * https://docs.oracle.com/javase/specs/jls/se7/html/jls-14.html#jls-14.11
+  /** SwitchStmt.
+   *  CFG per the Java specification: https://docs.oracle.com/javase/specs/jls/se7/html/jls-14.html#jls-14.11
    */
   eq SwitchStmt.firstNodes() = getExpr().firstNodes();
   eq SwitchStmt.getExpr().nextNodes() = getBlock().firstNodes();
@@ -489,11 +483,11 @@ public
                                             ? SmallSet.<CFGNode>singleton(this)
                                             : SmallSet.<CFGNode>empty();
 
-  /************************ SynchronizedStmt **********************************/
+  /* --- SynchronizedStmt --- */
   eq SynchronizedStmt.firstNodes() = getExpr().firstNodes();
   eq SynchronizedStmt.getExpr().nextNodes() = getBlock().firstNodes();
 
-  /****************************** EmptyStmt **********************************/
+  /* --- EmptyStmt --- */
   eq EmptyStmt.firstNodes() = nextNodes();
 
   /**
