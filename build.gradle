@@ -1,8 +1,8 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
-    id 'java'
-    id 'org.jastadd' version '1.13.3'
+  id 'java'
+  id 'org.jastadd' version '1.15.0'
 }
 
 defaultTasks ':relaxed-stacked:jarCopy'
@@ -40,14 +40,20 @@ ext {
                     include(root.file('extendj/jastadd_modules').absolutePath) // Include core ExtendJ modules.
 
                     module "intraj", {
-                        imports "java8 frontend" // ExtendJ dependency for intraj module.
+                        imports "java11 frontend" // ExtendJ dependency for intraj module.
 
                         jastadd {
                             basedir '../src/jastadd'
                             include "**/*.ast"
                             include "**/*.jadd"
                             include "**/*.jrag"
+
+                            excludeFrom "java4 frontend", "grammar/Java.ast"
                         }
+
+                        // Replace ExtendJ's Java.ast with our patched version that re-adds
+                        // NTA children (Finally, Close) needed by IntraJ's CFG modelling.
+
                     }
                 }
 
@@ -174,6 +180,10 @@ subprojects {
 clean.dependsOn ':basic-stacked:clean', ':relaxed-stacked:clean'
 test.dependsOn ':relaxed-stacked:test'
 
+// //jar.destinationDirectory = projectDir
+// //
+// // // Java -source and -target version.
+sourceCompatibility = targetCompatibility = '11'
 
 task sourceZip(type: Zip) {
     description 'Builds a Zip file with the entire repisotory (including the ExtendJ submodule).'

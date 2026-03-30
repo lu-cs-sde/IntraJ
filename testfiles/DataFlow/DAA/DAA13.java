@@ -1,7 +1,7 @@
 // Readapted from fop-0.95/src/java/org/apache/fop/fonts/FontUtil.java:35
 public class DAA13 {
   int foo(boolean b, String text) {
-    int weight = 400;
+    int weight = 400; // @DAA
     try {
       weight = Integer.parseInt(text);
       weight = ((int)weight / 100) * 100;

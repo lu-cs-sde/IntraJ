@@ -301,18 +301,18 @@ public class IntraJ extends Frontend {
       System.out.println("IntraJ");
       System.out.println("Available options:");
       System.out.println("  -help: prints all the available options.");
-      System.out.println("  -genpdf: generates a pdf with AST structure of all the methods in the analysed files. It can be used combined with `-succ`,`-pred`.");
-      System.out.println("  -succ: generates a pdf with the successor relation for all the methods in the analysed files. It can be used combined with `-pred`.");
-      System.out.println("  -pred: generates a pdf with the predecessor relation for all the methods in the analysed files. It can be used combined with `-succ`.");
-      System.out.println("  -statistics: prints the number of CFGRoots, CFGNodes and CFGEdges in the analysed files.");
+      System.out.println("  -genpdf: generates a PDF with the AST structure of all methods in the analyzed files. Can be combined with `-succ`, `-pred`.");
+      System.out.println("  -succ: generates a PDF with the successor relation for all methods in the analyzed files. Can be combined with `-pred`.");
+      System.out.println("  -pred: generates a PDF with the predecessor relation for all methods in the analyzed files. Can be combined with `-succ`.");
+      System.out.println("  -statistics: prints the number of CFGRoots, CFGNodes and CFGEdges in the analyzed files.");
       System.out.println("  -nowarn: the warning messages are not printed.");
 
       System.out.println("-------------- ANALYSIS OPTIONS --------------------");
       System.out.println("Available analysis (ID):");
       System.out.println("  DAA:  Detects unused `dead` assignments");
-      System.out.println("  NPA:  Detects occurrences of Null Pointer Dereferenciation");
+      System.out.println("  NPA:  Detects occurrences of null pointer dereference");
       System.out.println("STREQ:  Detects occurrences of String equality with `==`");
-      System.out.println("IMPDAA: Detects occurrences of implict dead assignments");
+      System.out.println("IMPDAA: Detects occurrences of implicit dead assignments");
       System.out.println("EMPTYIF: Detects occurrences of empty if statements");
       System.out.println("EMPTYWHILE: Detects occurrences of empty while statements");
       System.out.println("SWITCHDEFAULT: Detects occurrences of switch statements without default case");

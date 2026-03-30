@@ -1,8 +1,8 @@
-public class NA04 {
+public class NPA04 {
   void m() {
     Integer tmp = null;
     if (tmp == null) {
-      tmp.toString();
+      tmp.toString(); // @NPA
       tmp = new Integer(2);
       tmp.toString();
     }

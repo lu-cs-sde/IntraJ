@@ -66,10 +66,7 @@ aspect DAA {
       getDeclaration() != null && exprAsStmt() &&
       getDeclaration().isLocalVariable() && isDead();
 
-  /**************************************************************************
-  ***************************ERROR COLLECTION********************************
-  ***************************************************************************
-  */
+  /* --- Error Collection --- */
 
   AssignExpr contributes warning(
       getCompilationUnit().pathName(),
@@ -90,10 +87,7 @@ aspect DAA {
       Analysis.AvailableAnalysis.DAA, null, null) when
   DAA_isDeadAssign() to CompilationUnit.DAA();
 
-  /**************************************************************************
-  ***************************HELPERS ****************************************
-  ***************************************************************************
-  */
+  /* --- Helpers --- */
 
   syn boolean Expr.isUsualDefaultValue()  = false;
   eq MinusExpr.isUsualDefaultValue() = getOperand().isUsualDefaultValue();

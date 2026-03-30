@@ -44,9 +44,16 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.extendj.IntraJ;
 import org.extendj.analysis.Analysis;
 import org.extendj.analysis.Warning;
@@ -153,5 +160,100 @@ public class UtilTest {
     } catch (Throwable t) {
     }
     return nbrWrn;
+  }
+
+  private static List<Warning> collectWarnings(
+      Program program, Analysis.AvailableAnalysis analysis) {
+    List<Warning> result = new ArrayList<>();
+    try {
+      for (CompilationUnit cu : program.getCompilationUnits()) {
+        @SuppressWarnings("unchecked")
+        Set<Warning> wmgs = (Set<Warning>) cu.getClass()
+            .getDeclaredMethod(analysis.toString())
+            .invoke(cu);
+        for (Warning wm : wmgs) {
+          if (analysis.equals(wm.getAnalysisType())) {
+            result.add(wm);
+          }
+        }
+      }
+    } catch (Throwable t) {
+      fail("Failed to run analysis " + analysis + ": " + t.getMessage());
+    }
+    return result;
+  }
+
+  /**
+   * Parses inline annotations from a Java test file. Annotations are
+   * end-of-line comments of the form {@code // @ANALYSIS}, e.g.
+   * {@code // @NPA} or {@code // @DAA}. Multiple annotations on the
+   * same line are supported ({@code // @NPA @DAA}).
+   *
+   * @return a map from analysis name to the sorted list of expected
+   *         warning line numbers
+   */
+  public static Map<String, List<Integer>> parseAnnotations(File javaFile) {
+    Map<String, List<Integer>> result = new HashMap<>();
+    Pattern pattern = Pattern.compile("@(\\w+)");
+    Set<String> validAnalyses = new TreeSet<>();
+    for (Analysis.AvailableAnalysis a : Analysis.AvailableAnalysis.values()) {
+      validAnalyses.add(a.name());
+    }
+    try {
+      List<String> lines = Files.readAllLines(javaFile.toPath());
+      for (int i = 0; i < lines.size(); i++) {
+        String line = lines.get(i);
+        int commentIdx = line.indexOf("//");
+        if (commentIdx < 0) continue;
+        String comment = line.substring(commentIdx);
+        Matcher m = pattern.matcher(comment);
+        while (m.find()) {
+          String name = m.group(1);
+          if (validAnalyses.contains(name)) {
+            result.computeIfAbsent(name, k -> new ArrayList<>()).add(i + 1);
+          }
+        }
+      }
+    } catch (IOException e) {
+      fail("Could not read test file: " + javaFile + ": " + e.getMessage());
+    }
+    return result;
+  }
+
+  /**
+   * Checks that the warnings produced by each annotated analysis
+   * match the {@code // @ANALYSIS} inline annotations in the file.
+   * If the file has no annotations, the default analysis (inferred
+   * from the parent directory) is checked for zero warnings.
+   */
+  public static void checkWarningsInline(File javaFile,
+                                         String defaultAnalysis) {
+    Map<String, List<Integer>> expected = parseAnnotations(javaFile);
+
+    if (expected.isEmpty()) {
+      expected.put(defaultAnalysis, Collections.emptyList());
+    }
+
+    IntraJ.excludeLiteralsAndNull = true;
+    Program program = genAST(javaFile);
+
+    for (Map.Entry<String, List<Integer>> entry : expected.entrySet()) {
+      Analysis.AvailableAnalysis analysis =
+          Analysis.AvailableAnalysis.valueOf(entry.getKey());
+      List<Integer> expectedLines = entry.getValue();
+
+      List<Warning> warnings = collectWarnings(program, analysis);
+      List<Integer> actualLines = new ArrayList<>();
+      for (Warning w : warnings) {
+        actualLines.add(w.getLineStart());
+      }
+      Collections.sort(actualLines);
+
+      assertEquals(
+          analysis.name() + " warnings in " + javaFile.getName()
+              + "\n  Expected lines: " + expectedLines
+              + "\n  Actual lines:   " + actualLines,
+          expectedLines, actualLines);
+    }
   }
 }

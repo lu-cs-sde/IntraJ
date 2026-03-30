@@ -1,1 +1,11 @@
+NodeName: Entry[13] Successors: [BooleanLiteral[23]]
+NodeName: BooleanLiteral[23] Successors: [VariableDeclarator[20]]
+NodeName: VariableDeclarator[20] Successors: [VarAccess[25]]
+NodeName: VarAccess[25] Successors: [VarAccess[25], Exit[13]]
+NodeName: Exit[13] Successors: []
 
+NodeName: Exit[13] Predecessor: [VarAccess[25]]
+NodeName: VarAccess[25] Predecessor: [VariableDeclarator[20], VarAccess[25]]
+NodeName: VariableDeclarator[20] Predecessor: [BooleanLiteral[23]]
+NodeName: BooleanLiteral[23] Predecessor: [Entry[13]]
+NodeName: Entry[13] Predecessor: []

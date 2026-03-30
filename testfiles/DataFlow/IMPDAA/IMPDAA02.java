@@ -1,7 +1,7 @@
 public class IMPDAA02 {
   void foo(Boolean b) {
     String y = "Test";
-    String x = y;
+    String x = y; // @DAA
     if (b) {
       x = "test";
     } else {

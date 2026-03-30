@@ -1,1 +1,9 @@
+NodeName: Entry[20] Successors: [IntegerLiteral[27]]
+NodeName: IntegerLiteral[27] Successors: [FieldDeclarator[24]]
+NodeName: FieldDeclarator[24] Successors: [Exit[20]]
+NodeName: Exit[20] Successors: []
 
+NodeName: Exit[20] Predecessor: [FieldDeclarator[24]]
+NodeName: FieldDeclarator[24] Predecessor: [IntegerLiteral[27]]
+NodeName: IntegerLiteral[27] Predecessor: [Entry[20]]
+NodeName: Entry[20] Predecessor: []

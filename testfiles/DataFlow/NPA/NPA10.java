@@ -2,7 +2,7 @@ import java.util.*;
 class NA10 {
   void m() {
     Collection<String> coll = null;
-    for (String str : coll) {
+    for (String str : coll) { // @NPA
       int a = 10;
     }
     int b;

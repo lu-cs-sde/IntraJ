@@ -1,9 +1,9 @@
 public class IMPDAA08 {
     void testIfElseCircular(boolean condition) {
-        int x, y;
+        int x = 0, y = 0; // @IMPDAA
         
         if (condition) {
-            x = y;
+            x = y; // @IMPDAA
             y = x;
         } else {
             x = 5;
@@ -12,15 +12,15 @@ public class IMPDAA08 {
     }
     
     void testSwitchCircular(int value) {
-        int a, b, c;
+        int a = 0, b = 0, c = 0; // @IMPDAA @IMPDAA
         
         switch (value) {
             case 1:
-                a = b;
+                a = b; // @IMPDAA
                 b = a;
                 break;
             case 2:
-                b = c;
+                b = c; // @IMPDAA
                 c = b;
                 break;
             default:
@@ -30,22 +30,22 @@ public class IMPDAA08 {
     }
     
     void testConditionalInLoop() {
-        int m, n;
+        int m = 0, n = 0; // @IMPDAA
         
         for (int i = 0; i < 10; i++) {
             if (i % 2 == 0) {
-                m = n;
-                n = m;
+                m = n; // @IMPDAA
+                n = m; // @IMPDAA
             }
         }
     }
     
     void testNestedConditionalCircular(boolean outer, boolean inner) {
-        int p, q, r;
+        int p = 0, q = 0, r = 0; // @IMPDAA @IMPDAA
         
         if (outer) {
             if (inner) {
-                p = q;
+                p = q; // @IMPDAA
                 q = r;
                 r = p;
             } else {
@@ -55,16 +55,16 @@ public class IMPDAA08 {
     }
     
     void testTernaryCircular(boolean condition) {
-        int x, y, temp;
+        int x = 0, y = 0, temp = 0; // @IMPDAA @IMPDAA
         
         temp = condition ? (x = y) : (y = x);
     }
     
     void testTryCatchCircular() {
-        int a, b;
+        int a = 0, b = 0; // @IMPDAA
         
         try {
-            a = b;
+            a = b; // @IMPDAA
             b = a;
             throw new RuntimeException("test");
         } catch (Exception e) {

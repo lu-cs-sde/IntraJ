@@ -38,13 +38,14 @@ public
   ThrowStmt implements ThrowsException;
 
   TryWithResources implements CFGSupport;
+  Resource implements CFGNode;
   NTACloseResource implements CFGNode;
 
-  /**************************** TryWithResources*******************************/
+  /* --- TryWithResources --- */
   syn Boolean TryStmt.hasResources() = false;
   eq TryWithResources.hasResources() = true;
 
-  inh SmallSet<CFGNode> ResourceDeclaration.exceptionLookup(TypeDecl t);
+  inh SmallSet<CFGNode> Resource.exceptionLookup(TypeDecl t);
 
   eq TryWithResources.getCatchClause().nextNodes() =
       hasFinally() ? getFinally().firstNodes() : nextNodes();
@@ -77,16 +78,21 @@ public
 
   eq TryWithResources.getResource(int index).nextNodes() {
     SmallSet<CFGNode> res = new SmallSet<CFGNode>();
-    ResourceDeclaration rd = getResource(index);
-    // Adding all the exceptions if the resource is a new class instance expr.
-    if (rd.getResourceType().isClassInstanceExpr()) {
-      ClassInstanceExpr cie = (ClassInstanceExpr)rd.getResourceType();
-      for (Access a : cie.decl().getExceptions())
-        res.add(rd.exceptionLookup(a.type()));
+    Resource rd = getResource(index);
+    // Adding all the exceptions if the resource initializer is a new class
+    // instance expr (only applicable for ResourceDeclaration, not ResourceUse).
+    if (rd instanceof ResourceDeclaration) {
+      ResourceDeclaration rdecl = (ResourceDeclaration) rd;
+      if (rdecl.getVariableDeclarator().hasInit()
+          && rdecl.getVariableDeclarator().getInit() instanceof ClassInstanceExpr) {
+        ClassInstanceExpr cie = (ClassInstanceExpr) rdecl.getVariableDeclarator().getInit();
+        for (Access a : cie.decl().getExceptions())
+          res.add(rd.exceptionLookup(a.type()));
+      }
     }
     // If there are exceptions, then we should add the edges to close safely all
     // the resources.
-    if (!res.isEmpty())
+    if (!res.isEmpty() && index > 0)
       res.add(getResource(index - 1).closeAccess().firstNodes());
     // Adding the non exceptional edges.
     res.add((index == getNumResource() - 1)
@@ -119,21 +125,21 @@ public
   eq TryWithResources.UncheckedExceptions().nextNodes() =
       hasFinally() ? getFinally().firstNodes() : nextNodes();
 
-  /************************ ResourceDeclaration*******************************/
-  eq ResourceDeclaration.closeAccess().nextNodes() =
+  /* --- Resource --- */
+  eq Resource.closeAccess().nextNodes() =
       (getIndex() == 0) ? getEnclosingTry().UncheckedExceptions().firstNodes()
                         : lookupPrev(getIndex());
 
-  inh SmallSet<CFGNode> ResourceDeclaration.lookupPrev(int index);
+  inh SmallSet<CFGNode> Resource.lookupPrev(int index);
   eq TryWithResources.getResource().lookupPrev(int index) =
       getResource(index - 1).closeAccess().firstNodes();
 
-  inh int ResourceDeclaration.getIndex();
+  inh int Resource.getIndex();
   inh int MethodAccess.getIndex();
   inh int ClassInstanceExpr.getIndex();
   eq TryWithResources.getResource(int index).getIndex() = index;
 
-  /**************************** MethodAccess *******************************/
+  /* --- MethodAccess --- */
 
   // Defining the chain of resources to close depending on the nature of the
   // method if it is a close method or not.
@@ -215,7 +221,7 @@ public
   }
 
   inh Boolean MethodAccess.isCloseMethod();
-  eq ResourceDeclaration.closeAccess().isCloseMethod() = true;
+  eq Resource.closeAccess().isCloseMethod() = true;
   eq CompilationUnit.getChild().isCloseMethod() = false;
 
   eq MethodAccess.getFinally(int i).nextNodes() {
@@ -249,7 +255,7 @@ public
   }
   to CFGNode.predColl();
 
-  /************************ ClassInstanceExpr*****************************/
+  /* --- ClassInstanceExpr --- */
   syn boolean Access.isClassInstanceExpr() = false;
   eq ClassInstanceExpr.isClassInstanceExpr() = true;
 
@@ -307,7 +313,7 @@ public
     }
     to CFGNode.predColl();
 
-    /**************************** ThrowStmt*******************************/
+    /* --- ThrowStmt --- */
 
     eq ThrowStmt.getExpr().nextNodes() {
       if (hasClose())
@@ -323,7 +329,7 @@ public
     }
     to CFGNode.predColl();
 
-    /**************************** ContinueStmt*******************************/
+    /* --- ContinueStmt --- */
     eq ContinueStmt.firstNodes() {
       if (hasClose()) {
         return getClose(0).firstNodes();
@@ -341,7 +347,7 @@ public
     }
     to CFGNode.predColl();
 
-    /**************************** ReturnStmt*******************************/
+    /* --- ReturnStmt --- */
     eq ReturnStmt.firstNodes() {
       if (hasResult()) {
         return getResult().firstNodes();
@@ -371,7 +377,7 @@ public
     }
     to CFGNode.predColl();
 
-    /**************************** BreakStmt*******************************/
+    /* --- BreakStmt --- */
 
     eq BreakStmt.firstNodes() {
       if (hasClose()) {
@@ -391,7 +397,7 @@ public
     }
     to CFGNode.predColl();
 
-    /************************** ThrowsException*******************************/
+    /* --- ThrowsException --- */
 
     syn nta List<NTACloseResource> ThrowsException.getCloseList() {
       List<NTACloseResource> res = new List<>();
@@ -466,8 +472,7 @@ public
 
     eq ThrowStmt.elseNode() = exceptionLookup(getExpr().type());
 
-    /***************************
-     * NTACloseResource*******************************/
+    /* --- NTACloseResource --- */
     syn MethodAccess NTACloseResource.getOrigin() = origin;
   private
     MethodAccess NTACloseResource.origin;
@@ -476,8 +481,7 @@ public
       this.origin = origin;
     }
 
-    /**************************** MultiCatch
-     * ***********************************/
+    /* --- MultiCatch --- */
     eq MultiCatch.firstNodes() { return getParameter().firstNodes(); }
 
     eq MultiCatch.getParameter().nextNodes() { return getBlock().firstNodes(); }

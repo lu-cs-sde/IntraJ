@@ -1,32 +1,32 @@
 public class IMPDAA05 {
     void testBasicThreeWayCircle() {
-        int x, y, z;
-        x = y;
+        int x = 0, y = 0, z = 0; // @IMPDAA @IMPDAA
+        x = y; // @IMPDAA
         y = z;
         z = x;
     }
     
     void testThreeWayInLoop() {
-        int a, b, c;
+        int a = 0, b = 0, c = 0; // @IMPDAA @IMPDAA
         for (int i = 0; i < 5; i++) {
-            a = b;
-            b = c;
-            c = a;
+            a = b; // @IMPDAA
+            b = c; // @IMPDAA
+            c = a; // @IMPDAA
         }
     }
     
     void testComplexThreeWayChain() {
-        int p, q, r;
+        int p = 0, q = 0, r = 0; // @IMPDAA @IMPDAA
         while (p < 100) {
-            p = q + 1;
-            q = r * 2;
-            r = p / 3;
+            p = q + 1; // @IMPDAA
+            q = r * 2; // @IMPDAA
+            r = p / 3; // @IMPDAA
         }
     }
     
     void testFourVariableChain() {
-        int a, b, c, d;
-        a = b;
+        int a = 0, b = 0, c = 0, d = 0; // @IMPDAA @IMPDAA @IMPDAA
+        a = b; // @IMPDAA
         b = c;
         c = d;
         d = a;

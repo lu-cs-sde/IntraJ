@@ -46,10 +46,7 @@ public
   ImplicitAssignment implements Assign;
   VariableDeclarator implements Assign;
 
-  /**************************************************************************
-  ************************** TRFunction *************************************
-  ***************************************************************************
-  */
+  /* --- TRFunction --- */
   syn Gamma CFGNode.trFun(Gamma gamma) { return gamma; }
   eq Assign.trFun(Gamma gamma) {
     Variable decl = getDeclaration();
@@ -67,10 +64,7 @@ public
     return gamma;
   }
 
-  /**************************************************************************
-  ***************************OUT ENVIRONMENT*********************************
-  ***************************************************************************
-  */
+  /* --- Out Environment --- */
 
   coll Gamma TryStmt.NA_out() with join; // TryStmt is not a CFGNode
 
@@ -83,10 +77,7 @@ public
     return res;
   }
 
-  /**************************************************************************
-   ***************************IN ENVIRONMENT*********************************
-   ***************************************************************************
-   */
+  /* --- In Environment --- */
   syn Gamma CFGNode.NA_in() circular[new Gamma()] {
     Gamma res = new Gamma();
     for (CFGNode e : pred())
@@ -95,19 +86,13 @@ public
   }
   eq Entry.NA_in() = new Gamma();
 
-  /**************************************************************************
-  ************************** ERROR PREDICATE ********************************
-  *************************** ISNULLABLE ************************************
-  */
+  /* --- Error Predicate / isNullable --- */
   syn Boolean VarAccess.isNullable() {
     AbsDomain res = NA_in().get(varDecl());
     return isDereferencing() && (res == AbsDomain.NULL);
   }
 
-  /**************************************************************************
-  ***************************ERROR COLLECTION********************************
-  ***************************************************************************
-  */
+  /* --- Error Collection --- */
   VarAccess contributes warning(
       getCompilationUnit().pathName(),
       "A 'NullPointerException' could be thrown;'" + name() + "' is nullable.",
@@ -115,10 +100,7 @@ public
       null, null) when
   isNullable() to CompilationUnit.NPA();
 
-  /***************************************************************************
-   *************************** HELPERS ***************************************
-   ***************************************************************************
-   */
+  /* --- Helpers --- */
   syn Variable ReachedLVal.getDeclaration();
   eq VariableDeclarator.getDeclaration() = singletonValue();
   eq FieldDeclarator.getDeclaration() = singletonValue();
@@ -144,10 +126,7 @@ public
 
   eq CastExpr.varDecl() = getExpr().varDecl();
 
-  /*************************** IMPROVING ANALYSIS *****************************
-   *************************** EXTENDING THE CFGs *****************************
-   **************************** GENERETING FACTs ******************************
-   */
+  /* --- Improving Analysis / Extending the CFGs / Generating Facts --- */
 
 public
   interface FactGenerator {}

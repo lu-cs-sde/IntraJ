@@ -4,7 +4,7 @@ class Person {
   String getName() { return name; }
 }
 
-public class NA07 {
+public class NPA07 {
   public static void main(String args[]) {
     Person x = null;
     Boolean b = false;
