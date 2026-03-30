@@ -13,6 +13,9 @@
 /src/gen-res/
 /*.jar
 /*.zip
+/cache-config.csv
+/basic-stacked/build
+/relaxed-stacked/build
 
 # Vim swap files.
 *.swp
