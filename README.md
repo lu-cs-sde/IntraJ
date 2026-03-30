@@ -26,7 +26,6 @@ With **IntraJ** you can:
 You can run IntraJ on other Java codebases (up to Java 11) in order to construct CFGs and get DAA and NPA analysis results.
 
 
-
 # Build IntraJ from the source code
 ## Prerequisites
 
@@ -84,6 +83,18 @@ To run all the tests, execute:
 ./gradlew test
 ```
 
+### JastAdd evaluation strategy
+
+This version of IntraJ defaults to the optimised _Relaxed-Stacked_ evaluation method introduced in
+[Riouak et al.: _Efficient Demand Evaluation of Fixed-Point Attributes using Static Analysis_](https://dl.acm.org/doi/10.1145/3687997.3695644).
+
+To build IntraJ with the unoptimised _Basic-Stacked_ evaluation method, you can run:
+
+```
+./gradlew :basic-stacked:jarCopy
+```
+
+
 ### Python Dependencies
 
 To install Python dependencies, you can execute the following instruction:
@@ -114,7 +125,11 @@ The top-level structure of the repository:
     |          ├── flow                      # Flow utilities
     |          ├── test                      # JUnit test spec
     |          └── utils                     # General helpers for visualisation
-    ├── tools                                # JastAdd and MagpieBridge JARs
+    ├── basic-stacked                        # Gradle subproject for building IntraJ in basic-stacked mode
+    ├── relaxed-stacked                      # Gradle subproject for building IntraJ in relaxed-stacked mode
+    ├── tools                                # JastAdd and other library jars
+    |    ├── jastadd2.jar                    # Custom version of Jastadd
+    |    └── cat.jar                         # Callgraph analysis tool
     ├── testfiles                            # Automated test files
     |    ├── DataFlow
     |    └── CFG
