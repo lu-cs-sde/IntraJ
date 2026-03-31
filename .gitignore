@@ -14,8 +14,16 @@
 /*.jar
 /*.zip
 /cache-config.csv
-/basic-stacked/**
-/relaxed-stacked/**
+/basic-stacked/bin
+/basic-stacked/build
+/basic-stacked/.classpath
+/basic-stacked/.project
+/basic-stacked/.settings
+/relaxed-stacked/bin
+/relaxed-stacked/build
+/relaxed-stacked/.classpath
+/relaxed-stacked/.project
+/relaxed-stacked/.settings
 
 # Vim swap files.
 *.swp
@@ -27,9 +35,9 @@
 .vscode/
 .VSCodeCounter/
 
-evaluation/antlr-2.7.2/
-
-
+# Common temporary files
+/tmp/
+/evaluation/antlr-2.7.2/
 .ipynb_checkpoints
 
 
