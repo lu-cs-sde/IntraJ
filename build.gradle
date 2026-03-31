@@ -1,8 +1,8 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
-  id 'java'
-  id 'org.jastadd' version '1.15.0'
+  id 'base'
+  id 'org.jastadd' version '1.15.0' apply false // only as dependency, we apply it in the sub-projects only
 }
 
 defaultTasks ':relaxed-stacked:jarCopy'
@@ -28,7 +28,7 @@ ext {
                 // In the future, get this from Maven Central:
                 //jastadd2 "org.jastadd:jastadd:2.5.0"
 
-                implementation 'junit:junit:4.12'
+                testImplementation 'junit:junit:4.12'
                 implementation files("${rootDir}/tools/magpiebridge-0.1.6-SNAPSHOT-jar-with-dependencies.jar")
                 implementation 'com.sun.net.httpserver:http:20070405'
                 implementation group: 'org.freemarker', name: 'freemarker', version: '2.3.29'
@@ -60,10 +60,7 @@ ext {
                 module = 'intraj'
 
                 // Target module to build:
-                jastaddOptions = [ "--rewrite=cnta",
-                                  "--safeLazy",
-                                  "--visitCheck=false",
-                                  "--optimize-imports" ] + extraOptions
+                jastaddOptions = root.jastaddDefaultOptions + extraOptions
                 astPackage = 'org.extendj.ast'
                 parser.name = 'JavaParser'
                 scanner.name = 'OriginalScanner'
@@ -72,6 +69,7 @@ ext {
                 java {
                     srcDir "${rootDir}/extendj/src/frontend-main"
                     srcDir "${rootDir}/src/java"
+                    exclude "test/**"
                 }
                 resources {
                     srcDir "${rootDir}/src/java/magpiebridge/resources"
@@ -87,7 +85,6 @@ ext {
 
             test {
                 useJUnit()
-                dependsOn 'cleanTest'
                 workingDir = rootDir
             }
 
@@ -110,7 +107,7 @@ ext {
                 rename { filename -> jarName }
             }
 
-            sourceCompatibility = targetCompatibility = '1.8'
+            sourceCompatibility = targetCompatibility = '11'
 
             //afterEvaluate {  // To debug which jastadd2.jar we're using
             //    println "jastadd2 conf: ${configurations.jastadd2.files}"
@@ -161,14 +158,6 @@ repositories {
     flatDir { dirs "tools" }
 }
 
-dependencies {
-    // override JastAdd plugin defaults with local jastadd2.jar:
-    jastadd2 name: "jastadd2"
-    //jastadd2 files("${rootProject.projectDir}/tools/jastadd2.jar")
-    // In the future, get this from Maven Central:
-    //jastadd2 "org.jastadd:jastadd:2.5.0"
-}
-
 
 subprojects {
     repositories {
@@ -178,12 +167,14 @@ subprojects {
 }
 
 clean.dependsOn ':basic-stacked:clean', ':relaxed-stacked:clean'
-test.dependsOn ':relaxed-stacked:test'
+
+tasks.register('test') {
+  group = 'verification'
+  description = 'Runs the test suite (delegates to relaxed-stacked).'
+  dependsOn ':relaxed-stacked:test'
+}
 
 // //jar.destinationDirectory = projectDir
-// //
-// // // Java -source and -target version.
-sourceCompatibility = targetCompatibility = '11'
 
 task sourceZip(type: Zip) {
     description 'Builds a Zip file with the entire repisotory (including the ExtendJ submodule).'

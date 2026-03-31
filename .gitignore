@@ -14,8 +14,8 @@
 /*.jar
 /*.zip
 /cache-config.csv
-/basic-stacked/build
-/relaxed-stacked/build
+/basic-stacked/**
+/relaxed-stacked/**
 
 # Vim swap files.
 *.swp
