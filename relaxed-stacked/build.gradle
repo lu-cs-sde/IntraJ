@@ -9,4 +9,6 @@ afterEvaluate {
     tasks.named('generateAst') {
         dependsOn ':generateCacheConfig'
     }
+    // Register generated sources as actual sources, so jdtls etc. can pick them up
+    sourceSets.main.java.srcDir jastadd.genDir
 }

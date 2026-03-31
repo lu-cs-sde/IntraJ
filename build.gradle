@@ -13,6 +13,7 @@ if (!file('extendj/jastadd_modules').exists()) {
 
 
 ext {
+    javaVersion = 11
     jastaddDefaultOptions = [ "--rewrite=cnta",
                              "--safeLazy",
                              "--visitCheck=false",
