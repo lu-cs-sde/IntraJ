@@ -1,11 +1,11 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
-  id 'base'
-  id 'org.jastadd' version '1.15.0' apply false // only as dependency, we apply it in the sub-projects only
+  id 'java'
+  id 'org.jastadd' version '1.15.0' apply false // we apply it in the sub-projects only
 }
 
-defaultTasks ':relaxed-stacked:jarCopy'
+defaultTasks ':jarCopy'
 
 if (!file('extendj/jastadd_modules').exists()) {
     throw new GradleException('ExtendJ seems to be missing. Please run "git submodule init", then "git submodule update".')
@@ -108,13 +108,22 @@ ext {
                 rename { filename -> jarName }
             }
 
-            sourceCompatibility = targetCompatibility = '11'
+            sourceCompatibility = targetCompatibility = javaVersion
 
             //afterEvaluate {  // To debug which jastadd2.jar we're using
             //    println "jastadd2 conf: ${configurations.jastadd2.files}"
             //}
         }
     }
+}
+
+sourceCompatibility = targetCompatibility = javaVersion
+
+dependencies {
+    testImplementation 'junit:junit:4.12'
+    implementation files("${rootDir}/tools/magpiebridge-0.1.6-SNAPSHOT-jar-with-dependencies.jar")
+    // magpiebridge technically depends on framemarker, but we don't use that part of it:
+    // implementation group: 'org.freemarker', name: 'freemarker', version: '2.3.29'
 }
 
 task generateCacheConfig(type: JavaExec) {
@@ -169,13 +178,75 @@ subprojects {
 
 clean.dependsOn ':basic-stacked:clean', ':relaxed-stacked:clean'
 
-tasks.register('test') {
-  group = 'verification'
-  description = 'Runs the test suite (delegates to relaxed-stacked).'
-  dependsOn ':relaxed-stacked:test'
+// We copy the generated AST from relaxed-stacked into the toplevel project.
+// - For building IntraJ: this is somewhat wasteful
+// - It substantially improves LSP support
+//   Rationale (creichen at 2026-04-01): The jdtls library (used in "the" dominant
+//   Java LSP server today) refuse to properly index generated code in subprojects,
+//   so we here tell it that the generated code is part of the toplevel project.
+tasks.register('copyGeneratedSrc', Sync) {
+    dependsOn ':relaxed-stacked:generateAst',
+              ':relaxed-stacked:generateParser',
+              ':relaxed-stacked:generateScanner'
+    from project(':relaxed-stacked').file('build/generated-src')
+    into layout.buildDirectory.dir('generated-src')
 }
 
-// //jar.destinationDirectory = projectDir
+compileJava.dependsOn 'copyGeneratedSrc'
+
+sourceSets {
+    main {
+        java {
+            srcDir 'extendj/src/frontend'        // includes Beaver
+            srcDir 'extendj/java8/src/main/java' // main entry point is currently part of the java8 submodule
+            srcDir 'extendj/src/frontend-main'
+            srcDir 'src/java'
+
+            // Generated code that we copy from :relaxed-stacked via copyGeneratedSrc
+            srcDir layout.buildDirectory.dir('generated-src/ast')
+            srcDir layout.buildDirectory.dir('generated-src/parser')
+            srcDir layout.buildDirectory.dir('generated-src/scanner')
+
+            // Don't include the tests in our main build:
+            exclude 'test/**'
+        }
+        resources {
+            // Version information
+            srcDir 'extendj/src/res'
+        }
+    }
+    test {
+        java {
+            srcDir 'src/java/test'
+        }
+    }
+}
+
+test {
+    useJUnit()
+    workingDir = rootDir
+}
+
+// --------------------------------------------------------------------------------
+// Packaging
+
+// Flat jar
+jar {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    manifest {
+        attributes 'Main-Class': intrajMainEntry
+    }
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    archiveBaseName = 'intraj'
+}
+
+task jarCopy(type: Copy) {
+    dependsOn 'jar'
+    from jar.archiveFile
+    into rootDir
+    rename { 'intraj.jar' }
+}
 
 task sourceZip(type: Zip) {
     description 'Builds a Zip file with the entire repisotory (including the ExtendJ submodule).'
@@ -200,3 +271,31 @@ task sourceZip(type: Zip) {
 
     into 'intraj'
 }
+
+// --------------------------------------------------------------------------------
+// Better LSP support
+
+apply plugin: 'eclipse'
+
+// Explicitly configure the Eclipse plugin
+// Rationale (criechne at 2026-04-01): The jdtls language server tries to use
+// Gradle directly (via something called "Buildship") to get source files etc.,
+// and this step is quite opaque to me but doesn't seem to work properly for us.
+// So here we tell it "don't use this Buildship thing, just rely on explicit paths".
+eclipse {
+    project {
+        name = 'IntraJ'
+        // "Trust our paths":
+        natures 'org.eclipse.jdt.core.javanature'
+        buildCommands.clear()
+        buildCommand 'org.eclipse.jdt.core.javabuilder'
+    }
+    classpath {
+        // The Eclipse plugin can figure out the paths from our sourceSets and
+        // dependencies if we tell it to not deleate this to Gradle's "Buildship":
+        containers.remove 'org.eclipse.buildship.core.gradleclasspathcontainer'
+    }
+}
+
+tasks.named('eclipse') { dependsOn 'copyGeneratedSrc' }
+
