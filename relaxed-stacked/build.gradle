@@ -3,7 +3,7 @@ plugins {
     id 'org.jastadd'
 }
 
-rootProject.ext.makeJastAddPass(project, rootProject, 'intraj-relaxed-stacked.jar',
+rootProject.ext.makeJastAddPass(project, rootProject, 'relaxed-stacked',
                                 [ "--dncConfig=${rootProject.file(rootProject.cacheConfigFile).absolutePath}" ])
 afterEvaluate {
     tasks.named('generateAst') {

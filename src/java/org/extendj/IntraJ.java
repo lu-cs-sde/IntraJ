@@ -52,10 +52,13 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.jar.Attributes;
+
 import org.extendj.analysis.Analysis;
 import org.extendj.analysis.Warning;
 import org.extendj.ast.CFGNode;
@@ -89,6 +92,57 @@ public class IntraJ extends Frontend {
 
   public static Analysis analysis = Analysis.getAnalysisInstance();
   public static IntraJ intraj;
+
+  /** Full build version information */
+  public final static String VERSION_INFO;
+  /** Evaluation mechanism, e.g., relaxed-stacked */
+  public final static String EVALUATOR;
+  /** Gradle build timestamp */
+  public final static java.util.Date BUILD_TIMESTAMP;
+  /** Version or git hash */
+  public final static String VERSION;
+
+  static {
+    String version = "<unknown>";
+    try{
+      Enumeration<URL> resources = IntraJ.class.getClassLoader().getResources("META-INF/MANIFEST.MF");
+      System.err.println("Resources:" + resources);
+      while (resources.hasMoreElements()) {
+        java.util.jar.Manifest manifest = new java.util.jar.Manifest(resources.nextElement().openStream());
+        System.err.println("manifest = " + manifest);
+        Attributes attrs = manifest.getMainAttributes();
+        System.err.println("attrs = " + attrs);
+        if ("IntraJ".equals(attrs.getValue("Implementation-Title"))) {
+          version = attrs.getValue("Implementation-Version");
+          break;
+        } else {
+          System.err.println("Bad manifest: " + attrs);
+        }
+      }
+    } catch (IOException exn) {
+      System.err.println("Manifest failure");
+      exn.printStackTrace();
+      // Fall back to default version
+    }
+    String[] versionSplit = version.split("/");
+    if (versionSplit.length == 3) {
+      VERSION = versionSplit[0];
+      java.util.Date timestamp = null;
+      try {
+        timestamp = new java.util.Date(Long.valueOf(versionSplit[1]) * 1000);
+      } catch (Exception __) {
+        //BUILD_TIMESTAMP = null;
+      }
+      BUILD_TIMESTAMP = timestamp;
+      EVALUATOR = versionSplit[2];
+      VERSION_INFO = VERSION + "/" + EVALUATOR + " from " +  (new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")).format(timestamp);
+    } else {
+      VERSION = null;
+      BUILD_TIMESTAMP = null;
+      EVALUATOR = null;
+      VERSION_INFO = version;
+    }
+  }
 
   private static String[] setEnv(String[] args) throws FileNotFoundException {
     if (args.length < 1) {
@@ -298,7 +352,7 @@ public class IntraJ extends Frontend {
   }
 
   static void printOptionsUsage() {
-      System.out.println("IntraJ");
+      System.out.println("IntraJ, version " + VERSION_INFO);
       System.out.println("Available options:");
       System.out.println("  -help: prints all the available options.");
       System.out.println("  -genpdf: generates a PDF with the AST structure of all methods in the analyzed files. Can be combined with `-succ`, `-pred`.");

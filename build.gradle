@@ -11,17 +11,26 @@ if (!file('extendj/jastadd_modules').exists()) {
     throw new GradleException('ExtendJ seems to be missing. Please run "git submodule init", then "git submodule update".')
 }
 
+// Query git revision
+def gitCmd = "git rev-parse --short HEAD".execute()
+gitCmd.waitFor()
 
 ext {
     javaVersion = 11
+    gitRevision = gitCmd.exitValue() == 0 ? gitCmd.text.trim() : "unknown"
+    buildTimestamp = (int)(new Date().getTime() / 1000)
     jastaddDefaultOptions = [ "--rewrite=cnta",
                              "--safeLazy",
                              "--visitCheck=false",
                              "--optimize-imports" ]
     cacheConfigFile = "cache-config.csv"
     intrajMainEntry = 'org.extendj.IntraJ'
+    defaultEvaluator = 'relaxed-stacked'
 
-    makeJastAddPass = { project, root, jarName, extraOptions = [] ->
+    mkVersion = { evaluator -> "${gitRevision}/${buildTimestamp}/${evaluator}" }
+
+    makeJastAddPass = { project, root, jastaddEvaluator, extraOptions = [] ->
+        def jarName = "intraj-${jastaddEvaluator}.jar"
         project.with {
             dependencies {
                 // override JastAdd plugin defaults with local jastadd2.jar:
@@ -92,12 +101,15 @@ ext {
             jar {
                 duplicatesStrategy = DuplicatesStrategy.INCLUDE
                 manifest {
-                    attributes 'Main-Class': root.intrajMainEntry
+                    attributes(
+                        'Main-Class'             : root.intrajMainEntry,
+                        'Implementation-Title'   : 'IntraJ',
+                        'Implementation-Version' : mkVersion(jastaddEvaluator)
+                    )
                 }
                 from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
                 exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
                 baseName = 'intraj'
-                rename { filename -> jarName }
             }
 
             task jarCopy(type: Copy) {
@@ -165,6 +177,7 @@ task generateCacheConfig(type: JavaExec) {
 
 repositories {
     mavenLocal()
+    mavenCentral()
     flatDir { dirs "tools" }
 }
 
@@ -172,6 +185,7 @@ repositories {
 subprojects {
     repositories {
         mavenLocal()
+        mavenCentral()
         flatDir { dirs "${rootProject.projectDir}/tools" }
     }
 }
@@ -185,10 +199,10 @@ clean.dependsOn ':basic-stacked:clean', ':relaxed-stacked:clean'
 //   Java LSP server today) refuse to properly index generated code in subprojects,
 //   so we here tell it that the generated code is part of the toplevel project.
 tasks.register('copyGeneratedSrc', Sync) {
-    dependsOn ':relaxed-stacked:generateAst',
-              ':relaxed-stacked:generateParser',
-              ':relaxed-stacked:generateScanner'
-    from project(':relaxed-stacked').file('build/generated-src')
+    dependsOn ":${defaultEvaluator}:generateAst",
+              ":${defaultEvaluator}:generateParser",
+              ":${defaultEvaluator}:generateScanner"
+    from project(":${defaultEvaluator}").file('build/generated-src')
     into layout.buildDirectory.dir('generated-src')
 }
 
@@ -234,7 +248,9 @@ test {
 jar {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     manifest {
-        attributes 'Main-Class': intrajMainEntry
+        attributes 'Main-Class'  : intrajMainEntry,
+        'Implementation-Title'   : 'IntraJ',
+        'Implementation-Version' : mkVersion(defaultEvaluator)
     }
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
@@ -289,11 +305,6 @@ eclipse {
         natures 'org.eclipse.jdt.core.javanature'
         buildCommands.clear()
         buildCommand 'org.eclipse.jdt.core.javabuilder'
-    }
-    classpath {
-        // The Eclipse plugin can figure out the paths from our sourceSets and
-        // dependencies if we tell it to not deleate this to Gradle's "Buildship":
-        containers.remove 'org.eclipse.buildship.core.gradleclasspathcontainer'
     }
 }
 
