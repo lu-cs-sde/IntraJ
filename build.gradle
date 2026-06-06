@@ -133,10 +133,7 @@ task generateCacheConfig(type: JavaExec) {
     outputs.file file(cacheConfigFile)
 
     // JVM setup
-    classpath = files(
-        "${rootDir}/tools/cat.jar",
-        "${rootDir}/tools/magpiebridge-0.1.6-SNAPSHOT-jar-with-dependencies.jar"
-    )
+    classpath = files("${rootDir}/tools/cat.jar")
 
     mainClass = "org.extendj.Cat"
 
@@ -146,7 +143,15 @@ task generateCacheConfig(type: JavaExec) {
         def javaGenFiles = generatedSrcFiles.files.collect { it.path }
         def javaFiles = srcFiles.files.collect { it.path }
 
+        // Build CAT's -classpath from the basic-stacked compile dependencies
+        def catClasspath = (
+            files("${rootDir}/tools/magpiebridge-0.1.6-SNAPSHOT-jar-with-dependencies.jar") +
+            project(':basic-stacked').configurations.getByName('compileClasspath') +
+            files(project(':basic-stacked').sourceSets.main.output.classesDirs)
+        ).asPath
+
         args = [
+            '-classpath', catClasspath,
             '-o', cacheConfigFile,
             '-attributesOnly',
             '-rta',
