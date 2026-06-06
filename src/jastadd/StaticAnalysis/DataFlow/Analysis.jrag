@@ -30,9 +30,9 @@
 
 import com.ibm.wala.cast.tree.CAstSourcePositionMap.Position;
 import com.ibm.wala.util.collections.Pair;
-import org.extendj.magpiebridge.IJPosition;
 import org.extendj.analysis.Analysis;
 import org.extendj.analysis.Warning;
+import org.extendj.flow.utils.IJPosition;
 
 aspect Analysis {
 

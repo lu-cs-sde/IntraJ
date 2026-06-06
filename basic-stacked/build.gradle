@@ -1,0 +1,6 @@
+plugins {
+    id 'java'
+    id 'org.jastadd'
+}
+
+rootProject.ext.makeJastAddPass(project, rootProject, 'intraj-basic-stacked.jar')

@@ -1,0 +1,12 @@
+plugins {
+    id 'java'
+    id 'org.jastadd'
+}
+
+rootProject.ext.makeJastAddPass(project, rootProject, 'intraj.jar',
+                                [ "--dncConfig=${rootProject.file(rootProject.cacheConfigFile).absolutePath}" ])
+afterEvaluate {
+    tasks.named('generateAst') {
+        dependsOn ':generateCacheConfig'
+    }
+}
