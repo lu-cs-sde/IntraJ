@@ -1,8 +1,8 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
 plugins {
-  id 'java'
-  id 'org.jastadd' version '1.15.0'
+    id 'java'
+    id 'org.jastadd' version '1.15.0'
 }
 
 defaultTasks ':relaxed-stacked:jarCopy'

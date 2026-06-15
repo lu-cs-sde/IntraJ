@@ -30,41 +30,17 @@
 
 package org.extendj;
 
-import com.ibm.wala.classLoader.Module;
-import com.ibm.wala.classLoader.SourceFileModule;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Optional;
-import java.util.Set;
 import java.util.TreeSet;
 import org.extendj.analysis.Analysis;
 import org.extendj.analysis.Warning;
-import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
 import org.extendj.ast.Frontend;
 
 import org.extendj.ast.Program;
-import org.extendj.ast.SmallSet;
 import org.extendj.flow.utils.IJGraph;
 import org.extendj.flow.utils.Utils;
 
@@ -75,7 +51,6 @@ import org.extendj.flow.utils.Utils;
  */
 public class IntraJ extends Frontend {
 
-  public enum FlowProfiling { BACKWARD, FORWARD, COLLECTION, NONE, ALL }
   private static Boolean pred = false;
   private static Boolean succ = false;
   private static Boolean pdf = false;
@@ -83,7 +58,7 @@ public class IntraJ extends Frontend {
   private static IJGraph graph;
   private static String filename;
   public static Object DrAST_root_node;
-  private static Integer numb_warning = 0;
+  private static Integer warningsNum = 0;
   private static boolean statistics = false;
   private static long totalTime = 0;
 
@@ -163,7 +138,7 @@ public class IntraJ extends Frontend {
   public static void main(String args[])
       throws FileNotFoundException, InterruptedException, IOException {
     String[] jCheckerArgs = setEnv(args);
- 
+
       IntraJ intraj = getInstance();
       intraj.program = new Program();
       DrAST_root_node = intraj.getEntryPoint();
@@ -176,13 +151,13 @@ public class IntraJ extends Frontend {
       if (pdf){
         intraj.generatePDF();
       }
-  
+
       if (statistics) {
         Utils.printStatistics(
             System.out, "Elapsed time (CFG + Dataflow): " + totalTime / 1000 +
                             "." + totalTime % 1000 + "s");
         Utils.printStatistics(System.out,
-                              "Total number of warnings: " + numb_warning);
+                              "Total number of warnings: " + warningsNum);
         printProgramStatistics(intraj.getEntryPoint());
       }
   }
@@ -242,6 +217,7 @@ public class IntraJ extends Frontend {
   /**
    * Called for each from-source compilation unit with no errors.
    */
+  @SuppressWarnings("unchecked")
   protected void processNoErrors(CompilationUnit unit) {
     Integer nbrWrn = 0;
     for (Analysis.AvailableAnalysis a : analysis.getActiveAnalyses()) {
@@ -263,7 +239,7 @@ public class IntraJ extends Frontend {
         System.exit(1);
       }
     }
-    numb_warning += nbrWrn;
+    warningsNum += nbrWrn;
   }
 
   @Override

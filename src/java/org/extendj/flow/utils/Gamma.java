@@ -30,11 +30,9 @@
 
 package org.extendj.flow.utils;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.extendj.ast.Variable;
-import org.extendj.flow.utils.AbsDomain;
 
 public class Gamma extends HashMap<Variable, AbsDomain> {
 

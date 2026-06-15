@@ -9,4 +9,6 @@ afterEvaluate {
     tasks.named('generateAst') {
         dependsOn ':generateCacheConfig'
     }
+    // [jdtls] language server: register generated files as source code
+    sourceSets.main.java.srcDir jastadd.genDir
 }
