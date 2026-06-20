@@ -20,7 +20,10 @@ ext {
     cacheConfigFile = "cache-config.csv"
     intrajMainEntry = 'org.extendj.IntraJ'
 
-    makeJastAddPass = { project, root, jarName, extraOptions = [] ->
+    makeJastAddPass = { project, root, jarName, extraOptions = [], indexFromToplevel = false ->
+	// indexFromToplevel: for language server [jdtls]:
+	//   marks the sub-project whose generated sources we want the language server to
+	//   include in this (toplevel) project
         project.with {
             dependencies {
                 // override JastAdd plugin defaults with local jastadd2.jar:
@@ -71,13 +74,29 @@ ext {
             sourceSets.main {
                 java {
                     srcDir "${rootDir}/extendj/src/frontend-main"
-                    srcDir "${rootDir}/src/java"
+                    // [jdtls] (language server):
+                    //   make sure beaver.Symbol and org.jastadd.util are visible
+                    srcDir "${rootDir}/extendj/src/frontend"
+                    srcDir "${rootDir}/extendj/java8/src/main/java"
                 }
                 resources {
                     srcDir "${rootDir}/src/java/magpiebridge/resources"
                     srcDir "${rootDir}/extendj/src/res"
                     srcDir jastadd.buildInfoDir
                 }
+            }
+            if (indexFromToplevel) {
+                // [jdtls] (language server):
+                //   include the generated AST
+                sourceSets.main.java.srcDir "${rootDir}/src/java"
+            } else {
+                // [jdtls] (language server):
+                //   compilation dependency
+                tasks.named('compileJava').configure { source "${rootDir}/src/java" }
+            }
+            afterEvaluate {
+                // [jdtls] (language server) must be able to see the generated sources:
+                sourceSets.main.java.srcDir jastadd.genDir
             }
             sourceSets.test{
                 java{
