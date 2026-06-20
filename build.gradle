@@ -100,7 +100,7 @@ ext {
             }
             sourceSets.test{
                 java{
-                    srcDir "${rootDir}/src/java/test/"
+                    srcDir "${rootDir}/src/test/java/"
                 }
             }
 
@@ -202,7 +202,9 @@ subprojects {
 }
 
 clean.dependsOn ':basic-stacked:clean', ':relaxed-stacked:clean'
-test.dependsOn ':relaxed-stacked:test'
+sourceSets.test.java.srcDirs = [] // Don't run tests without the JastAdd apparatus...
+test.dependsOn ':relaxed-stacked:test' // ...delegate to relaxed-stacked instead
+
 
 // //jar.destinationDirectory = projectDir
 // //

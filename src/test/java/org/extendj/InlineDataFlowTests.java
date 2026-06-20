@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.extendj.test;
+package org.extendj;
 
 import java.io.File;
 import java.util.ArrayList;

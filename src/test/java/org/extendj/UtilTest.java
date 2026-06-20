@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.extendj.test;
+package org.extendj;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
