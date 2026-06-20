@@ -117,16 +117,13 @@ ext {
                 }
                 from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
                 exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
-                baseName = 'intraj'
-                rename { filename -> jarName }
+                archiveFileName = jarName
+                destinationDirectory = file("${rootDir}")
             }
 
-            task jarCopy(type: Copy) {
+            task jarCopy {
                 dependsOn 'jar'
-                afterEvaluate { println "Copying ${jar.archiveFile} to ${rootDir}" }
-                from jar.archiveFile
-                into rootDir
-                rename { filename -> jarName }
+                doLast { println "Built ${rootDir}/${jar.archiveFile.get()}" }
             }
 
             sourceCompatibility = targetCompatibility = '1.8'
@@ -205,6 +202,10 @@ clean.dependsOn ':basic-stacked:clean', ':relaxed-stacked:clean'
 sourceSets.test.java.srcDirs = [] // Don't run tests without the JastAdd apparatus...
 test.dependsOn ':relaxed-stacked:test' // ...delegate to relaxed-stacked instead
 
+// We build the jar indirectly, via ':relaxed-stacked:jarCopy', so no local activities needed:
+tasks.named('jar') {
+    enabled = false
+}
 
 // //jar.destinationDirectory = projectDir
 // //
