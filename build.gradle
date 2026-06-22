@@ -199,13 +199,23 @@ subprojects {
 }
 
 clean.dependsOn ':basic-stacked:clean', ':relaxed-stacked:clean'
-sourceSets.test.java.srcDirs = [] // Don't run tests without the JastAdd apparatus...
-test.dependsOn ':relaxed-stacked:test' // ...delegate to relaxed-stacked instead
 
 // We build the jar indirectly, via ':relaxed-stacked:jarCopy', so no local activities needed:
 tasks.named('jar') {
     enabled = false
 }
+
+sourceSets.test.java.srcDirs = [] // Don't run tests without the JastAdd apparatus...
+test {
+    dependsOn ':relaxed-stacked:test' // ...delegate to relaxed-stacked instead
+    enabled = false
+    testLogging {
+        outputs.upToDateWhen {false}
+        // show stderr during tracing
+        showStandardStreams = true
+    }
+}
+
 
 // //jar.destinationDirectory = projectDir
 // //
