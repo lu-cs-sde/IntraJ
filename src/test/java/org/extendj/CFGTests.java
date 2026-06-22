@@ -33,13 +33,9 @@ package org.extendj;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import org.extendj.IntraJ;
-import org.extendj.analysis.Warning;
 import org.extendj.ast.CFGNode;
 import org.extendj.ast.CFGRoot;
-import org.extendj.ast.ConstructorDecl;
-import org.extendj.ast.MethodDecl;
 import org.extendj.ast.Program;
 import org.extendj.ast.SmallSet;
 import org.extendj.flow.utils.IJGraph;
@@ -67,7 +63,7 @@ public class CFGTests {
         Assert.fail("Compilation errors found " + execCode);
       }
 
-      SmallSet<CFGNode> nodes = SmallSet.<CFGNode>empty().<CFGNode>mutable();
+      SmallSet<CFGNode> nodes = SmallSet.<CFGNode>mutable();
       Program program = jChecker.getEntryPoint();
       System.setOut(new PrintStream(baos));
       IJGraph graph = new IJGraph(true, true);
@@ -77,30 +73,11 @@ public class CFGTests {
         fun.entry().printSuccSets(outStream, nodes);
       }
       outStream.println();
-      nodes = SmallSet.<CFGNode>empty().<CFGNode>mutable();
+      nodes = SmallSet.<CFGNode>mutable();
       for (CFGRoot fun : program.CFGRoots()) {
         fun.exit().printPredSets(outStream, nodes);
       }
 
-      // graph.generatePDF(filename);
-      // {
-      //   ArrayList<String> cmdLd = new ArrayList<String>();
-      //   cmdLd.add("python3");
-      //   cmdLd.add("resources/pdf_merger.py");
-      //   cmdLd.add(IJGraph.changeExtension(filename, ""));
-      //   ProcessBuilder pb = new ProcessBuilder(cmdLd);
-      //   Process process = pb.start();
-      //   process.getOutputStream().close();
-      //   process.waitFor();
-      // }
-      // ArrayList<String> cmdLd = new ArrayList<String>();
-      // cmdLd.add("python3");
-      // cmdLd.add("resources/deleteFiles.py");
-      // cmdLd.add(IJGraph.changeExtension(filename, ""));
-      // ProcessBuilder pb = new ProcessBuilder(cmdLd);
-      // Process process = pb.start();
-      // process.getOutputStream().close();
-      // process.waitFor();
       UtilTest.compareOutput(
           baos.toString(), new File(UtilTest.changeExtension(filename, ".out")),
           new File(UtilTest.changeExtension(filename, ".expected")));

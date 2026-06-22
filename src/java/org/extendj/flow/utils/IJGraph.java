@@ -37,9 +37,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import org.extendj.IntraJ.FlowProfiling;
 import org.extendj.ast.ASTNode;
-import org.extendj.ast.CFGNode;
 import org.extendj.ast.SmallSet;
 import org.extendj.flow.utils.IJEdge.FlowRelation;
 

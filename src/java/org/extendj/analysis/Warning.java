@@ -2,11 +2,8 @@ package org.extendj.analysis;
 
 import com.ibm.wala.cast.tree.CAstSourcePositionMap.Position;
 import com.ibm.wala.util.collections.Pair;
-import java.io.File;
 import java.io.PrintStream;
-import java.net.URL;
 import magpiebridge.util.SourceCodeReader;
-import org.extendj.IntraJ;
 import org.extendj.flow.utils.Utils;
 import org.extendj.flow.utils.IJPosition;
 
