@@ -4,7 +4,8 @@ plugins {
 }
 
 rootProject.ext.makeJastAddPass(project, rootProject, 'intraj.jar',
-                                [ "--dncConfig=${rootProject.file(rootProject.cacheConfigFile).absolutePath}" ])
+                                [ "--dncConfig=${rootProject.file(rootProject.cacheConfigFile).absolutePath}" ],
+                                true) // index for top-level language server
 afterEvaluate {
     tasks.named('generateAst') {
         dependsOn ':generateCacheConfig'

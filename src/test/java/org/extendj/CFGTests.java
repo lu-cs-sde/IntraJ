@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-package test;
+package org.extendj;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
