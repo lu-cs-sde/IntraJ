@@ -37,10 +37,17 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Random;
 
 import org.extendj.ast.Warning;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
+import org.extendj.ast.ClassDecl;
+import org.extendj.ast.BodyDecl;
+import org.extendj.ast.TypeDecl;
+import org.extendj.ast.MethodDecl;
 import org.extendj.ast.Frontend;
 import org.extendj.ast.Program;
 import org.extendj.ast.StaticAnalysis;
@@ -56,11 +63,24 @@ public class IntraJ extends Frontend {
 
     static final Action HELP_ACTION = new HelpAction();
     static final Action ANALYSIS_ACTION = new AnalysisAction();
+    static final Action BENCHMARK_ACTION = new BenchmarkAction();
     static Action action = HELP_ACTION;
     static boolean printStats = false;
     static LinkedHashSet<StaticAnalysis> analysesActive = new LinkedHashSet<>();
+    static int benchIterNum = 10; // Number of iterations when benchmarking
 
     static CLIOptions cliOptions = new CLIOptions();
+
+    /**
+     * Indicate interest in benchmark action
+     */
+    static void analysisAction() {
+        // unless the user has explicitly selected benchmarking
+        if (action != BENCHMARK_ACTION) {
+            action = ANALYSIS_ACTION;
+        }
+    }
+
     static {
         cliOptions
             .flag("-help",       "Prints this help text",
@@ -69,15 +89,20 @@ public class IntraJ extends Frontend {
                 v -> { action = new VersionAction(); }).withShort('V')
             .flag("-genpdf",     "Generates a PDF with AST structure of the files under analysis (see also 'pred' and 'succ')",
                 v -> { action = new PDFAction(); })
+            .flag("-bench",      "Benchmark the specified program analyses over all compilation units for '-niter' runs",
+                v -> { action = BENCHMARK_ACTION; })
             .flag("-statistics", "Print analysis statistics",
                 v -> { printStats = true; })
             .flag("-Wall",       "Enables all analyses",
-                v -> { action = ANALYSIS_ACTION; analysesActive.addAll(StaticAnalysis.analyses()); });
+                v -> { analysisAction(); analysesActive.addAll(StaticAnalysis.analyses()); })
+            .option("-niter",    "Number of iterations for benchmarking (default " + benchIterNum + ")",
+                v -> { benchIterNum = Integer.parseInt(v); })
+            ;
 
         for (StaticAnalysis analysis: StaticAnalysis.analyses()) {
             cliOptions.flag("-W" + analysis.name(), null, v -> {
                 analysesActive.add(analysis);
-                action = ANALYSIS_ACTION;
+                analysisAction();
             });
         }
 
@@ -167,7 +192,12 @@ public class IntraJ extends Frontend {
     /**
      * Initialize the Java checker.
      */
-    public IntraJ() { super("IntraJ-" + INTRAJ_VERSION, ExtendJVersion.getVersion()); }
+    public IntraJ() {
+        super("IntraJ-" + INTRAJ_VERSION, ExtendJVersion.getVersion());
+        this.program = new Program();
+        DrAST_root_node = getEntryPoint();
+
+    }
 
     /**
      * @param args command-line arguments
@@ -197,23 +227,18 @@ public class IntraJ extends Frontend {
         return run(jCheckerOptions);
     }
 
-    protected void resetWarningHandlers() {
+    protected static void resetCounters(WarningHandler ... warningHandlers) {
+        totalDurations = new TreeMap<>();
+        warningHandler = new WarningHandler.Multi(warningHandlers);
         warningHandler.reset();
     }
 
-    protected void init() {
-        this.program = new Program();
-        DrAST_root_node = getEntryPoint();
-        totalDurations = new TreeMap<>();
-        resetWarningHandlers();
-    }
+    static WarningHandler.Collect warningCollector = new WarningHandler.Collect();
+    static WarningHandler.Count warningCounter = new WarningHandler.Count();
+    static WarningHandler.Print warningPrinter = new WarningHandler.Print(System.out);
+    static WarningHandler warningHandler = new WarningHandler.Multi();
 
-    WarningHandler.Collect warningCollector = new WarningHandler.Collect();
-    WarningHandler.Count warningCounter = new WarningHandler.Count();
-    WarningHandler.Print warningPrinter = new WarningHandler.Print(System.out);
-    WarningHandler warningHandler = new WarningHandler.Multi(warningCollector, warningCounter, warningPrinter);
-
-    Map<StaticAnalysis, Long> totalDurations = new TreeMap<>();
+    static Map<StaticAnalysis, Long> totalDurations = new TreeMap<>();
 
     /**
      * Called for each from-source compilation unit with no errors.
@@ -316,7 +341,7 @@ public class IntraJ extends Frontend {
         @Override
         public int exec() {
             IntraJ intraj = new IntraJ();
-            intraj.init();
+            resetCounters();
             intraj.runFrontendWithConfig();
             try {
                 intraj.generatePDF();
@@ -338,20 +363,111 @@ public class IntraJ extends Frontend {
         @Override
         public int exec() {
             IntraJ intraj = new IntraJ();
-            intraj.init();
+            resetCounters(warningCollector, warningCounter, warningPrinter);
             intraj.runFrontendWithConfig();
+            printStats(intraj);
+            return 0;
+        }
+
+        protected void printStats(IntraJ intraj) {
             if (printStats) {
                 printProgramStatistics(intraj.getEntryPoint());
                 for (StaticAnalysis analysis: analysesActive) {
                     Utils.printStatistics(System.out,
                         String.format("%-20s\t%20s ns",
-                        analysis.name(),
-                        intraj.totalDurations.get(analysis)));
+                            analysis.name(),
+                            totalDurations.get(analysis)));
                 }
-                Utils.printStatistics(System.out, "warnings\t" + intraj.warningCounter.get());
-                Utils.printStatistics(System.out, "md5\t" + intraj.warningCollector.md5());
+                Utils.printStatistics(System.out, "warnings\t" + warningCounter.get());
+                Utils.printStatistics(System.out, "md5\t" + warningCollector.md5());
+            }
+        }
+    }
+
+    /**
+     * Action: Benchmark analysis execution
+     */
+    static class BenchmarkAction extends AnalysisAction {
+        @Override
+        public int exec() {
+            IntraJ intraj = null;
+            resetCounters(warningCollector, warningCounter);
+            for (int i = 0; i < benchIterNum; ++i) {
+                intraj = resetIntraJ.reset(intraj);
+                intraj.runFrontendWithConfig();
+                for (StaticAnalysis analysis: analysesActive) {
+                    System.out.println(
+                        String.format("%-20s\t%s\t%d\t%16s ns\t%-7s warnings\t%s",
+                            analysis.name(),
+                            resetIntraJ,
+                            i+1,
+                            totalDurations.get(analysis),
+                            warningCounter.get(),
+                            warningCollector.md5()));
+                }
+                resetCounters(warningCollector);
+            }
+            if (intraj != null) {
+                printStats(intraj);
             }
             return 0;
         }
+    }
+
+
+    // ---- IntraJ benchmarking reset strategies
+
+    /**
+     * Governs how to prepare IntraJ prior to a second benchmarking run
+     */
+    static abstract class IntraJResetStrategy {
+        static TreeMap<String, IntraJResetStrategy> strategies = new TreeMap<>();
+        String name;
+        public IntraJResetStrategy(String name) {
+            this.name = name;
+            strategies.put(name, this);
+        }
+        @Override
+        public String toString() {
+            return name;
+        }
+        /**
+         * Reset IntraJ instrance
+         */
+        public abstract IntraJ reset(IntraJ intraj);
+
+        static IntraJResetStrategy fromString(String name) {
+            IntraJResetStrategy result = strategies.get(name);
+            if (result == null) {
+                throw new RuntimeException("Unknown strategy: " + name);
+            }
+            return result;
+        }
+    }
+
+    static final IntraJResetStrategy INTRAJ_RESET_REPARSE = new IntraJResetStrategy("REPARSE") {
+        @Override
+        public IntraJ reset(IntraJ intraj) {
+            return new IntraJ();
+        }
+    };
+
+    static final IntraJResetStrategy INTRAJ_RESET_FLUSH_ALL = new IntraJResetStrategy("FLUSH-ALL") {
+        @Override
+        public IntraJ reset(IntraJ intraj) {
+            if (intraj == null) {
+                return new IntraJ();
+            }
+            intraj.getEntryPoint().flushTreeCache();
+            return intraj;
+        }
+    };
+
+    static IntraJResetStrategy resetIntraJ = INTRAJ_RESET_REPARSE;
+
+    static {
+        cliOptions
+            .option("-reset",         "Strategy for resetting IntraJ between benchmark runs, one of " + IntraJResetStrategy.strategies.keySet() + ", (default " + resetIntraJ + ")",
+                v -> { resetIntraJ = IntraJResetStrategy.fromString(v); });
     }
 }
