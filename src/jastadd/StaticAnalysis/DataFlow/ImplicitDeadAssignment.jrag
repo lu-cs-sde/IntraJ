@@ -1,4 +1,8 @@
 aspect ImplicitDeadAssignment {
+  // Add analysis to the StaticAnalysis registry:
+  public static StaticAnalysis StaticAnalysis.IMPDAA =
+    StaticAnalysis.dataFlow("Implicit Dead Assignment",
+                            (CompilationUnit cu) -> cu.IMPDAA());
 
   coll Set<CFGNode> CFGNode.daaAllUses()[new HashSet<>()] with add;
 
@@ -32,26 +36,26 @@ aspect ImplicitDeadAssignment {
     return true;
   }
 
-  
+
 
    AssignExpr contributes warning(
        getCompilationUnit().pathName(),
        "Assignment to '" + getDest().varDecl().name() +
            "' is implicitly dead: only consumed by assignments that are themselves dead.",
-       Analysis.AvailableAnalysis.IMPDAA, null, null) when
+       StaticAnalysis.IMPDAA, null, null) when
    isImplicitlyDead() to CompilationUnit.IMPDAA();
 
    VariableDeclarator contributes warning(
        getCompilationUnit().pathName(),
        "Assignment to '" + singletonValue().name() +
            "' is implicitly dead: only consumed by assignments that are themselves dead.",
-       Analysis.AvailableAnalysis.IMPDAA, null, null) when
+       StaticAnalysis.IMPDAA, null, null) when
    isImplicitlyDead() to CompilationUnit.IMPDAA();
 
    UnaryIncDec contributes warning(
        getCompilationUnit().pathName(),
        "Assignment to '" + getOperand().varDecl().name() +
            "' is implicitly dead: only consumed by assignments that are themselves dead.",
-       Analysis.AvailableAnalysis.IMPDAA, null, null) when
+       StaticAnalysis.IMPDAA, null, null) when
    isImplicitlyDead() to CompilationUnit.IMPDAA();
 }

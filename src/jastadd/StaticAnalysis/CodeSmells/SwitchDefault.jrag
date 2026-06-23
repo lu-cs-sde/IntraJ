@@ -1,8 +1,12 @@
 aspect SwitchDefault {
+    // Add analysis to the StaticAnalysis registry:
+    public static StaticAnalysis StaticAnalysis.SWITCHDEFAULT =
+        StaticAnalysis.localPattern("Switch statement without default",
+                                    (CompilationUnit cu) -> cu.SWITCHDEFAULT());
 
     SwitchStmt contributes warning(
         getCompilationUnit().pathName(),
         "Switch statement should have a default case." ,
-        Analysis.AvailableAnalysis.SWITCHDEFAULT, null, null) when
+        StaticAnalysis.SWITCHDEFAULT, null, null) when
         noDefaultLabel() to CompilationUnit.SWITCHDEFAULT();
 }

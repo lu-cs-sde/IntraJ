@@ -1,0 +1,304 @@
+/***************************************************************************
+ * Copyright (C) 2026 The JastAdd Team
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+import java.util.function.Function;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
+
+
+import java.io.PrintStream;
+import magpiebridge.util.SourceCodeReader;
+import org.extendj.flow.utils.Utils;
+import org.extendj.flow.utils.IJPosition;
+import org.extendj.ast.StaticAnalysis;
+
+aspect StaticAnalysis {
+    /**
+     * Registry for static analyses that are run once per compilation unit
+     *
+     * To register a new analysis, declare a static field and initialise it with
+     * the result of {@link #dataFlow(String, String, Function)},
+     * {@link #localPattern(String, String, Function)} etc.
+     * The name of the static field is then the short name of the analysis.
+     */
+    public class StaticAnalysis implements Comparable<StaticAnalysis> {
+        protected String description;
+        protected String category;
+        protected Function<CompilationUnit, Collection<Warning>> scanner;
+        private String name = "<name not set>";
+
+        protected StaticAnalysis(String description, String category,
+                                 Function<CompilationUnit, Collection<Warning>> scanner) {
+            this.description = description;
+            this.category = category;
+            this.scanner = scanner;
+        }
+
+        public static StaticAnalysis dataFlow(String description,
+                                              Function<CompilationUnit, Collection<Warning>> scanner) {
+            return new StaticAnalysis(description, "data flow",
+                                      scanner);
+        }
+
+        public static StaticAnalysis localPattern(String description,
+                                                  Function<CompilationUnit, Collection<Warning>> scanner) {
+            return new StaticAnalysis(description, "",
+                                      scanner);
+        }
+
+        public String description() {
+            return description;
+        }
+
+        public String name() {
+            return name;
+        }
+
+        public String category() {
+            return category;
+        }
+
+        private void setName(String newName) {
+            this.name = newName;
+        }
+
+        public Collection<? extends Warning> scan(CompilationUnit unit) {
+            return scanner.apply(unit);
+        }
+
+        private static Map<String, StaticAnalysis> computeAnalyses() {
+            Map<String, StaticAnalysis> unsortedResults = new LinkedHashMap<String, StaticAnalysis>();
+            Map<String, ArrayList<String>> categoriesMap = new HashMap<String, ArrayList<String>>();
+            try {
+                for (java.lang.reflect.Field field: StaticAnalysis.class.getFields()) {
+                    if (field.getType().equals(StaticAnalysis.class)
+                        && (field.getModifiers() & java.lang.reflect.Modifier.STATIC) > 0) {
+                        final String name = field.getName().replace('_', '-');
+                        final StaticAnalysis analysis =
+                            (StaticAnalysis) field.get(null);
+                        if (!categoriesMap.containsKey(analysis.category())) {
+                            categoriesMap.put(analysis.category(), new ArrayList<String>());
+                        }
+                        analysis.setName(name);
+                        categoriesMap.get(analysis.category()).add(name);
+                        unsortedResults.put(name,
+                                            analysis);
+                    }
+                }
+            } catch (IllegalAccessException exn) {
+                exn.printStackTrace();
+            }
+            // Now sort first by category and then by short name of the analysis
+            final ArrayList<String> categories = new ArrayList<String>(categoriesMap.keySet());
+            final Map<String, StaticAnalysis> results = new LinkedHashMap<String, StaticAnalysis>();
+
+            Collections.sort(categories);
+            for (String category: categories) {
+                final ArrayList<String> analysisNames = categoriesMap.get(category);
+                Collections.sort(analysisNames);
+                for (String name: analysisNames) {
+                    results.put(name, unsortedResults.get(name));
+                }
+            }
+
+            return results;
+        }
+
+        private static Map<String, StaticAnalysis> ANALYSIS_MAP = null;
+
+        /**
+         * Map from analysis names to the corresponding analyses
+         *
+         * Ordered, read-only
+         */
+        public static Map<? extends String, ? extends StaticAnalysis> analysisMap() {
+            if (ANALYSIS_MAP == null) {
+                ANALYSIS_MAP = computeAnalyses();
+            }
+            return ANALYSIS_MAP;
+        }
+
+        /**
+         * Set of all analyses
+         *
+         * Ordered, read-only
+         */
+        public static Collection<? extends StaticAnalysis> analyses() {
+            return analysisMap().values();
+        }
+
+        /**
+         * Look up analysis by (string) name
+         *
+         * @param name Analysis name to look up
+         * @return The corresponding analysis, or <tt>null</tt> if none
+         */
+        public static StaticAnalysis fromString(String name) {
+            return analysisMap().get(name);
+        }
+
+        public static int analysisNameMaxLength() {
+            int max = 0;
+            for (StaticAnalysis a: analyses()) {
+                max = Integer.max(max, a.name().length());
+            }
+            return max;
+        }
+
+        /**
+         * Print information on all static analyses
+         */
+        public static void printAnalyses(java.io.PrintStream out) {
+            int maxNameLen = analysisNameMaxLength();
+            String lastCategory = "";
+            for (StaticAnalysis analysis: analyses()) {
+                if (!analysis.category().equals(lastCategory)) {
+                    lastCategory = analysis.category();
+                    out.println("  -- " + analysis.category() + " --");
+                }
+                out.println(String.format("    %-" + maxNameLen + "s  %s",
+                                          analysis.name(), analysis.description()));
+            }
+        }
+
+        @Override
+        public String toString() {
+            return this.name;
+        }
+
+        @Override
+        public int compareTo(StaticAnalysis other) {
+            return this.name.compareTo(other.name);
+        }
+    }
+
+    /**
+     * Warning: potential issue flagged by a static analysis
+     */
+    public class Warning implements Comparable<Warning> {
+        private final Integer lineStart, columnStart, lineEnd, columnEnd;
+        private final String errMsg;
+        final StaticAnalysis analysis;
+        final String sourceFilePath;
+        private final Pair<Position, String> repair;
+        private final java.util.List<Pair<Position, String>> relatedInfo;
+        private IJPosition position = null;
+        private String code = "Error...";
+
+        public Warning(String sourceFilePath, StaticAnalysis analysis,
+                       Integer lineStart, Integer columnStart, Integer lineEnd,
+                       Integer columnEnd, String errMsg,
+                       Pair<Position, String> repair,
+                       java.util.List<Pair<Position, String>> relatedInfo) {
+            this.analysis = analysis;
+            this.lineStart = lineStart;
+            this.lineEnd = lineEnd;
+            this.errMsg = errMsg;
+            this.sourceFilePath = sourceFilePath;
+            this.columnEnd = columnEnd;
+            this.columnStart = columnStart;
+            this.repair = repair;
+            this.relatedInfo = relatedInfo;
+
+            try {
+                this.position = new IJPosition(lineStart, lineEnd, columnStart,
+                                               columnEnd, sourceFilePath);
+                this.code = SourceCodeReader.getLinesInString(position);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        public int compareTo(Warning other) {
+            if (lineStart.equals(other.lineStart)) {
+                if (columnStart != null) {
+                    if (columnStart.equals(other.columnStart))
+                        return errMsg.compareTo(other.errMsg);
+                    else {
+                        if (columnStart != null && other.columnStart != null)
+                            return Integer.compare(columnStart, other.columnStart);
+                        else {
+                            if (columnStart == null) {
+                                return -1;
+                            } else {
+                                return 1;
+                            }
+                        }
+                    }
+                } else {
+                    return Integer.compare(columnEnd, other.columnEnd);
+                }
+            } else {
+                return Integer.compare(lineStart, other.lineStart);
+            }
+        }
+
+        public Integer getLineStart() { return lineStart; }
+
+        public Integer getColumnStart() { return columnStart; }
+
+        public Integer getLineEnd() { return lineEnd; }
+
+        public Integer getColumnEnd() { return columnEnd; }
+
+        public String getErrMsg() { return errMsg; }
+
+        public Pair<Position, String> getRepair() { return repair; }
+
+        public java.util.List<Pair<Position, String>> getRelatedInfo() {
+            return relatedInfo;
+        }
+
+        public IJPosition getPosition() { return position; }
+
+        public String getCode() { return code; }
+
+        public String getSourceFilePath() { return sourceFilePath; }
+
+        public void print(PrintStream out) {
+            Utils.printWarning(out,
+                               analysis.name() + " - " + sourceFilePath + ":" +
+                               lineStart + "," + columnStart,
+                               errMsg);
+        }
+
+        public String toString() {
+            return analysis.name() + " - " + sourceFilePath + ":" + lineStart + "," +
+                columnStart + " - " + errMsg;
+        }
+
+        public StaticAnalysis getAnalysisType() { return analysis; }
+
+    }
+}

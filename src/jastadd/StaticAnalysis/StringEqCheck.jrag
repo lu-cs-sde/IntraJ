@@ -1,8 +1,13 @@
 aspect STREQ {
+  // Add analysis to the StaticAnalysis registry:
+  public static StaticAnalysis StaticAnalysis.STREQ =
+    StaticAnalysis.localPattern("String reference equality check",
+                                (CompilationUnit cu) -> cu.STREQ());
+
   EQExpr contributes warning(
       getCompilationUnit().pathName(),
       "Use of '==' to compare strings is discouraged. Use 'equals()' instead.",
-      Analysis.AvailableAnalysis.STREQ, null, null) when
+      StaticAnalysis.STREQ, null, null) when
       left()
           .type()
           .isString() &&

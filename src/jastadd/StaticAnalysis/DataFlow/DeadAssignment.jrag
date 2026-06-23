@@ -29,8 +29,13 @@
  */
 
 import org.extendj.IntraJ;
+
 aspect DAA {
-  
+  // Add analysis to the StaticAnalysis registry:
+  public static StaticAnalysis StaticAnalysis.DAA =
+    StaticAnalysis.dataFlow("Dead Assignment",
+                            (CompilationUnit cu) -> cu.DAA());
+
   // True <==> LVA_def() ∩  LVA_out() = emptyset
   syn boolean CFGNode.isDead() // = !LVA_def().compl(LVA_out()).isEmpty();
   {
@@ -71,20 +76,20 @@ aspect DAA {
   AssignExpr contributes warning(
       getCompilationUnit().pathName(),
       "The value stored in '" + getDest().varDecl().name() + "' is never read.",
-      Analysis.AvailableAnalysis.DAA, null, null) when
+      StaticAnalysis.DAA, null, null) when
   DAA_isDeadAssign() to CompilationUnit.DAA();
 
   VariableDeclarator contributes warning(
       getCompilationUnit().pathName(),
       "The value stored in '" + singletonValue().name() + "' is never read.",
-      Analysis.AvailableAnalysis.DAA, null, null) when
+      StaticAnalysis.DAA, null, null) when
   DAA_isDeadAssign() to CompilationUnit.DAA();
 
   UnaryIncDec contributes warning(
       getCompilationUnit().pathName(),
       "The value stored in '" + getOperand().varDecl().name() +
           "' is never read.",
-      Analysis.AvailableAnalysis.DAA, null, null) when
+      StaticAnalysis.DAA, null, null) when
   DAA_isDeadAssign() to CompilationUnit.DAA();
 
   /* --- Helpers --- */

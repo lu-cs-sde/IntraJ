@@ -49,8 +49,8 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.extendj.IntraJ;
-import org.extendj.analysis.Analysis;
-import org.extendj.analysis.Warning;
+import org.extendj.ast.StaticAnalysis;
+import org.extendj.ast.Warning;
 import org.extendj.ast.CompilationUnit;
 import org.extendj.ast.Program;
 
@@ -121,7 +121,7 @@ public class UtilTest {
 
   public static void checkWarnings(File file, String filename,
 
-                                   Analysis.AvailableAnalysis analysis,
+                                   StaticAnalysis analysis,
                                    int nerrors) {
     IntraJ.excludeLiteralsAndNull = true;
     Program program = genAST(new File(file, filename));
@@ -132,7 +132,7 @@ public class UtilTest {
   }
 
   private static int computeAnalysis(Program program,
-                                     Analysis.AvailableAnalysis analysis) {
+                                     StaticAnalysis analysis) {
     Integer nbrWrn = 0;
     try {
       for (CompilationUnit cu : program.getCompilationUnits()) {
@@ -152,7 +152,7 @@ public class UtilTest {
   }
 
   private static List<Warning> collectWarnings(
-      Program program, Analysis.AvailableAnalysis analysis) {
+      Program program, StaticAnalysis analysis) {
     List<Warning> result = new ArrayList<>();
     try {
       for (CompilationUnit cu : program.getCompilationUnits()) {
@@ -185,7 +185,7 @@ public class UtilTest {
     Map<String, List<Integer>> result = new HashMap<>();
     Pattern pattern = Pattern.compile("@(\\w+)");
     Set<String> validAnalyses = new TreeSet<>();
-    for (Analysis.AvailableAnalysis a : Analysis.AvailableAnalysis.values()) {
+    for (StaticAnalysis a : StaticAnalysis.analyses()) {
       validAnalyses.add(a.name());
     }
     try {
@@ -227,8 +227,8 @@ public class UtilTest {
     Program program = genAST(javaFile);
 
     for (Map.Entry<String, List<Integer>> entry : expected.entrySet()) {
-      Analysis.AvailableAnalysis analysis =
-          Analysis.AvailableAnalysis.valueOf(entry.getKey());
+      StaticAnalysis analysis =
+          StaticAnalysis.fromString(entry.getKey());
       List<Integer> expectedLines = entry.getValue();
 
       List<Warning> warnings = collectWarnings(program, analysis);

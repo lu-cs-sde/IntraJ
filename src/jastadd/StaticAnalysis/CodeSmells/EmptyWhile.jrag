@@ -1,9 +1,13 @@
 aspect EmptyWhile{
-	
+    // Add analysis to the StaticAnalysis registry:
+    public static StaticAnalysis StaticAnalysis.EMPTYWHILE =
+        StaticAnalysis.localPattern("While statement with empty body",
+                                    (CompilationUnit cu) -> cu.EMPTYWHILE());
+
 	WhileStmt contributes warning(
 	  getCompilationUnit().pathName(),
 	  "Empty 'while' statement may indicate unintended behavior." ,
-	  Analysis.AvailableAnalysis.EMPTYWHILE, null, null) when
+	  StaticAnalysis.EMPTYWHILE, null, null) when
 	  getStmt().getNumberStatements()==0 to CompilationUnit.EMPTYWHILE();
 
 }

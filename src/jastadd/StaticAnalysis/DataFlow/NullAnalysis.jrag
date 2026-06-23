@@ -31,6 +31,11 @@
 import org.extendj.flow.utils.Gamma;
 import org.extendj.ast.SmallSet;
 aspect NPA {
+  // Add analysis to the StaticAnalysis registry:
+  public static StaticAnalysis StaticAnalysis.NPA =
+    StaticAnalysis.dataFlow("Null Pointer Dereference",
+                            (CompilationUnit cu) -> cu.NPA());
+
 public
   interface ReachedLVal {}
   VariableDeclarator implements ReachedLVal;
@@ -96,7 +101,7 @@ public
   VarAccess contributes warning(
       getCompilationUnit().pathName(),
       "A 'NullPointerException' could be thrown;'" + name() + "' is nullable.",
-      Analysis.AvailableAnalysis.NPA,
+      StaticAnalysis.NPA,
       null, null) when
   isNullable() to CompilationUnit.NPA();
 

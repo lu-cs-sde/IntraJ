@@ -1,15 +1,19 @@
 aspect EmptyIf {
+    // Add analysis to the StaticAnalysis registry:
+    public static StaticAnalysis StaticAnalysis.EMPTYIF =
+        StaticAnalysis.localPattern("If statement with empty branch body",
+                                    (CompilationUnit cu) -> cu.EMPTYIF());
 
 	IfStmt contributes warning(
       getCompilationUnit().pathName(),
       "Empty 'then' branch in 'if' statement may indicate unintended behavior." ,
-      Analysis.AvailableAnalysis.EMPTYIF, null, null) when
+      StaticAnalysis.EMPTYIF, null, null) when
       getThen().getNumberStatements()==0 to CompilationUnit.EMPTYIF();
-	
+
 	IfStmt contributes warning(
       getCompilationUnit().pathName(),
       "Empty 'else' branch in 'if' statement may indicate unintended behavior." ,
-      Analysis.AvailableAnalysis.EMPTYIF, null, null) when
+      StaticAnalysis.EMPTYIF, null, null) when
       hasElse() && getElse().getNumberStatements()==0 to CompilationUnit.EMPTYIF();
 
 	syn Integer Stmt.getNumberStatements() = 1;
