@@ -211,6 +211,8 @@ public class IntraJ extends Frontend {
         return 0 == new JavaChecker().run(args);
     }
 
+    int run_iteration = 0;
+
     /**
      * Run the Java checker.
      * @param args command-line arguments
@@ -242,10 +244,7 @@ public class IntraJ extends Frontend {
 
     static Map<StaticAnalysis, Long> totalDurations = new TreeMap<>();
 
-    /**
-     * Called for each from-source compilation unit with no errors.
-     */
-    protected void processNoErrors(CompilationUnit unit) {
+    protected void analyzeCompilationUnit(CompilationUnit unit) {
         final String fileName = unit.getClassSource().sourceName();
         for (StaticAnalysis analysis: analysesActive) {
             if (!totalDurations.containsKey(analysis)) {
@@ -259,6 +258,13 @@ public class IntraJ extends Frontend {
                 warningHandler.handle(fileName, w);
             }
         }
+    }
+
+    /**
+     * Called for each from-source compilation unit with no errors.
+     */
+    protected void processNoErrors(CompilationUnit unit) {
+        resetIntraJ.visitCompilationUnit(this, unit);
     }
 
     @Override
@@ -395,8 +401,7 @@ public class IntraJ extends Frontend {
             IntraJ intraj = null;
             resetCounters(warningCollector, warningCounter);
             for (int i = 0; i < benchIterNum; ++i) {
-                intraj = resetIntraJ.reset(intraj);
-                intraj.runFrontendWithConfig();
+                intraj = resetIntraJ.resetAndRun(intraj);
                 for (StaticAnalysis analysis: analysesActive) {
                     System.out.println(
                         String.format("%-20s\t%s\t%d\t%16s ns\t%-7s warnings\t%s",
@@ -433,10 +438,6 @@ public class IntraJ extends Frontend {
         public String toString() {
             return name;
         }
-        /**
-         * Reset IntraJ instrance
-         */
-        public abstract IntraJ reset(IntraJ intraj);
 
         static IntraJResetStrategy fromString(String name) {
             IntraJResetStrategy result = strategies.get(name);
@@ -445,23 +446,53 @@ public class IntraJ extends Frontend {
             }
             return result;
         }
+
+        /**
+         * Reset IntraJ instrance
+         */
+        public abstract IntraJ resetAndRun(IntraJ intraj);
+        public abstract void visitCompilationUnit(IntraJ intraj, CompilationUnit cu);
     }
 
     static final IntraJResetStrategy INTRAJ_RESET_REPARSE = new IntraJResetStrategy("REPARSE") {
         @Override
-        public IntraJ reset(IntraJ intraj) {
-            return new IntraJ();
+        public IntraJ resetAndRun(IntraJ intraj) {
+            intraj = new IntraJ();
+            intraj.runFrontendWithConfig();
+            return intraj;
+        }
+
+        @Override
+        public void visitCompilationUnit(IntraJ intraj, CompilationUnit cu) {
+            intraj.analyzeCompilationUnit(cu);
         }
     };
 
     static final IntraJResetStrategy INTRAJ_RESET_FLUSH_ALL = new IntraJResetStrategy("FLUSH-ALL") {
+        ArrayList<CompilationUnit> cuList = new ArrayList<>();
+        IntraJ intraj;
+
         @Override
-        public IntraJ reset(IntraJ intraj) {
+        public IntraJ resetAndRun(IntraJ intraj) {
             if (intraj == null) {
-                return new IntraJ();
+                intraj = new IntraJ();
+                intraj.runFrontendWithConfig();
+            } else {
+                intraj.getEntryPoint().flushTreeCache();
             }
-            intraj.getEntryPoint().flushTreeCache();
+            this.intraj = intraj;
+            benchAll();
             return intraj;
+        }
+
+        void benchAll() {
+            for (CompilationUnit cu: cuList) {
+                intraj.analyzeCompilationUnit(cu);
+            }
+        }
+
+        public void visitCompilationUnit(IntraJ intraj, CompilationUnit cu) {
+            cuList.add(cu);
         }
     };
 
@@ -469,7 +500,7 @@ public class IntraJ extends Frontend {
 
     static {
         cliOptions
-            .option("-reset",         "Strategy for resetting IntraJ between benchmark runs, one of " + IntraJResetStrategy.strategies.keySet() + ", (default " + resetIntraJ + ")",
+            .option("-reset-method",         "Strategy for resetting IntraJ between benchmark runs, one of " + IntraJResetStrategy.strategies.keySet() + ", (default " + resetIntraJ + ")",
                 v -> { resetIntraJ = IntraJResetStrategy.fromString(v); });
     }
 }
