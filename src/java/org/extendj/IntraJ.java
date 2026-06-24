@@ -35,11 +35,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
+
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Random;
+import java.util.Iterator;
 
 import org.extendj.ast.Warning;
 import org.extendj.ast.CFGRoot;
@@ -189,6 +191,15 @@ public class IntraJ extends Frontend {
             "Largest CFG in terms of nodes: " + maxNodes);
         Utils.printStatistics(System.out,
             "Largest CFG in terms of edges: " + maxEdges);
+
+        int cuNum = 0;
+        Iterator<CompilationUnit> cuIt = program.compilationUnitIterator();
+        while (cuIt.hasNext()) {
+            ++cuNum;
+            cuIt.next();
+        }
+        Utils.printStatistics(System.out,
+            "Number compilation units: " + cuNum);
     }
 
     /**
@@ -377,9 +388,7 @@ public class IntraJ extends Frontend {
             return 0;
         }
 
-        protected void printStats(IntraJ intraj) {
-            if (printStats) {
-                printProgramStatistics(intraj.getEntryPoint());
+        protected void printExtraStats(IntraJ intraj) {
                 for (StaticAnalysis analysis: analysesActive) {
                     Utils.printStatistics(System.out,
                         String.format("%-20s\t%20s ns",
@@ -388,6 +397,12 @@ public class IntraJ extends Frontend {
                 }
                 Utils.printStatistics(System.out, "warnings\t" + warningCounter.get());
                 Utils.printStatistics(System.out, "md5\t" + warningCollector.md5());
+        }
+
+        protected void printStats(IntraJ intraj) {
+            if (printStats) {
+                printProgramStatistics(intraj.getEntryPoint());
+                printExtraStats(intraj);
             }
         }
     }
@@ -418,6 +433,11 @@ public class IntraJ extends Frontend {
                 printStats(intraj);
             }
             return 0;
+        }
+
+        @Override
+        protected void printExtraStats(IntraJ intraj) {
+            // parent class stats aren't very useful for us
         }
     }
 
