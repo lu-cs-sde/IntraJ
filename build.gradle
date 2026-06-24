@@ -20,6 +20,125 @@ ext {
     cacheConfigFile = "cache-config.csv"
     intrajMainEntry = 'org.extendj.IntraJ'
 
+    // Provenance: submodules whose revisions we want to track
+    submodulePaths = [ extendj : 'extendj',
+                       intracfg: 'src/jastadd/CFG/IntraCFG' ]
+
+    // git query command runner, returns empty string on failure
+    gitQuery = { File dir, List<String> gitArgs ->
+        try {
+            def cmd = [ 'git', '-C', dir.absolutePath ] + gitArgs
+            def proc = cmd.execute()
+            proc.waitForOrKill(5000) // milliseconds
+            return proc.exitValue() == 0 ? proc.text.trim() : ''
+        } catch (ignored) {
+            return ''
+        }
+    }
+
+    // get git HEAD version, attach "-dirty" if there are uncommitted changes
+    gitCommit = { File dir ->
+        def head = gitQuery(dir, ['rev-parse', 'HEAD'])
+        if (!head) {
+            return 'unknown'
+        }
+        def dirty = gitQuery(dir, ['status', '--porcelain'])
+        return dirty ? "${head}-dirty" : head
+    }
+
+    // Commit date or "unknown"
+    gitCommitDate = { File dir ->
+        def d = gitQuery(dir, ['show', '-s', '--format=%cI', 'HEAD'])
+        return d ?: 'unknown'
+    }
+
+    // The submodule commit present on disk
+    submoduleCommit = { File repoRoot, String relPath ->
+        def dir = new File(repoRoot, relPath)
+        if (new File(dir, '.git').exists()) {
+            def c = gitCommit(dir)
+            if (c != 'unknown') return c
+        }
+        return 'missing'
+    }
+
+
+    // Extract identifying information for the JastAdd file
+    jastAddJarInfo = { org.gradle.api.artifacts.Configuration conf ->
+        def info = [ version: 'unknown', jar: 'unknown', sha256: 'unknown' ]
+        try {
+            // Find the JastAdd jar that the plugin is using
+            def jastaddJar = conf.files.find { f -> // The plugin adds the jar to conf.files
+                f.name.endsWith('.jar') && {
+                    try {
+                        new java.util.zip.ZipFile(f).withCloseable { zf ->
+                            zf.getEntry('org/jastadd/JastAdd.class') != null
+                        }
+                    } catch (ignored) { false }
+                }()
+            }
+            if (jastaddJar == null) {
+                return info
+            }
+            info.jar = jastaddJar.name
+            // Don't trust the reported version by itself
+            info.sha256 = java.security.MessageDigest.getInstance('SHA-256')
+                .digest(jastaddJar.bytes).encodeHex().toString()
+            // Extract JastAdd version directly from the jar:
+            new java.util.zip.ZipFile(jastaddJar).withCloseable { zf ->
+                def entry = zf.getEntry('Version.properties')
+                if (entry != null) {
+                    def p = new Properties()
+                    zf.getInputStream(entry).withCloseable { p.load(it) }
+                    if (p.version) info.version = p.version
+                }
+            }
+        } catch (exn) { }
+        return info
+    }
+
+    // Write a file `/IntraJBuildInfo.properties` into the project jar that carries
+    // provenance information
+    writeProvenance = { project, root ->
+        project.with {
+            def provDir  = file("${project.buildDir}/generated-resources/provenance")
+            def provFile = file("${provDir}/IntraJBuildInfo.properties")
+
+            def gen = tasks.register('generateBuildProvenance') {
+                description 'Generates /IntraJBuildInfo.properties baked into the jar.'
+                // Toggling JastAdd options (e.g. --tracing) must change the file.
+                inputs.property 'jastaddOptions', jastadd.jastaddOptions.join(' ')
+                outputs.file provFile
+                // Always re-evaluate so commit/dirty state stays accurate; the
+                // file's *content* is what gates downstream rebuilds, and it is
+                // stable for a given commit (no wall-clock timestamp), so this
+                // does not force needless recompilation.
+                outputs.upToDateWhen { false }
+                doLast {
+                    def info = root.jastAddJarInfo(configurations.jastadd2)
+                    provDir.mkdirs()
+                    def p = new Properties()
+                    p.setProperty('intraj.commit',       root.gitCommit(root.rootDir))
+                    p.setProperty('intraj.commit.date',  root.gitCommitDate(root.rootDir))
+                    p.setProperty('extendj.commit',      root.submoduleCommit(root.rootDir, root.submodulePaths.extendj))
+                    p.setProperty('intracfg.commit',     root.submoduleCommit(root.rootDir, root.submodulePaths.intracfg))
+                    p.setProperty('jastadd2.version',    info.version)
+                    p.setProperty('jastadd2.jar',        info.jar)
+                    p.setProperty('jastadd2.jar.sha256', info.sha256)
+                    p.setProperty('jastadd2.options',    jastadd.jastaddOptions.join(' '))
+                    p.setProperty('build.variant',       project.name)
+                    provFile.withWriter('UTF-8') { w ->
+                        p.store(w, 'IntraJ build provenance')
+                    }
+                }
+            }
+
+            sourceSets.main.resources.srcDir provDir
+            tasks.named('processResources').configure { dependsOn gen }
+        }
+    }
+
+
     makeJastAddPass = { project, root, jarName, extraOptions = [], indexFromToplevel = false ->
 	// indexFromToplevel: for language server [jdtls]:
 	//   marks the sub-project whose generated sources we want the language server to
@@ -97,6 +216,12 @@ ext {
             afterEvaluate {
                 // [jdtls] (language server) must be able to see the generated sources:
                 sourceSets.main.java.srcDir jastadd.genDir
+
+                // This should track jastAdd options as a dependency, so that changing
+                // options will force a rebuild without manual ./gradlew clean
+                tasks.named('generateAst').configure {
+                    inputs.property 'jastaddOptions', jastadd.jastaddOptions.join(' ')
+                }
             }
             sourceSets.test{
                 java{
@@ -127,6 +252,9 @@ ext {
             }
 
             sourceCompatibility = targetCompatibility = '1.8'
+
+            // Write provenance information
+            root.writeProvenance(project, root)
 
             //afterEvaluate {  // To debug which jastadd2.jar we're using
             //    println "jastadd2 conf: ${configurations.jastadd2.files}"

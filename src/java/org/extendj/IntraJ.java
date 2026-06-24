@@ -61,7 +61,7 @@ import org.extendj.flow.utils.Utils;
  * Perform static semantic checks on a Java program.
  */
 public class IntraJ extends Frontend {
-    static final String INTRAJ_VERSION = "0.1.0";
+    static final String INTRAJ_VERSION = "0.1.0-" + Provenance.INTRAJ_COMMIT;
 
     static final Action HELP_ACTION = new HelpAction();
     static final Action ANALYSIS_ACTION = new AnalysisAction();
@@ -88,7 +88,9 @@ public class IntraJ extends Frontend {
             .flag("-help",       "Prints this help text",
                 v -> { action = HELP_ACTION; }).withShort('h')
             .flag("-version",    "Prints the IntraJ version number and exits",
-                v -> { action = new VersionAction(); }).withShort('V')
+                v -> { action = new VersionAction(); })
+            .flag("-buildinfo",  "Prints detailed IntraJ build provenance information",
+                v -> { action = new ProvenanceAction(); }).withShort('V')
             .flag("-genpdf",     "Generates a PDF with AST structure of the files under analysis (see also 'pred' and 'succ')",
                 v -> { action = new PDFAction(); })
             .flag("-bench",      "Benchmark the specified program analyses over all compilation units for '-niter' runs",
@@ -349,6 +351,25 @@ public class IntraJ extends Frontend {
         public int exec() {
             IntraJ intraj = new IntraJ();
             System.out.println(intraj.version());
+            return 0;
+        }
+    }
+
+    /**
+     * Action: print detailed build provenance information
+     */
+    static class ProvenanceAction implements Action {
+        @Override
+        public int exec() {
+            System.out.println("IntraJ  \tversion    \t" + INTRAJ_VERSION);
+            System.out.println("IntraJ  \tvariant    \t" + Provenance.INTRAJ_VARIANT);
+            System.out.println("IntraJ  \tcommit     \t" + Provenance.INTRAJ_COMMIT);
+            System.out.println("IntraJ  \tcommit-date\t" + Provenance.INTRAJ_COMMIT_DATE);
+            System.out.println("ExtendJ \tcommit     \t" + Provenance.EXTENDJ_COMMIT);
+            System.out.println("IntraCFG\tcommit     \t" + Provenance.INTRACFG_COMMIT);
+            System.out.println("IntraJ  \tjar        \t" + Provenance.JASTADD2_JAR);
+            System.out.println("JastAdd2\tsha256     \t" + Provenance.JASTADD2_JAR_SHA256);
+            System.out.println("JastAdd2\toptions    \t" + Provenance.JASTADD2_OPTIONS);
             return 0;
         }
     }
