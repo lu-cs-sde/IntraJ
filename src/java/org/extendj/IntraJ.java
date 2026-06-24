@@ -107,12 +107,14 @@ public class IntraJ extends Frontend {
         }
 
         cliOptions
-            .passthrough("-nowarn",     false, "Disable ExtendJ warnings")
-            .passthrough("-verbose",    false, "ExtendJ frontend: be verbose")
-            .passthrough("-classpath",  true,  "ExtendJ frontend: classpath")
-            .passthrough("-cp",         true,  null)
-            .passthrough("-source",     true,  "ExtendJ frontend: source language version")
-            .passthrough("-sourcepath", true,  "ExtendJ frontend: source file path");
+            .passthrough("-nowarn",        false, "Disable ExtendJ warnings")
+            .passthrough("-verbose",       false, "ExtendJ frontend: be verbose")
+            .passthrough("-classpath",     true,  "ExtendJ frontend: classpath")
+            .passthrough("-cp",            true,  null)
+            .passthrough("-source",        true,  "ExtendJ frontend: source language version")
+            .passthrough("-sourcepath",    true,  "ExtendJ frontend: source file path")
+            .passthrough("-bootclasspath", true,  "ExtendJ frontend: standard library classpath")
+            .passthrough("-extdirs",       true,  "ExtendJ frontend: JDK extension paths");
     }
 
     static boolean pdfPred = false; // include pred edges in PDF

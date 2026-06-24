@@ -42,7 +42,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import org.extendj.ast.Warning;
-import org.extendj.ast.StaticAnalysis;
 
 /**
  * Handle a warning message for a specified source file
