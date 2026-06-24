@@ -242,18 +242,18 @@ public class IntraJ extends Frontend {
     static WarningHandler.Print warningPrinter = new WarningHandler.Print(System.out);
     static WarningHandler warningHandler = new WarningHandler.Multi();
 
-    static Map<StaticAnalysis, Long> totalDurations = new TreeMap<>();
+    static Map<StaticAnalysis, ResourceTracker> totalDurations = new TreeMap<>();
 
     protected void analyzeCompilationUnit(CompilationUnit unit) {
         final String fileName = unit.getClassSource().sourceName();
         for (StaticAnalysis analysis: analysesActive) {
             if (!totalDurations.containsKey(analysis)) {
-                totalDurations.put(analysis, 0L);
+                totalDurations.put(analysis, new ResourceTracker());
             }
-            long startTime = System.nanoTime();
+            ResourceTracker tracker = totalDurations.get(analysis);
+            ResourceTracker.State start = tracker.start();
             Collection<? extends Warning> warnings = analysis.scan(unit);
-            long timeDelta = System.nanoTime() - startTime;
-            totalDurations.put(analysis, totalDurations.get(analysis) + timeDelta);
+            tracker.stop(start);
             for (Warning w: warnings) {
                 warningHandler.handle(fileName, w);
             }
@@ -404,7 +404,7 @@ public class IntraJ extends Frontend {
                 intraj = resetIntraJ.resetAndRun(intraj);
                 for (StaticAnalysis analysis: analysesActive) {
                     System.out.println(
-                        String.format("%-20s\t%s\t%d\t%16s ns\t%-7s warnings\t%s",
+                        String.format("%-20s\t%s\t%d\t%32s\t%-7s warnings\t%s",
                             analysis.name(),
                             resetIntraJ,
                             i+1,
