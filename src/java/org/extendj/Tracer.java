@@ -31,40 +31,35 @@
 
 package org.extendj;
 
-import java.io.InputStream;
-import java.util.Properties;
+import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 
-/**
- * IntraJ provenance information
- */
-public class Provenance {
-    private static final String RESOURCE = "/IntraJBuildInfo.properties";
-    private static final Properties PROPS = load();
+import org.extendj.ast.Program;
 
-    private static Properties load() {
-        Properties props = new Properties();
-        try (InputStream inStream = Provenance.class.getResourceAsStream(RESOURCE)) {
-            if (inStream != null) {
-                props.load(inStream);
-            }
-        } catch (Exception e) {
-            // Failed to get provenance information
-        }
-        return props;
-    }
 
-    private static String getProp(String key) {
-        return PROPS.getProperty(key, "");
-    }
+interface Tracer {
 
-    public static final String INTRAJ_COMMIT       = getProp("intraj.commit");
-    public static final String INTRAJ_COMMIT_DATE  = getProp("intraj.commit.date");
-    public static final boolean TRACING            = Boolean.parseBoolean(getProp("jastadd.tracing"));
-    public static final String INTRAJ_VARIANT      = getProp("build.variant"); // basic-stacked or relaxed-stacked?
-    public static final String EXTENDJ_COMMIT      = getProp("extendj.commit");
-    public static final String INTRACFG_COMMIT     = getProp("intracfg.commit");
-    public static final String JASTADD2_VERSION    = getProp("jastadd2.version");
-    public static final String JASTADD2_JAR        = getProp("jastadd2.jar");
-    public static final String JASTADD2_JAR_SHA256 = getProp("jastadd2.jar.sha256");
-    public static final String JASTADD2_OPTIONS    = getProp("jastadd2.options");
+  public static Tracer traceMaybe(Program program) {
+      try {
+          Class<?> traceClass = Class.forName("org.extendj.IntraJTracer");
+          Object tracer = traceClass.newInstance();
+          Method traceMethod = program.getClass().getMethod("trace");
+          Object traceHandler = traceMethod.invoke(program);
+          Class<?> traceReceiverClass = Class.forName("org.extendj.ast.ASTState$Trace$Receiver");
+          Method setReceiverMethod =
+              traceHandler.getClass().getMethod("setReceiver", traceReceiverClass);
+          setReceiverMethod.invoke(traceHandler, tracer);
+          // System.err.println("Tracing ACTIVE!");
+          return (Tracer) tracer;
+      } catch (InstantiationException
+             | NoSuchMethodException
+             | InvocationTargetException
+             | IllegalAccessException exn) {
+          exn.printStackTrace();
+      } catch (ClassNotFoundException exn) {
+          // System.err.println("Tracing disabled");
+      }
+      // Tracing disabled
+      return null;
+  }
 }

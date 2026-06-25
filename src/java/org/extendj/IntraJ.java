@@ -362,6 +362,7 @@ public class IntraJ extends Frontend {
         @Override
         public int exec() {
             System.out.println("IntraJ  \tversion    \t" + INTRAJ_VERSION);
+            System.out.println("IntraJ  \ttracing    \t" + Provenance.TRACING);
             System.out.println("IntraJ  \tvariant    \t" + Provenance.INTRAJ_VARIANT);
             System.out.println("IntraJ  \tcommit     \t" + Provenance.INTRAJ_COMMIT);
             System.out.println("IntraJ  \tcommit-date\t" + Provenance.INTRAJ_COMMIT_DATE);
@@ -403,6 +404,7 @@ public class IntraJ extends Frontend {
         @Override
         public int exec() {
             IntraJ intraj = new IntraJ();
+            // Tracer tracer = Tracer.traceMaybe(intraj.getEntryPoint());
             resetCounters(warningCollector, warningCounter, warningPrinter);
             intraj.runFrontendWithConfig();
             printStats(intraj);

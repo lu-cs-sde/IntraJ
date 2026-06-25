@@ -3,8 +3,19 @@ plugins {
     id 'org.jastadd'
 }
 
-rootProject.ext.makeJastAddPass(project, rootProject, 'intraj.jar',
-                                [ "--dncConfig=${rootProject.file(rootProject.cacheConfigFile).absolutePath}" ],
+// Tracing enabled via `-Ptracing`
+def tracing    = project.hasProperty('tracing')
+// Can specify `-Ptracing=all` to select specific tracing levels, otherwise we use the default
+def traceFlags = project.findProperty('tracing') ?: rootProject.jastaddTracingDefault
+def jarName    = tracing ? 'intraj-tracing.jar' : 'intraj.jar'
+
+def extraOpts = [ "--dncConfig=${rootProject.file(rootProject.cacheConfigFile).absolutePath}" ]
+if (tracing) {
+    extraOpts += "--tracing=${traceFlags}".toString()
+}
+
+rootProject.ext.makeJastAddPass(project, rootProject, jarName,
+                                extraOpts,
                                 true) // index for top-level language server
 afterEvaluate {
     tasks.named('generateAst') {

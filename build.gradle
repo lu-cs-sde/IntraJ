@@ -24,6 +24,10 @@ ext {
     submodulePaths = [ extendj : 'extendj',
                        intracfg: 'src/jastadd/CFG/IntraCFG' ]
 
+    // Tracing: Default tracing level if tracing is enabled
+    // I.e., this is only used if tracing is enabled with unspecified tracing level
+    jastaddTracingDefault = 'compute'
+
     // git query command runner, returns empty string on failure
     gitQuery = { File dir, List<String> gitArgs ->
         try {
@@ -99,7 +103,7 @@ ext {
 
     // Write a file `/IntraJBuildInfo.properties` into the project jar that carries
     // provenance information
-    writeProvenance = { project, root ->
+    writeProvenance = { project, root, boolean tracingEnabled ->
         project.with {
             def provDir  = file("${project.buildDir}/generated-resources/provenance")
             def provFile = file("${provDir}/IntraJBuildInfo.properties")
@@ -120,6 +124,7 @@ ext {
                     def p = new Properties()
                     p.setProperty('intraj.commit',       root.gitCommit(root.rootDir))
                     p.setProperty('intraj.commit.date',  root.gitCommitDate(root.rootDir))
+                    p.setProperty('jastadd.tracing',     Boolean.toString(tracingEnabled))
                     p.setProperty('extendj.commit',      root.submoduleCommit(root.rootDir, root.submodulePaths.extendj))
                     p.setProperty('intracfg.commit',     root.submoduleCommit(root.rootDir, root.submodulePaths.intracfg))
                     p.setProperty('jastadd2.version',    info.version)
@@ -154,6 +159,10 @@ ext {
                 implementation files("${rootDir}/tools/magpiebridge-0.1.6-SNAPSHOT-jar-with-dependencies.jar")
                 implementation 'com.sun.net.httpserver:http:20070405'
                 implementation group: 'org.freemarker', name: 'freemarker', version: '2.3.29'
+            }
+
+            def tracingEnabled = extraOptions.any {
+                it.startsWith('--tracing') && it != '--tracing=none'
             }
 
             jastadd {
@@ -208,6 +217,13 @@ ext {
                 // [jdtls] (language server):
                 //   include the generated AST
                 sourceSets.main.java.srcDir "${rootDir}/src/java"
+                if (tracingEnabled) {
+                    sourceSets.main.java.srcDir "${rootDir}/src/tracing"
+                }
+                //if (!tracingEnabled) {
+                    sourceSets.main.java.exclude 'org/extendj/tracing/**'  // path relative to each src root
+                    //sourceSets.main.java.exclude "${rootDir}/tracing/**"  // path relative to each src root
+                //}
             } else {
                 // [jdtls] (language server):
                 //   compilation dependency
@@ -254,7 +270,7 @@ ext {
             sourceCompatibility = targetCompatibility = '1.8'
 
             // Write provenance information
-            root.writeProvenance(project, root)
+            root.writeProvenance(project, root, tracingEnabled)
 
             //afterEvaluate {  // To debug which jastadd2.jar we're using
             //    println "jastadd2 conf: ${configurations.jastadd2.files}"
@@ -269,7 +285,10 @@ task generateCacheConfig(type: JavaExec) {
 
     def bsBuildDir        = project(':basic-stacked').buildDir
     def generatedSrcFiles = fileTree("${bsBuildDir}/generated-src")  { include '**/*.java' }
-    def srcFiles          = fileTree("src")                          { include '**/*.java' }
+    def srcFiles          = fileTree("src")                          {
+        include '**/*.java'
+        exclude 'tracing/**' // Don't confuse CAT with the tracing code
+    }
 
     // Explicit dependencies for Gradle
     inputs.files generatedSrcFiles

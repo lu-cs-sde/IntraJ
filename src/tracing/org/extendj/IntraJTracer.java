@@ -31,40 +31,14 @@
 
 package org.extendj;
 
-import java.io.InputStream;
-import java.util.Properties;
+import org.extendj.ast.ASTNode;
+import org.extendj.ast.ASTState;
+import org.extendj.ast.ASTState.Trace.Event;
 
-/**
- * IntraJ provenance information
- */
-public class Provenance {
-    private static final String RESOURCE = "/IntraJBuildInfo.properties";
-    private static final Properties PROPS = load();
-
-    private static Properties load() {
-        Properties props = new Properties();
-        try (InputStream inStream = Provenance.class.getResourceAsStream(RESOURCE)) {
-            if (inStream != null) {
-                props.load(inStream);
-            }
-        } catch (Exception e) {
-            // Failed to get provenance information
-        }
-        return props;
+public class IntraJTracer implements ASTState.Trace.Receiver, Tracer {
+    @Override
+    public void accept(Event event, ASTNode node,
+                       String attribute,
+                       Object params, Object value) {
     }
-
-    private static String getProp(String key) {
-        return PROPS.getProperty(key, "");
-    }
-
-    public static final String INTRAJ_COMMIT       = getProp("intraj.commit");
-    public static final String INTRAJ_COMMIT_DATE  = getProp("intraj.commit.date");
-    public static final boolean TRACING            = Boolean.parseBoolean(getProp("jastadd.tracing"));
-    public static final String INTRAJ_VARIANT      = getProp("build.variant"); // basic-stacked or relaxed-stacked?
-    public static final String EXTENDJ_COMMIT      = getProp("extendj.commit");
-    public static final String INTRACFG_COMMIT     = getProp("intracfg.commit");
-    public static final String JASTADD2_VERSION    = getProp("jastadd2.version");
-    public static final String JASTADD2_JAR        = getProp("jastadd2.jar");
-    public static final String JASTADD2_JAR_SHA256 = getProp("jastadd2.jar.sha256");
-    public static final String JASTADD2_OPTIONS    = getProp("jastadd2.options");
 }
