@@ -386,6 +386,7 @@ public class IntraJ extends Frontend {
             System.out.println("IntraJ  \tvariant    \t" + Provenance.INTRAJ_VARIANT);
             System.out.println("IntraJ  \tcommit     \t" + Provenance.INTRAJ_COMMIT);
             System.out.println("IntraJ  \tcommit-date\t" + Provenance.INTRAJ_COMMIT_DATE);
+            System.out.println("IntraJ  \tlog-format\tlong"); // long log format
             System.out.println("ExtendJ \tcommit     \t" + Provenance.EXTENDJ_COMMIT);
             System.out.println("IntraCFG\tcommit     \t" + Provenance.INTRACFG_COMMIT);
             System.out.println("IntraJ  \tjar        \t" + Provenance.JASTADD2_JAR);
@@ -451,24 +452,36 @@ public class IntraJ extends Frontend {
     }
 
     /**
+     * Benchmarking result reporter
+     */
+    interface BenchReporter {
+        /**
+         * Report a benchmarking result for the current sub-experiment
+         */
+        public void benchLog(String subId, String property, String value);
+    }
+
+    /**
      * Action: Benchmark analysis execution
      */
-    static class BenchmarkAction extends AnalysisAction {
+    static class BenchmarkAction extends AnalysisAction implements BenchReporter {
+        int benchRun = 0;
+
         @Override
         public int exec() {
             IntraJ intraj = null;
             resetCounters(warningCollector, warningCounter);
-            for (int i = 0; i < benchIterNum; ++i) {
+            for (benchRun = 0; benchRun < benchIterNum; ++benchRun) {
                 intraj = resetIntraJ.resetAndRun(intraj);
                 for (StaticAnalysis analysis: analysesActive) {
-                    System.out.println(
-                        String.format("%-20s\t%s\t%d\t%32s\t%-7s warnings\t%s",
-                            analysis.name(),
-                            resetIntraJ,
-                            i+1,
-                            totalDurations.get(analysis),
-                            warningCounter.get(),
-                            warningCollector.md5()));
+                    String pfx = analysis.name();
+                    benchLog(pfx, "analysis", analysis.name());
+                    benchLog(pfx, "reset", resetIntraJ.toString());
+                    benchLog(pfx, "sub-seq", benchRun + "");
+                    benchLog(pfx, "time", totalDurations.get(analysis).getTotalTimeNanos() + "");
+                    benchLog(pfx, "heap-usage", totalDurations.get(analysis).getTotalMemBytes() + "");
+                    benchLog(pfx, "warnings-num", warningCounter.get() + "");
+                    benchLog(pfx, "warnings-md5", warningCollector.md5());
                 }
                 resetCounters(warningCollector);
             }
@@ -476,6 +489,11 @@ public class IntraJ extends Frontend {
                 printStats(intraj);
             }
             return 0;
+        }
+
+        @Override
+        public void benchLog(String subId, String property, String value) {
+            System.out.println("L " + benchRun + "-" + subId + "\t" + property + "\t" + value);
         }
 
         @Override
