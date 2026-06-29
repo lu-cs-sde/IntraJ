@@ -404,10 +404,15 @@ public class IntraJ extends Frontend {
         @Override
         public int exec() {
             IntraJ intraj = new IntraJ();
-            // Tracer tracer = Tracer.traceMaybe(intraj.getEntryPoint());
+            // Install tracing, if desired
+            Tracer tracer = Tracer.traceMaybe(intraj.getEntryPoint());
             resetCounters(warningCollector, warningCounter, warningPrinter);
             intraj.runFrontendWithConfig();
             printStats(intraj);
+            if (tracer != null) {
+                // Give the tracer the opportunity to flush
+                tracer.finish();
+            }
             return 0;
         }
 

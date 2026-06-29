@@ -35,10 +35,24 @@ import org.extendj.ast.ASTNode;
 import org.extendj.ast.ASTState;
 import org.extendj.ast.ASTState.Trace.Event;
 
-public class IntraJTracer implements ASTState.Trace.Receiver, Tracer {
+public class FullEventTracer extends Tracer implements ASTState.Trace.Receiver {
     @Override
     public void accept(Event event, ASTNode node,
                        String attribute,
                        Object params, Object value) {
+        String paramsStr = "";
+        if (params != null) {
+            paramsStr = params.toString();
+        }
+        String nodeStr = node.getClass().getName() + "@" + System.identityHashCode(node);
+        System.out.println("[TRACE] " + event + "\t" + nodeStr + " . " + attribute + "(" +  paramsStr + ")"
+                           + ((value == null)
+                              ? ""
+                              : " -> [" + value + "] : " + value.getClass().getName()));
+    }
+
+    @Override
+    public void finish() {
     }
 }
+

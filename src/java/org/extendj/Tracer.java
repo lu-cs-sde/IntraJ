@@ -37,29 +37,34 @@ import java.lang.reflect.InvocationTargetException;
 import org.extendj.ast.Program;
 
 
-interface Tracer {
+public class Tracer {
 
-  public static Tracer traceMaybe(Program program) {
-      try {
-          Class<?> traceClass = Class.forName("org.extendj.IntraJTracer");
-          Object tracer = traceClass.newInstance();
-          Method traceMethod = program.getClass().getMethod("trace");
-          Object traceHandler = traceMethod.invoke(program);
-          Class<?> traceReceiverClass = Class.forName("org.extendj.ast.ASTState$Trace$Receiver");
-          Method setReceiverMethod =
-              traceHandler.getClass().getMethod("setReceiver", traceReceiverClass);
-          setReceiverMethod.invoke(traceHandler, tracer);
-          // System.err.println("Tracing ACTIVE!");
-          return (Tracer) tracer;
-      } catch (InstantiationException
+    /**
+     * Called after evaluation completion
+     */
+    public void finish() {}
+
+    public static Tracer traceMaybe(Program program) {
+        try {
+            Class<?> traceClass = Class.forName("org.extendj.FullEventTracer");
+            Object tracer = traceClass.newInstance();
+            Method traceMethod = program.getClass().getMethod("trace");
+            Object traceHandler = traceMethod.invoke(program);
+            Class<?> traceReceiverClass = Class.forName("org.extendj.ast.ASTState$Trace$Receiver");
+            Method setReceiverMethod =
+                traceHandler.getClass().getMethod("setReceiver", traceReceiverClass);
+            setReceiverMethod.invoke(traceHandler, tracer);
+            // System.err.println("Tracing ACTIVE!");
+            return (Tracer) tracer;
+        } catch (InstantiationException
              | NoSuchMethodException
              | InvocationTargetException
              | IllegalAccessException exn) {
-          exn.printStackTrace();
-      } catch (ClassNotFoundException exn) {
-          // System.err.println("Tracing disabled");
-      }
-      // Tracing disabled
-      return null;
-  }
+            exn.printStackTrace();
+        } catch (ClassNotFoundException exn) {
+            // System.err.println("Tracing disabled");
+        }
+        // Tracing disabled
+        return null;
+    }
 }
