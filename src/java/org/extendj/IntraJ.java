@@ -38,18 +38,11 @@ import java.util.TreeMap;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Random;
 import java.util.Iterator;
 
 import org.extendj.ast.Warning;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
-import org.extendj.ast.ClassDecl;
-import org.extendj.ast.BodyDecl;
-import org.extendj.ast.TypeDecl;
-import org.extendj.ast.MethodDecl;
 import org.extendj.ast.Frontend;
 import org.extendj.ast.Program;
 import org.extendj.ast.StaticAnalysis;
@@ -85,21 +78,23 @@ public class IntraJ extends Frontend {
 
     static {
         cliOptions
-            .flag("-help",       "Prints this help text",
+            .flag("-help",          "Prints this help text",
                 v -> { action = HELP_ACTION; }).withShort('h')
-            .flag("-version",    "Prints the IntraJ version number and exits",
-                v -> { action = new VersionAction(); })
-            .flag("-buildinfo",  "Prints detailed IntraJ build provenance information",
-                v -> { action = new ProvenanceAction(); }).withShort('V')
-            .flag("-genpdf",     "Generates a PDF with AST structure of the files under analysis (see also 'pred' and 'succ')",
+            .flag("-version",       "Prints the IntraJ version number and exits",
+                v -> { action = new VersionAction(); }).withShort('V')
+            .flag("-buildinfo",     "Prints detailed IntraJ build provenance information",
+                v -> { action = new ProvenanceAction(); })
+            .flag("-genpdf",        "Generates a PDF with AST structure of the files under analysis (see also 'pred' and 'succ')",
                 v -> { action = new PDFAction(); })
-            .flag("-bench",      "Benchmark the specified program analyses over all compilation units for '-niter' runs",
+            .flag("-list-analyses", "List all analyses in machine-readable format",
+                v -> { action = new ListAnalysesAction(); })
+            .flag("-bench",         "Benchmark the specified program analyses over all compilation units for '-niter' runs",
                 v -> { action = BENCHMARK_ACTION; })
-            .flag("-statistics", "Print analysis statistics",
+            .flag("-statistics",    "Print analysis statistics",
                 v -> { printStats = true; })
-            .flag("-Wall",       "Enables all analyses",
+            .flag("-Wall",          "Enables all analyses",
                 v -> { analysisAction(); analysesActive.addAll(StaticAnalysis.analyses()); })
-            .option("-niter",    "Number of iterations for benchmarking (default " + benchIterNum + ")",
+            .option("-niter",       "Number of iterations for benchmarking (default " + benchIterNum + ")",
                 v -> { benchIterNum = Integer.parseInt(v); })
             ;
 
@@ -241,13 +236,17 @@ public class IntraJ extends Frontend {
      */
     public int runFrontendWithConfig() {
         String[] jCheckerOptions = cliOptions.getExtendJOptions();
-        return run(jCheckerOptions);
+        startTrackingFrontendResources();
+        int result = run(jCheckerOptions);
+        stopTrackingFrontendResources();
+        return result;
     }
 
     protected static void resetCounters(WarningHandler ... warningHandlers) {
-        totalDurations = new TreeMap<>();
+        analysisResources = new TreeMap<>();
         warningHandler = new WarningHandler.Multi(warningHandlers);
         warningHandler.reset();
+        frontendResources = new ResourceTracker();
     }
 
     static WarningHandler.Collect warningCollector = new WarningHandler.Collect();
@@ -255,15 +254,35 @@ public class IntraJ extends Frontend {
     static WarningHandler.Print warningPrinter = new WarningHandler.Print(System.out);
     static WarningHandler warningHandler = new WarningHandler.Multi();
 
-    static Map<StaticAnalysis, ResourceTracker> totalDurations = new TreeMap<>();
+    // These two track resources used by Beaver, ExtendJ etc. outside of any dependencies
+    // triggered by the analysis calls
+    static ResourceTracker.State frontendResourcesState = null;
+    static ResourceTracker frontendResources = null;
+
+    static void stopTrackingFrontendResources() {
+        if (frontendResources != null) {
+            assert frontendResourcesState != null;
+            frontendResources.stop(frontendResourcesState);
+            frontendResourcesState = null;
+        }
+    }
+    static void startTrackingFrontendResources() {
+        if (frontendResources != null) {
+            assert frontendResourcesState == null;
+            frontendResourcesState = frontendResources.start();
+        }
+    }
+
+    static Map<StaticAnalysis, ResourceTracker> analysisResources = new TreeMap<>();
 
     protected void analyzeCompilationUnit(CompilationUnit unit) {
+        stopTrackingFrontendResources();
         final String fileName = unit.getClassSource().sourceName();
         for (StaticAnalysis analysis: analysesActive) {
-            if (!totalDurations.containsKey(analysis)) {
-                totalDurations.put(analysis, new ResourceTracker());
+            if (!analysisResources.containsKey(analysis)) {
+                analysisResources.put(analysis, new ResourceTracker());
             }
-            ResourceTracker tracker = totalDurations.get(analysis);
+            ResourceTracker tracker = analysisResources.get(analysis);
             ResourceTracker.State start = tracker.start();
             Collection<? extends Warning> warnings = analysis.scan(unit);
             tracker.stop(start);
@@ -271,6 +290,7 @@ public class IntraJ extends Frontend {
                 warningHandler.handle(fileName, w);
             }
         }
+        startTrackingFrontendResources();
     }
 
     /**
@@ -356,6 +376,24 @@ public class IntraJ extends Frontend {
     }
 
     /**
+     * Action: print all analyses in a machine readable format
+     */
+    static class ListAnalysesAction implements Action {
+        @Override
+        public int exec() {
+            for (StaticAnalysis analysis: StaticAnalysis.analyses()) {
+                String category = analysis.category();
+                if (category.length() == 0) {
+                    category = "local-pattern";
+                }
+                category = category.replace(' ', '-');
+                System.out.println(analysis.name() + "\t" + category + "\t" + analysis.description());
+            }
+            return 0;
+        }
+    }
+
+    /**
      * Action: print detailed build provenance information
      */
     static class ProvenanceAction implements Action {
@@ -366,6 +404,7 @@ public class IntraJ extends Frontend {
             System.out.println("IntraJ  \tvariant    \t" + Provenance.INTRAJ_VARIANT);
             System.out.println("IntraJ  \tcommit     \t" + Provenance.INTRAJ_COMMIT);
             System.out.println("IntraJ  \tcommit-date\t" + Provenance.INTRAJ_COMMIT_DATE);
+            System.out.println("IntraJ  \tlog-format\tlong"); // long log format
             System.out.println("ExtendJ \tcommit     \t" + Provenance.EXTENDJ_COMMIT);
             System.out.println("IntraCFG\tcommit     \t" + Provenance.INTRACFG_COMMIT);
             System.out.println("IntraJ  \tjar        \t" + Provenance.JASTADD2_JAR);
@@ -421,7 +460,7 @@ public class IntraJ extends Frontend {
                     Utils.printStatistics(System.out,
                         String.format("%-20s\t%20s ns",
                             analysis.name(),
-                            totalDurations.get(analysis)));
+                            analysisResources.get(analysis)));
                 }
                 Utils.printStatistics(System.out, "warnings\t" + warningCounter.get());
                 Utils.printStatistics(System.out, "md5\t" + warningCollector.md5());
@@ -436,24 +475,38 @@ public class IntraJ extends Frontend {
     }
 
     /**
+     * Benchmarking result reporter
+     */
+    interface BenchReporter {
+        /**
+         * Report a benchmarking result for the current sub-experiment
+         */
+        public void benchLog(String subId, String property, String value);
+    }
+
+    /**
      * Action: Benchmark analysis execution
      */
-    static class BenchmarkAction extends AnalysisAction {
+    static class BenchmarkAction extends AnalysisAction implements BenchReporter {
+        int benchRun = 0;
+
         @Override
         public int exec() {
             IntraJ intraj = null;
             resetCounters(warningCollector, warningCounter);
-            for (int i = 0; i < benchIterNum; ++i) {
+            for (benchRun = 0; benchRun < benchIterNum; ++benchRun) {
                 intraj = resetIntraJ.resetAndRun(intraj);
                 for (StaticAnalysis analysis: analysesActive) {
-                    System.out.println(
-                        String.format("%-20s\t%s\t%d\t%32s\t%-7s warnings\t%s",
-                            analysis.name(),
-                            resetIntraJ,
-                            i+1,
-                            totalDurations.get(analysis),
-                            warningCounter.get(),
-                            warningCollector.md5()));
+                    String pfx = analysis.name();
+                    benchLog(pfx, "analysis", analysis.name());
+                    benchLog(pfx, "reset", resetIntraJ.toString());
+                    benchLog(pfx, "sub-seq", benchRun + "");
+                    benchLog(pfx, "time", analysisResources.get(analysis).getTotalTimeNanos() + "");
+                    benchLog(pfx, "heap-usage", analysisResources.get(analysis).getTotalMemBytes() + "");
+                    benchLog(pfx, "frontend-time", frontendResources.getTotalTimeNanos() + "");
+                    benchLog(pfx, "frontend-heap-usage", frontendResources.getTotalMemBytes() + "");
+                    benchLog(pfx, "warnings-num", warningCounter.get() + "");
+                    benchLog(pfx, "warnings-md5", warningCollector.md5());
                 }
                 resetCounters(warningCollector);
             }
@@ -461,6 +514,11 @@ public class IntraJ extends Frontend {
                 printStats(intraj);
             }
             return 0;
+        }
+
+        @Override
+        public void benchLog(String subId, String property, String value) {
+            System.out.println("L " + benchRun + "-" + subId + "\t" + property + "\t" + value);
         }
 
         @Override

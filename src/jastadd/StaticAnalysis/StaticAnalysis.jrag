@@ -38,7 +38,7 @@ import java.util.Collections;
 
 
 import java.io.PrintStream;
-import magpiebridge.util.SourceCodeReader;
+//import magpiebridge.util.SourceCodeReader;
 import org.extendj.flow.utils.Utils;
 import org.extendj.flow.utils.IJPosition;
 import org.extendj.ast.StaticAnalysis;
@@ -231,13 +231,14 @@ aspect StaticAnalysis {
             this.repair = repair;
             this.relatedInfo = relatedInfo;
 
-            try {
-                this.position = new IJPosition(lineStart, lineEnd, columnStart,
-                                               columnEnd, sourceFilePath);
-                this.code = SourceCodeReader.getLinesInString(position);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            // The code below induces MagpieBridge dependency:
+            // try {
+            //     this.position = new IJPosition(lineStart, lineEnd, columnStart,
+            //                                    columnEnd, sourceFilePath);
+            //     this.code = SourceCodeReader.getLinesInString(position);
+            // } catch (Exception e) {
+            //     e.printStackTrace();
+            // }
         }
 
         public int compareTo(Warning other) {

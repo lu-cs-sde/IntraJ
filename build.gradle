@@ -256,7 +256,8 @@ ext {
                 manifest {
                     attributes 'Main-Class': root.intrajMainEntry
                 }
-                from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+                // The line below creates big jars, only necessary if we want to restore the MagpieBridge connection
+                // from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
                 exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
                 archiveFileName = jarName
                 destinationDirectory = file("${rootDir}")

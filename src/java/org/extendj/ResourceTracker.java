@@ -64,6 +64,14 @@ public class ResourceTracker {
         return this.aggregate;
     }
 
+    public long getTotalTimeNanos() {
+        return aggregate.getTotalTimeNanos();
+    }
+
+    public long getTotalMemBytes() {
+        return aggregate.getTotalMemBytes();
+    }
+
     final static class State {
         long timeNanos;
         long allocBytes;
