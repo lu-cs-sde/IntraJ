@@ -38,18 +38,11 @@ import java.util.TreeMap;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Random;
 import java.util.Iterator;
 
 import org.extendj.ast.Warning;
 import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
-import org.extendj.ast.ClassDecl;
-import org.extendj.ast.BodyDecl;
-import org.extendj.ast.TypeDecl;
-import org.extendj.ast.MethodDecl;
 import org.extendj.ast.Frontend;
 import org.extendj.ast.Program;
 import org.extendj.ast.StaticAnalysis;
@@ -243,13 +236,17 @@ public class IntraJ extends Frontend {
      */
     public int runFrontendWithConfig() {
         String[] jCheckerOptions = cliOptions.getExtendJOptions();
-        return run(jCheckerOptions);
+        startTrackingFrontendResources();
+        int result = run(jCheckerOptions);
+        stopTrackingFrontendResources();
+        return result;
     }
 
     protected static void resetCounters(WarningHandler ... warningHandlers) {
-        totalDurations = new TreeMap<>();
+        analysisResources = new TreeMap<>();
         warningHandler = new WarningHandler.Multi(warningHandlers);
         warningHandler.reset();
+        frontendResources = new ResourceTracker();
     }
 
     static WarningHandler.Collect warningCollector = new WarningHandler.Collect();
@@ -257,15 +254,35 @@ public class IntraJ extends Frontend {
     static WarningHandler.Print warningPrinter = new WarningHandler.Print(System.out);
     static WarningHandler warningHandler = new WarningHandler.Multi();
 
-    static Map<StaticAnalysis, ResourceTracker> totalDurations = new TreeMap<>();
+    // These two track resources used by Beaver, ExtendJ etc. outside of any dependencies
+    // triggered by the analysis calls
+    static ResourceTracker.State frontendResourcesState = null;
+    static ResourceTracker frontendResources = null;
+
+    static void stopTrackingFrontendResources() {
+        if (frontendResources != null) {
+            assert frontendResourcesState != null;
+            frontendResources.stop(frontendResourcesState);
+            frontendResourcesState = null;
+        }
+    }
+    static void startTrackingFrontendResources() {
+        if (frontendResources != null) {
+            assert frontendResourcesState == null;
+            frontendResourcesState = frontendResources.start();
+        }
+    }
+
+    static Map<StaticAnalysis, ResourceTracker> analysisResources = new TreeMap<>();
 
     protected void analyzeCompilationUnit(CompilationUnit unit) {
+        stopTrackingFrontendResources();
         final String fileName = unit.getClassSource().sourceName();
         for (StaticAnalysis analysis: analysesActive) {
-            if (!totalDurations.containsKey(analysis)) {
-                totalDurations.put(analysis, new ResourceTracker());
+            if (!analysisResources.containsKey(analysis)) {
+                analysisResources.put(analysis, new ResourceTracker());
             }
-            ResourceTracker tracker = totalDurations.get(analysis);
+            ResourceTracker tracker = analysisResources.get(analysis);
             ResourceTracker.State start = tracker.start();
             Collection<? extends Warning> warnings = analysis.scan(unit);
             tracker.stop(start);
@@ -273,6 +290,7 @@ public class IntraJ extends Frontend {
                 warningHandler.handle(fileName, w);
             }
         }
+        startTrackingFrontendResources();
     }
 
     /**
@@ -437,7 +455,7 @@ public class IntraJ extends Frontend {
                     Utils.printStatistics(System.out,
                         String.format("%-20s\t%20s ns",
                             analysis.name(),
-                            totalDurations.get(analysis)));
+                            analysisResources.get(analysis)));
                 }
                 Utils.printStatistics(System.out, "warnings\t" + warningCounter.get());
                 Utils.printStatistics(System.out, "md5\t" + warningCollector.md5());
@@ -478,8 +496,10 @@ public class IntraJ extends Frontend {
                     benchLog(pfx, "analysis", analysis.name());
                     benchLog(pfx, "reset", resetIntraJ.toString());
                     benchLog(pfx, "sub-seq", benchRun + "");
-                    benchLog(pfx, "time", totalDurations.get(analysis).getTotalTimeNanos() + "");
-                    benchLog(pfx, "heap-usage", totalDurations.get(analysis).getTotalMemBytes() + "");
+                    benchLog(pfx, "time", analysisResources.get(analysis).getTotalTimeNanos() + "");
+                    benchLog(pfx, "heap-usage", analysisResources.get(analysis).getTotalMemBytes() + "");
+                    benchLog(pfx, "frontend-time", frontendResources.getTotalTimeNanos() + "");
+                    benchLog(pfx, "frontend-heap-usage", frontendResources.getTotalMemBytes() + "");
                     benchLog(pfx, "warnings-num", warningCounter.get() + "");
                     benchLog(pfx, "warnings-md5", warningCollector.md5());
                 }
