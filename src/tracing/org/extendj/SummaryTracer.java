@@ -37,7 +37,9 @@ import org.extendj.ast.ASTState.Trace.Event;
 
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.ArrayList;;
 import java.util.EnumMap;
+import java.util.Comparator;
 
 public class SummaryTracer extends Tracer implements ASTState.Trace.Receiver {
     HashSet<Class<?>> observedClasses = new HashSet<Class<?>>();
@@ -71,8 +73,37 @@ public class SummaryTracer extends Tracer implements ASTState.Trace.Receiver {
         }
     }
 
+    protected void printAll(String prefix, HashMap<Attr, EnumMap<Event, Integer>> counts,
+                            ArrayList<String> attrNames, ArrayList<Class<?>> classes) {
+        for (String name: attrNames) {
+            for (Class<?> cls: classes) {
+                Attr attr = new Attr(cls, name);
+                EnumMap<Event, Integer> events = counts.get(attr);
+                if (events != null) {
+                    for (Event ev: Event.values()) {
+                        Integer count = events.get(ev);
+                        if (count != null) {
+                            System.out.println("[TRACE] " + prefix + " " + name + "\t" + cls.getSimpleName() + "\t" + ev + "\t" + count);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     public void finish() {
+        ArrayList<Class<?>> classes = new ArrayList<Class<?>>(observedClasses);
+        ArrayList<String> attrNames = new ArrayList<String>(observedAttrNames);
+        classes.sort(new Comparator<Class<?>>() {
+            @Override
+            public int compare(Class<?> lhs, Class<?> rhs) {
+                return lhs.getSimpleName().compareTo(rhs.getSimpleName());
+            }
+        });
+        attrNames.sort(Comparator.naturalOrder());
+        printAll("frontend", frontendCounts, attrNames, classes);
+        printAll("analysis", analysisCounts, attrNames, classes);
     }
 
     final class Attr {

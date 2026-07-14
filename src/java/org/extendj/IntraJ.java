@@ -67,7 +67,7 @@ public class IntraJ extends Frontend {
     static CLIOptions cliOptions = new CLIOptions();
 
     /**
-     * Indicate interest in benchmark action
+     * indicate interest in benchmark action
      */
     static void analysisAction() {
         // unless the user has explicitly selected benchmarking
