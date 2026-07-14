@@ -44,9 +44,14 @@ public class Tracer {
      */
     public void finish() {}
 
-    public static Tracer traceMaybe(Program program) {
+    public static Tracer traceMaybe(Program program, String tracerToRun) {
+        if (tracerToRun == null) {
+            return null;
+        }
+        final String tracerPackage = "org.extendj.";
+        final String tracerClass = tracerPackage + tracerToRun;
         try {
-            Class<?> traceClass = Class.forName("org.extendj.FullEventTracer");
+            Class<?> traceClass = Class.forName(tracerClass);
             Object tracer = traceClass.newInstance();
             Method traceMethod = program.getClass().getMethod("trace");
             Object traceHandler = traceMethod.invoke(program);
@@ -62,7 +67,7 @@ public class Tracer {
              | IllegalAccessException exn) {
             exn.printStackTrace();
         } catch (ClassNotFoundException exn) {
-            // System.err.println("Tracing disabled");
+            System.err.println("Tracing disabled: could not find " + tracerClass);
         }
         // Tracing disabled
         return null;

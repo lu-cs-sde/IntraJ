@@ -259,6 +259,15 @@ public class IntraJ extends Frontend {
     static ResourceTracker.State frontendResourcesState = null;
     static ResourceTracker frontendResources = null;
 
+    /**
+     * Are we currently executing program analysis code (as opposed to frontend code)?
+     *
+     * Used by tracers
+     */
+    public static boolean inAnalysis() {
+        return frontendResourcesState == null;
+    }
+
     static void stopTrackingFrontendResources() {
         if (frontendResources != null) {
             assert frontendResourcesState != null;
@@ -436,6 +445,14 @@ public class IntraJ extends Frontend {
         }
     }
 
+    static String tracerToRun = null;
+
+    static {
+        cliOptions
+            .option("-trace",         "Enable a tracer (FullEventTracer, SummaryTracer)",
+                v -> { tracerToRun = v; });
+    }
+
     /**
      * Action: Run analyses
      */
@@ -444,7 +461,7 @@ public class IntraJ extends Frontend {
         public int exec() {
             IntraJ intraj = new IntraJ();
             // Install tracing, if desired
-            Tracer tracer = Tracer.traceMaybe(intraj.getEntryPoint());
+            Tracer tracer = Tracer.traceMaybe(intraj.getEntryPoint(), tracerToRun);
             resetCounters(warningCollector, warningCounter, warningPrinter);
             intraj.runFrontendWithConfig();
             printStats(intraj);
