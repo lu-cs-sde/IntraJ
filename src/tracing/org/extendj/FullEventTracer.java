@@ -35,7 +35,26 @@ import org.extendj.ast.ASTNode;
 import org.extendj.ast.ASTState;
 import org.extendj.ast.ASTState.Trace.Event;
 
+import java.util.WeakHashMap;
+
 public class FullEventTracer extends Tracer implements ASTState.Trace.Receiver {
+    // Unique ID per object.
+    // Technically we want a "WeakIdentityHashMap", but AST nodes don't implement
+    // equals (the only counter-examples I found implement it via reference equality,
+    // i.e., duplicating the default implementation).
+    WeakHashMap<Object, Long> objectIDs = new WeakHashMap<Object, Long>();
+    long objectIDCounter = 0;
+
+
+    protected long objectID(Object obj) {
+        if (objectIDs.containsKey(obj)) {
+            return objectIDs.get(obj);
+        }
+        long newID = ++objectIDCounter;
+        objectIDs.put(obj, newID);
+        return newID;
+    }
+
     @Override
     public void accept(Event event, ASTNode node,
                        String attribute,
@@ -44,8 +63,9 @@ public class FullEventTracer extends Tracer implements ASTState.Trace.Receiver {
         if (params != null) {
             paramsStr = params.toString();
         }
-        String nodeStr = node.getClass().getName() + "@" + System.identityHashCode(node);
-        System.out.println("[TRACE] " + event + "\t" + nodeStr + " . " + attribute + "(" +  paramsStr + ")"
+        String nodeStr = node.getClass().getName() + "@" + objectID(node);
+        String phase = IntraJ.inAnalysis() ? "analysis" : "frontend";
+        System.out.println("[TRACE] " + phase + "\t" + event + "\t" + nodeStr + " . " + attribute + "(" +  paramsStr + ")"
                            + ((value == null)
                               ? ""
                               : " -> [" + value + "] : " + value.getClass().getName()));
