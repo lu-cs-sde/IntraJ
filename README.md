@@ -31,7 +31,7 @@ You can run IntraJ on other Java codebases (up to Java 11) in order to construct
 
 We have run IntraJ on the following Java version:
 
-*  **Java SDK version 11** or later. (See [sdkman](https://sdkman.io)).
+*  **Java SDK version 8** or later. (See [sdkman](https://sdkman.io)).
 
 It is possible to generate PDFs that show the CFGs visually. For this you need:
 1) **Dot** (graphviz) - _PDF generation_
@@ -77,6 +77,15 @@ To generate all the JARs necessary for the evaluation, execute
 ./gradlew build
 ```
 
+or
+
+```
+./gradlew -Ptracing build
+```
+
+to build with tracing support enabled (note that this might impose a 10%-40% overhead even if you
+do not use the tracing features).
+
 To run all the tests, execute:
 
 ```
@@ -120,11 +129,10 @@ The top-level structure of the repository:
     |    |     ├── CFG                       # CFG spec in JastAdd
     |    |     ├── DataFlow                  # Data flow analyses spec
     |    |     └── grammar                   # Local grammar overrides
-    |    └── java
-    |          ├── analysis                  # Analysis entry points
-    |          ├── flow                      # Flow utilities
-    |          ├── test                      # JUnit test spec
-    |          └── utils                     # General helpers for visualisation
+    |    ├── java/org/extendj
+    |    |     └── flow/utils                # General helpers for visualisation
+    |    ├── test                            # Java tests
+    |    └── tracing                         # Java code for tracing (only)
     ├── basic-stacked                        # Gradle subproject for building IntraJ in basic-stacked mode
     ├── relaxed-stacked                      # Gradle subproject for building IntraJ in relaxed-stacked mode
     ├── tools                                # JastAdd and other library jars

@@ -26,7 +26,7 @@ ext {
 
     // Tracing: Default tracing level if tracing is enabled
     // I.e., this is only used if tracing is enabled with unspecified tracing level
-    jastaddTracingDefault = 'compute'
+    jastaddTracingDefault = 'all'
 
     // git query command runner, returns empty string on failure
     gitQuery = { File dir, List<String> gitArgs ->
