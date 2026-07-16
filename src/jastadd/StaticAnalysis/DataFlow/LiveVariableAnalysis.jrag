@@ -59,7 +59,7 @@ public
   syn SmallSet CFGNode.LVA_use()  = SmallSet.empty();
   eq VarAccess.LVA_use() = getVarDeclSet();
   eq UnaryIncDec.LVA_use() = getVarDeclSet();
- 
+
   /* --- Out sets --- */
   syn SmallSet CFGNode.LVA_out() {
     SmallSet res = SmallSet.<CFGNode>empty().mutable();
@@ -75,12 +75,12 @@ public
 
 
   /* --- In sets --- */
-  syn SmallSet CFGNode.LVA_in() circular[SmallSet.empty().mutable()] = LVA_out();
+  syn SmallSet CFGNode.LVA_in() circular[SmallSet.mutable()] = LVA_out();
   eq VariableDeclarator.LVA_in() =  SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
   eq AssignExpr.LVA_in() = SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
   eq UnaryIncDec.LVA_in() = SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
   eq VarAccess.LVA_in() = SmallSet.empty().mutable().union(LVA_use()).union(LVA_out().compl(LVA_def()));
- 
+
 
   /* --- getVarDeclSet --- */
 
