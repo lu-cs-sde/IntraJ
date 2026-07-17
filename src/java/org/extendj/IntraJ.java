@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Iterator;
 
@@ -45,6 +46,7 @@ import org.extendj.ast.CFGRoot;
 import org.extendj.ast.CompilationUnit;
 import org.extendj.ast.Frontend;
 import org.extendj.ast.Program;
+import org.extendj.ast.Problem;
 import org.extendj.ast.StaticAnalysis;
 import org.extendj.flow.utils.IJGraph;
 import org.extendj.flow.utils.Utils;
@@ -63,6 +65,7 @@ public class IntraJ extends Frontend {
     static boolean printStats = false;
     static LinkedHashSet<StaticAnalysis> analysesActive = new LinkedHashSet<>();
     static int benchIterNum = 10; // Number of iterations when benchmarking
+    static boolean frontendErrorScan = false; // Replicate sle24-intraj behaviour
 
     static CLIOptions cliOptions = new CLIOptions();
 
@@ -92,6 +95,8 @@ public class IntraJ extends Frontend {
                 v -> { action = BENCHMARK_ACTION; })
             .flag("-statistics",    "Print analysis statistics",
                 v -> { printStats = true; })
+            .flag("-Wfrontend",     "Enables frontend warnings (ExtendJ behaviour but not sle24-intraj behaviour)",
+                v -> { frontendErrorScan = true; })
             .flag("-Wall",          "Enables all analyses",
                 v -> { analysisAction(); analysesActive.addAll(StaticAnalysis.analyses()); })
             .option("-niter",       "Number of iterations for benchmarking (default " + benchIterNum + ")",
@@ -247,6 +252,7 @@ public class IntraJ extends Frontend {
         warningHandler = new WarningHandler.Multi(warningHandlers);
         warningHandler.reset();
         frontendResources = new ResourceTracker();
+        frontendCheckResources = new ResourceTracker();
     }
 
     static WarningHandler.Collect warningCollector = new WarningHandler.Collect();
@@ -258,6 +264,8 @@ public class IntraJ extends Frontend {
     // triggered by the analysis calls
     static ResourceTracker.State frontendResourcesState = null;
     static ResourceTracker frontendResources = null;
+    // ...except for general-purpose static checks in the frontend, tracked here
+    static ResourceTracker frontendCheckResources = null;
 
     /**
      * Are we currently executing program analysis code (as opposed to frontend code)?
@@ -284,6 +292,57 @@ public class IntraJ extends Frontend {
 
     static Map<StaticAnalysis, ResourceTracker> analysisResources = new TreeMap<>();
 
+
+    /**
+     * FIXME[CR]: make protected in superclass instead of copying
+     */
+    protected static Collection<Problem> EMPTY_PROBLEM_LIST = Collections.emptyList();
+
+    /**
+     * Processes from-source compilation units by error-checking them.
+     *
+     * Taken from `extendj/java4/frontend/FrontendMain.jrag` and adapted
+     *
+     * @return zero on success, non-zero on error
+     */
+    protected int processCompilationUnit(CompilationUnit unit) throws Error {
+        if (unit != null && unit.fromSource()) {
+            try {
+                Collection<Problem> errors = unit.parseErrors();
+                Collection<Problem> warnings = EMPTY_PROBLEM_LIST;
+                // Compute static semantic errors when there are no parse errors
+                // or the recover from parse errors option is specified.
+                if (errors.isEmpty() || program.options().hasOption("-recover")) {
+                    if (frontendErrorScan) { // replicate ExtendJ behaviour
+                        // sle24-intraj (Docker) does NOT run this code:
+                        stopTrackingFrontendResources();
+                        // we track this separately from "normal" frontend cost
+                        ResourceTracker.State start = frontendCheckResources.start();
+
+                        errors = unit.errors();
+                        warnings = unit.warnings();
+
+                        frontendCheckResources.stop(start);
+                        startTrackingFrontendResources();
+                    }
+                }
+                if (!errors.isEmpty()) {
+                    processErrors(errors, unit);
+                    return EXIT_ERROR;
+                } else {
+                    if (!warnings.isEmpty() && !program.options().hasOption("-nowarn")) {
+                        processWarnings(warnings, unit);
+                    }
+                }
+            } catch (Error e) {
+                System.err.println("Encountered error while processing " + unit.pathName());
+                throw e;
+            }
+        }
+        return EXIT_SUCCESS;
+    }
+
+
     protected void analyzeCompilationUnit(CompilationUnit unit) {
         stopTrackingFrontendResources();
         final String fileName = unit.getClassSource().sourceName();
@@ -304,6 +363,8 @@ public class IntraJ extends Frontend {
 
     /**
      * Called for each from-source compilation unit with no errors.
+     *
+     * Callback from `super().run()`
      */
     protected void processNoErrors(CompilationUnit unit) {
         resetIntraJ.visitCompilationUnit(this, unit);
@@ -522,6 +583,8 @@ public class IntraJ extends Frontend {
                     benchLog(pfx, "heap-usage", analysisResources.get(analysis).getTotalMemBytes() + "");
                     benchLog(pfx, "frontend-time", frontendResources.getTotalTimeNanos() + "");
                     benchLog(pfx, "frontend-heap-usage", frontendResources.getTotalMemBytes() + "");
+                    benchLog(pfx, "frontend-check-time", frontendCheckResources.getTotalTimeNanos() + "");
+                    benchLog(pfx, "frontend-check-heap-usage", frontendCheckResources.getTotalMemBytes() + "");
                     benchLog(pfx, "warnings-num", warningCounter.get() + "");
                     benchLog(pfx, "warnings-md5", warningCollector.md5());
                 }
