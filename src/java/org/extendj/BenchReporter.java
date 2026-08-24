@@ -31,6 +31,10 @@
 
 package org.extendj;
 
+import java.util.OptionalLong;
+
+//import java.util.Calendar;
+
 /**
  * Benchmarking result reporter
  */
@@ -39,6 +43,30 @@ public interface BenchReporter {
      * Report a benchmarking result
      */
     public void log(String property, String value);
+
+    default public void log(String property, long value) {
+        log(property, Long.toString(value));
+    }
+
+    /**
+     * Log double with specififed number of digits in precision
+     */
+    default public void logDouble(String property, double value, int digitsPrecision) {
+        log(property, String.format("%." + digitsPrecision + "f", value));
+    }
+
+    default public void log(String property, OptionalLong value) {
+        String s = "U";
+        if (value.isPresent()) {
+            s = Long.toString(value.getAsLong());
+        }
+        log(property, s);
+    }
+
+    default public void logWallTime() {
+        logDouble("wall-time", System.currentTimeMillis() / 1_000.0, 3);
+        //log("wall-time", (new Calendar()).getTimeInMillis() / 1_000.0);
+    }
 
     public interface Raw {
         /**

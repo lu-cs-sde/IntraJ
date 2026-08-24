@@ -41,6 +41,7 @@ import java.lang.management.MemoryManagerMXBean;
 import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import java.lang.ref.WeakReference;
+import java.util.OptionalLong;
 
 import org.extendj.ast.Program;
 
@@ -158,12 +159,12 @@ public abstract class ResourceTracker<STATE> {
         long timeNanos = 0;
         long allocBytes = 0;
         long javaParseNanos = 0;
-        long javaBytecodeNanos = 0;
+        long bytecodeParseNanos = 0;
 
         protected void setStateWithoutCurrentTime(Program p) {
             this.allocBytes = getAllocBytes();
             this.javaParseNanos = p == null? 0 : p.javaParseTime;
-            this.javaBytecodeNanos = p == null? 0 : p.bytecodeParseTime;
+            this.bytecodeParseNanos = p == null? 0 : p.bytecodeParseTime;
         }
 
         protected void setCurrentTimeState() {
@@ -192,10 +193,10 @@ public abstract class ResourceTracker<STATE> {
         }
 
         void addDelta(THState atStart, THState atStop) {
-            this.timeNanos          += atStop.timeNanos         - atStart.timeNanos;
-            this.allocBytes         += atStop.allocBytes        - atStart.allocBytes;
-            this.javaParseNanos     += atStop.javaParseNanos    - atStart.javaParseNanos;
-            this.javaBytecodeNanos  += atStop.javaBytecodeNanos - atStart.javaBytecodeNanos;
+            this.timeNanos           += atStop.timeNanos          - atStart.timeNanos;
+            this.allocBytes          += atStop.allocBytes         - atStart.allocBytes;
+            this.javaParseNanos      += atStop.javaParseNanos     - atStart.javaParseNanos;
+            this.bytecodeParseNanos  += atStop.bytecodeParseNanos - atStart.bytecodeParseNanos;
         }
 
         static THState zero() {
@@ -203,10 +204,10 @@ public abstract class ResourceTracker<STATE> {
         }
 
         protected void report(BenchReporter bench) {
-            bench.log("heap-bytes", allocBytes + "");
-            bench.log("time", timeNanos + "");
-            bench.log("java-parse-time", javaParseNanos + "");
-            bench.log("java-bytecode-time", javaBytecodeNanos + "");
+            bench.log("alloc-bytes", allocBytes);
+            bench.log("time", timeNanos);
+            bench.log("java-parse-time", javaParseNanos);
+            bench.log("bytecode-parse-time", bytecodeParseNanos);
         }
 
         @Override
@@ -256,9 +257,9 @@ public abstract class ResourceTracker<STATE> {
 
         protected long gcCount;
         protected long gcTime;
-        protected long jitTime;
         protected long classesLoaded;
         protected long classesUnloaded;
+        protected OptionalLong jitTime = OptionalLong.of(0);
 
         FullState() { }
 
@@ -303,22 +304,32 @@ public abstract class ResourceTracker<STATE> {
             this.processCPUTime  += atStop.processCPUTime  - atStart.processCPUTime;
             this.gcCount         += atStop.gcCount         - atStart.gcCount;
             this.gcTime          += atStop.gcTime          - atStart.gcTime;
-            this.jitTime         += atStop.jitTime         - atStart.jitTime;
             this.classesLoaded   += atStop.classesLoaded   - atStart.classesLoaded;
             this.classesUnloaded += atStop.classesUnloaded - atStart.classesUnloaded;
+            this.jitTime = plusDiff(this.jitTime,  atStop.jitTime,        atStart.jitTime);
         }
 
         @Override
         protected void report(BenchReporter bench) {
             super.report(bench);
-            bench.log("thread-cpu-time", threadCPUTime + "");
-            bench.log("process-cpu-time", processCPUTime + "");
-            bench.log("jit-time", jitTime + "");
-            bench.log("gc-time", gcTime + "");
-            bench.log("gc-count", gcCount + "");
-            bench.log("classes-loaded", classesLoaded + "");
-            bench.log("classes-unloaded", classesUnloaded + "");
+            bench.log("thread-cpu-time", threadCPUTime);
+            bench.log("process-cpu-time", processCPUTime);
+            bench.log("jit-time", jitTime);
+            bench.log("gc-time", gcTime);
+            bench.log("gc-count", gcCount);
+            bench.log("classes-loaded", classesLoaded);
+            bench.log("classes-unloaded", classesUnloaded);
         }
+    }
+
+    /**
+     * @return base + (stop - start), or OptionalLong.empty() if any parameter is empty
+     */
+    static OptionalLong plusDiff(OptionalLong base, OptionalLong stop, OptionalLong start) {
+        if (stop.isEmpty() || start.isEmpty() || base.isEmpty()) {
+            return OptionalLong.empty();
+        }
+        return OptionalLong.of(base.getAsLong() + stop.getAsLong() - start.getAsLong());
     }
 
 
@@ -368,11 +379,11 @@ public abstract class ResourceTracker<STATE> {
     /**
      * Full process CPU time
      */
-    static long processCPUNanos() {
+    static OptionalLong processCPUNanos() {
         if (operatingSystem == null) {
-            return 0;
+            return OptionalLong.empty();
         }
-        return operatingSystem.getProcessCpuTime();
+        return OptionalLong.of(operatingSystem.getProcessCpuTime());
     }
 
     /**
@@ -390,21 +401,22 @@ public abstract class ResourceTracker<STATE> {
      * Aggregate nanoseconds reported by GCs
      */
     static long totalGcNanos() {
-        long sum = 0; // millis
+        long sum = 0; // ms
         for (GarbageCollectorMXBean bean : garbageCollectors) {
             sum += bean.getCollectionTime();
         }
-        return sum * 1000;
+        return sum * 1_000_000; // scale to ns
     }
 
     /**
      * Aggregate nanoseconds reported by JIT
      */
-    static long totalJITNanos() {
+    static OptionalLong totalJITNanos() {
         if (!compilation.isCompilationTimeMonitoringSupported()) {
-            return 0;
+            return OptionalLong.empty();
         }
-        return compilation.getTotalCompilationTime() * 1000;
+        return OptionalLong.of(compilation.getTotalCompilationTime() // ms
+                               * 1_000_000);  // scale to ns
     }
 
     /**

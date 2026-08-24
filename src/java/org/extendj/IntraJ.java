@@ -607,11 +607,11 @@ public class IntraJ extends Frontend {
                     final String stopMemoryUsageSpec = ResourceTracker.memoryUsageSpec();
                     String pfx = analysis.name();
                     BenchReporter r = BenchReporter.fromRaw(this, pfx);
-                    r.log("wall-time", "" + (System.currentTimeMillis() / 1000000.0));
-                    r.log("gc-explicit-reset", "" + (runGCBetweenIterations? 1 : 0));
+                    r.logWallTime();
+                    r.log("gc-explicit-reset", runGCBetweenIterations? 1 : 0);
                     r.log("reset", resetIntraJ.toString());
                     r.log("analysis", analysis.name());
-                    r.log("sub-seq", benchRun + "");
+                    r.log("sub-seq", benchRun);
 
                     iterTracker.report(r);
 
@@ -628,8 +628,8 @@ public class IntraJ extends Frontend {
                     r.log("jvm-memory-usage-start", memoryUsageSpecAfterLastGC == null ?
                         initialMemoryUsageSpec : memoryUsageSpecAfterLastGC);
                     r.log("jvm-memory-usage-stop", stopMemoryUsageSpec);
-                    r.log("warnings-num", warningCounter.get() + "");
-                    r.log("warnings-md5", warningCollector.md5());
+                    r.log("warnings-num", warningCounter.get());
+                    r.log("warnings-md5", warningCollector.md5().toString());
                 }
                 resetAnalysisCounters(warningCollector);
             }
