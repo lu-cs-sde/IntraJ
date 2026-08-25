@@ -38,7 +38,6 @@ import java.lang.management.CompilationMXBean;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryManagerMXBean;
-import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import java.lang.ref.WeakReference;
 import java.util.OptionalLong;
@@ -329,7 +328,7 @@ public abstract class ResourceTracker<STATE> {
      * @return base + (stop - start), or OptionalLong.empty() if any parameter is empty
      */
     static OptionalLong plusDiff(OptionalLong base, OptionalLong stop, OptionalLong start) {
-        if (stop.isEmpty() || start.isEmpty() || base.isEmpty()) {
+        if (!(stop.isPresent() && start.isPresent() && base.isPresent())) {
             return OptionalLong.empty();
         }
         return OptionalLong.of(base.getAsLong() + stop.getAsLong() - start.getAsLong());
