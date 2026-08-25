@@ -266,10 +266,25 @@ public class IntraJ extends Frontend {
     /**
      * Clear analysis profilers and warning processors
      */
-    protected static void resetAnalysisCounters(WarningHandler ... warningHandlers) {
+    protected static void resetAnalysisCounters(boolean withTracking, boolean withPrinting) {
         analysisResources = new TreeMap<>();
-        warningHandler = new WarningHandler.Multi(warningHandlers);
-        warningHandler.reset();
+        warningHandlers = new TreeMap<>();
+        for (StaticAnalysis analysis: analysesActive) {
+            ArrayList<WarningHandler> handlerList = new ArrayList<>();
+            WarningHandlers handlers = new WarningHandlers();
+
+            if (withTracking) {
+                handlerList.add(handlers.counter);
+                handlerList.add(handlers.collector);
+                if (withPrinting) {
+                    handlerList.add(handlers.printer);
+                }
+            }
+
+            handlers.joint = new WarningHandler.Multi(handlerList.toArray(new WarningHandler[0]));
+            warningHandlers.put(analysis, handlers);
+            handlers.joint.reset();
+        }
     }
 
     /**
@@ -283,10 +298,14 @@ public class IntraJ extends Frontend {
     }
 
     // Track warnings:
-    static WarningHandler.Collect warningCollector = new WarningHandler.Collect();
-    static WarningHandler.Count warningCounter = new WarningHandler.Count();
-    static WarningHandler.Print warningPrinter = new WarningHandler.Print(System.out);
-    static WarningHandler warningHandler = new WarningHandler.Multi();
+    static class WarningHandlers {
+        WarningHandler.Collect collector = new WarningHandler.Collect();
+        WarningHandler.Count counter = new WarningHandler.Count();
+        WarningHandler.Print printer = new WarningHandler.Print(System.out);
+        WarningHandler joint = null; // Multi handler joining some or all of the above
+    }
+
+    static TreeMap<StaticAnalysis, WarningHandlers> warningHandlers = new TreeMap<>();
 
     // ------------------------------
     // Profiling:
@@ -385,12 +404,13 @@ public class IntraJ extends Frontend {
             if (!analysisResources.containsKey(analysis)) {
                 analysisResources.put(analysis, new ResourceTracker.TH(analysis.name()).setProgram(this.program));
             }
+            WarningHandlers warningHandler = warningHandlers.get(analysis);
             ResourceTracker.TH tracker = analysisResources.get(analysis);
             ResourceTracker.THState start = tracker.start();
             Collection<? extends Warning> warnings = analysis.scan(unit);
             tracker.stop(start);
             for (Warning w: warnings) {
-                warningHandler.handle(fileName, w);
+                warningHandler.joint.handle(fileName, w);
             }
         }
         startTrackingFrontendResources();
@@ -526,7 +546,7 @@ public class IntraJ extends Frontend {
         @Override
         public int exec() {
             IntraJ intraj = new IntraJ();
-            resetAnalysisCounters();
+            resetAnalysisCounters(false, false);
             resetFrontendCounters(intraj);
             intraj.runFrontendWithConfig();
             try {
@@ -559,7 +579,7 @@ public class IntraJ extends Frontend {
             IntraJ intraj = new IntraJ();
             // Install tracing, if desired
             Tracer tracer = Tracer.traceMaybe(intraj.getEntryPoint(), tracerToRun);
-            resetAnalysisCounters(warningCollector, warningCounter, warningPrinter);
+            resetAnalysisCounters(true, true);
             resetFrontendCounters(intraj);
             intraj.runFrontendWithConfig();
             printStats(intraj);
@@ -576,9 +596,10 @@ public class IntraJ extends Frontend {
                         String.format("%-20s\t%20s ns",
                             analysis.name(),
                             analysisResources.get(analysis)));
+                    WarningHandlers warningHandler = warningHandlers.get(analysis);
+                    Utils.printStatistics(System.out, "warnings\t" + warningHandler.counter.get());
+                    Utils.printStatistics(System.out, "md5\t" + warningHandler.collector.md5());
                 }
-                Utils.printStatistics(System.out, "warnings\t" + warningCounter.get());
-                Utils.printStatistics(System.out, "md5\t" + warningCollector.md5());
         }
 
         protected void printStats(IntraJ intraj) {
@@ -632,7 +653,7 @@ public class IntraJ extends Frontend {
             BenchReporter.Iterated resetReporter = BenchReporter.reset();
 
             IntraJ intraj = null;
-            resetAnalysisCounters(warningCollector, warningCounter);
+            resetAnalysisCounters(true, false);
             //final String initialMemoryUsageSpec = ResourceTracker.logMemoryUsageSpec();
             for (benchRun = 0; benchRun < benchIterNum; ++benchRun) {
                 BenchReporter.iter().nextIteration(); // count iterations
@@ -647,20 +668,21 @@ public class IntraJ extends Frontend {
 
                 iterReporter.logWallTime();
                 iterTracker.report(iterReporter);
-                iterReporter.log("warnings-num", warningCounter.get());
-                iterReporter.log("warnings-md5", warningCollector.md5().toString());
                 frontendResources.report(frontendReporter);
                 frontendCheckResources.report(frontendCheckReporter);
 
                 for (StaticAnalysis analysis: analysesActive) {
                     BenchReporter r = analysisReporters.get(analysis.name());
+                    WarningHandlers warningHandler = warningHandlers.get(analysis);
 
                     ResourceTracker.TH aRes = analysisResources.get(analysis);
                     if (aRes != null) {
                         aRes.report(r);
                     }
+                    r.log("warnings-num", warningHandler.counter.get());
+                    r.log("warnings-md5", warningHandler.collector.md5().toString());
                 }
-                resetAnalysisCounters(warningCollector, warningCounter);
+                resetAnalysisCounters(true, false);
             }
             if (intraj != null) {
                 printStats(intraj);
