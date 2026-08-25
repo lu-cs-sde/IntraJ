@@ -99,7 +99,7 @@ public interface BenchReporter {
                 throw new RuntimeException("BenchReporter.Iterated: subReporter("+name+") already registered");
             }
             registeredIteratedReporters.add(name);
-            RUN.log("sub-activity", activity + "\t" +  name);
+            RUN.logMap("parent-activity", name, this.activity);
             return new Iterated(name) {};
         }
 

@@ -36,7 +36,6 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -591,6 +590,25 @@ public class IntraJ extends Frontend {
     }
 
     /**
+     * Concatenated, comma-separated names of all active analyses
+     *
+     * Written out because older ExtendJ/CAT struggles with the concise stream() variant of this
+     */
+    static String analysesString() {
+        StringBuffer analysesStr = new StringBuffer();
+        boolean first = true;
+        for (StaticAnalysis a : analysesActive) {
+            if (first) {
+                first = false;
+            } else {
+                analysesStr.append(",");
+            }
+            analysesStr.append(a.name());
+        }
+        return analysesStr.toString();
+    }
+
+    /**
      * Action: Benchmark analysis execution
      */
     static class BenchmarkAction extends AnalysisAction {
@@ -600,6 +618,7 @@ public class IntraJ extends Frontend {
         public int exec() {
             BenchReporter.RUN.log("gc-explicit-reset", runGCBetweenIterations? 1 : 0);
             BenchReporter.RUN.log("reset", resetIntraJ.toString());
+            BenchReporter.RUN.log("analyses", analysesString());
             ResourceTracker.logMemoryManagersSpec(BenchReporter.RUN);
             HashMap<String, BenchReporter.Iterated> analysisReporters = new HashMap<>();
             for (StaticAnalysis analysis: analysesActive) {
@@ -641,7 +660,7 @@ public class IntraJ extends Frontend {
                     r.log("warnings-num", warningCounter.get());
                     r.log("warnings-md5", warningCollector.md5().toString());
                 }
-                resetAnalysisCounters(warningCollector);
+                resetAnalysisCounters(warningCollector, warningCounter);
             }
             if (intraj != null) {
                 printStats(intraj);

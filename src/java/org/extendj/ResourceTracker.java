@@ -241,8 +241,6 @@ public abstract class ResourceTracker<STATE> {
 
 	@Override
 	public void stop(FullState atStart) {
-            assert this.program != null;
-            assert program.get() != null;
             //System.err.println("--=--stop: " + this.name);
             FullState atStop = FullState.nowStop(program == null? null : program.get());
             this.aggregate.addFullDelta(atStart, atStop);
@@ -475,6 +473,13 @@ public abstract class ResourceTracker<STATE> {
         }
     }
 
+    static String liftedLongHex(long v) {
+        if (v < 0) {
+            return "U";
+        }
+        return String.format("0x%x", v);
+    }
+
     /**
      * Report the current memory usage structure
      */
@@ -485,13 +490,17 @@ public abstract class ResourceTracker<STATE> {
 
             MemoryUsage usage = bean.getUsage();
 
-            reporter.logMap("jvm-mem-pool-usage",
-                nname,
-                String.format("0x%x\t0x%x\t0x%x\t0x%x",
-                    usage.getInit(),
-                    usage.getUsed(),
-                    usage.getCommitted(),
-                    usage.getMax()));
+            if (usage == null) {
+                reporter.log("jvm-mem-pool-usage", "U");
+            } else {
+                reporter.logMap("jvm-mem-pool-usage",
+                    nname,
+                    "1"
+                    + "\t" + liftedLongHex(usage.getInit())
+                    + "\t" + liftedLongHex(usage.getUsed())
+                    + "\t" + liftedLongHex(usage.getCommitted())
+                    + "\t" + liftedLongHex(usage.getMax()));
+            }
         }
     }
 }
