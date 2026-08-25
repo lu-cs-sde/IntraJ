@@ -52,15 +52,13 @@ import org.extendj.ast.Program;
  * Use {@link Full} for detailed but slow tracking (~ tens of microseconds in 2026)
  */
 public abstract class ResourceTracker<STATE> {
-    private String reportPrefix;
+    protected String name;
 
     /**
-     * @param reportPrefix: either the empty string or a prefix (e.g.,
-     *   "total-") to prepend to the property name when reporting via
-     *   <tt>ResourceTracker.report()</tt>
+     * @param name A string name used for debugging
      */
-    public ResourceTracker(String reportPrefix) {
-        this.reportPrefix = reportPrefix;
+    public ResourceTracker(String name) {
+        this.name = name;
     }
 
     /**
@@ -84,9 +82,8 @@ public abstract class ResourceTracker<STATE> {
      *
      * @param unprefixedReporter Consumer of the report information
      */
-    public final void report(BenchReporter unprefixedReporter) {
-        BenchReporter bench = BenchReporter.withPrefix(unprefixedReporter, this.reportPrefix);
-        this.doReport(bench);
+    public final void report(BenchReporter reporter) {
+        this.doReport(reporter);
     }
 
     /**
@@ -108,8 +105,8 @@ public abstract class ResourceTracker<STATE> {
         // Keep as weak reference so we don't interfere with GC if we accidentally keep the reference around
         protected WeakReference<Program> program;
 
-        public TH(String prefix) {
-            super(prefix);
+        public TH(String name) {
+            super(name);
         }
 
         public TH setProgram(Program program) {
@@ -124,7 +121,9 @@ public abstract class ResourceTracker<STATE> {
          */
         @Override
         public THState start() {
-            return THState.nowStart(program == null ? null : program.get());
+            //System.err.println("-- start: " + this.name);
+            THState result = THState.nowStart(program == null ? null : program.get());
+            return result;
         }
 
         /**
@@ -136,6 +135,7 @@ public abstract class ResourceTracker<STATE> {
          */
         @Override
         public void stop(THState atStart) {
+            //System.err.println("-- stop: " + this.name);
             THState atStop = THState.nowStop(program.get());
             this.aggregate.addDelta(atStart, atStop);
         }
@@ -217,19 +217,21 @@ public abstract class ResourceTracker<STATE> {
     }
 
     /**
-     * Intended for per-iteration tracking, forces the "iter-" prefix
+     * Intended for per-iteration for the "iter" prefix
      */
     final static class Full extends ResourceTracker<FullState> {
         protected FullState aggregate = FullState.zero();
         protected WeakReference<Program> program = null;
 
-        public Full(String prefix) {
-            super(prefix);
+        public Full(String name) {
+            super(name);
         }
 
 	@Override
 	public FullState start() {
-            return FullState.nowStart(this.program == null? null : this.program.get());
+            //System.err.println("--=--start: " + this.name);
+            FullState result = FullState.nowStart(this.program == null? null : this.program.get());
+            return result;
 	}
 
         public Full setProgram(Program program) {
@@ -241,6 +243,7 @@ public abstract class ResourceTracker<STATE> {
 	public void stop(FullState atStart) {
             assert this.program != null;
             assert program.get() != null;
+            //System.err.println("--=--stop: " + this.name);
             FullState atStop = FullState.nowStop(program == null? null : program.get());
             this.aggregate.addFullDelta(atStart, atStop);
 	}
@@ -253,7 +256,7 @@ public abstract class ResourceTracker<STATE> {
 
     final static class FullState extends THState {
         protected long threadCPUTime;
-        protected long processCPUTime;
+        protected OptionalLong processCPUTime = OptionalLong.of(0);
 
         protected long gcCount;
         protected long gcTime;
@@ -288,7 +291,7 @@ public abstract class ResourceTracker<STATE> {
 
         static FullState nowStop(Program program) {
             long time = System.nanoTime();
-            long processCpuTime = processCPUNanos();
+            OptionalLong processCpuTime = processCPUNanos();
             long threadCpuTime = threadCPUNanos();
             FullState retval = new FullState();
             retval.timeNanos = time;
@@ -301,12 +304,14 @@ public abstract class ResourceTracker<STATE> {
         void addFullDelta(FullState atStart, FullState atStop) {
             this.addDelta(atStart, atStop);
             this.threadCPUTime   += atStop.threadCPUTime   - atStart.threadCPUTime;
-            this.processCPUTime  += atStop.processCPUTime  - atStart.processCPUTime;
             this.gcCount         += atStop.gcCount         - atStart.gcCount;
             this.gcTime          += atStop.gcTime          - atStart.gcTime;
             this.classesLoaded   += atStop.classesLoaded   - atStart.classesLoaded;
             this.classesUnloaded += atStop.classesUnloaded - atStart.classesUnloaded;
-            this.jitTime = plusDiff(this.jitTime,  atStop.jitTime,        atStart.jitTime);
+            this.jitTime
+              = plusDiff(this.jitTime,             atStop.jitTime,        atStart.jitTime);
+            this.processCPUTime
+              = plusDiff(this.processCPUTime,      atStop.processCPUTime, atStart.processCPUTime);
         }
 
         @Override
@@ -437,82 +442,56 @@ public abstract class ResourceTracker<STATE> {
      * Normalises a name used for reporting memory specs by removing whitespace
      */
     static String normalizeMemorySpecName(String m) {
-        return "\"" + m.replace("\"", "'") + "\"";
-    }
-
-    static String memoryManagersSpec() {
-        StringBuffer result = new StringBuffer("{ ");
-        boolean firstM = true;
-        for (MemoryManagerMXBean bean : memoryManagers) {
-            if (firstM) {
-                firstM = false;
-            } else {
-                result.append(", ");
-            }
-            String name = normalizeMemorySpecName(bean.getName());
-            result.append(name);
-            result.append(": { \"gc\": ");
-
-            if (bean instanceof GarbageCollectorMXBean) {
-                GarbageCollectorMXBean gc = (GarbageCollectorMXBean) bean;
-                result.append("true, ");
-                result.append("\"count\": ");
-                result.append(gc.getCollectionCount());
-                result.append(", \"totalTimeMillis\": ");
-                result.append(gc.getCollectionTime());
-            } else {
-                result.append("false");
-            }
-            result.append(", \"pools\" : [");
-            boolean first = true;
-            for (String pname : bean.getMemoryPoolNames()) {
-                if (first) {
-                    first = false;
-                } else {
-                    result.append(", ");
-                }
-                result.append(normalizeMemorySpecName(pname));
-            }
-            result.append("] }");
-        }
-        result.append(" }");
-        return result.toString();
+        return m.replaceAll(" ", "-").replaceAll("[^A-Za-z0-9_-]", "");
     }
 
     /**
-     * Constructs informative memory usage spec
+     * Report the overall memory pool and memory manager layout structure
      */
-    static String memoryUsageSpec() {
-        StringBuffer result = new StringBuffer("{ ");
-        boolean firstM = true;
-        for (MemoryPoolMXBean bean : memoryPools) {
-            if (firstM) {
-                firstM = false;
-            } else {
-                result.append(", ");
-            }
-            String name = normalizeMemorySpecName(bean.getName());
-            result.append(name);
-            result.append(": { \"heap\": ");
-            result.append(bean.getType() == MemoryType.HEAP);
+    public static void logMemoryManagersSpec(BenchReporter reporter) {
+        for (MemoryManagerMXBean bean : memoryManagers) {
+            String name = bean.getName();
+            String nname = normalizeMemorySpecName(name);
 
-            // Based on the most recent collection
+            StringBuffer pools = new StringBuffer();
+            for (String poolName : bean.getMemoryPoolNames()) {
+                pools.append(normalizeMemorySpecName(poolName));
+                pools.append(" ");
+            }
+
+            reporter.logMap("jvm-mem-manager", nname,
+                "pools=[ " + pools.toString() + "]"
+                + ", name=" + name);
+        }
+
+        for (MemoryPoolMXBean bean : memoryPools) {
+            String name = bean.getName();
+            String nname = normalizeMemorySpecName(name);
+
+            reporter.logMap("jvm-mem-pool", nname,
+                "type=" + bean.getType()
+                + ", name=" + name);
+
+        }
+    }
+
+    /**
+     * Report the current memory usage structure
+     */
+    public static void logMemoryUsageSpec(BenchReporter reporter) {
+        for (MemoryPoolMXBean bean : memoryPools) {
+            String name = bean.getName();
+            String nname = normalizeMemorySpecName(name);
+
             MemoryUsage usage = bean.getUsage();
 
-            if (usage != null) {
-                result.append(", \"usage\" : [ ");
-                result.append(usage.getInit());
-                result.append(", ");
-                result.append(usage.getUsed());
-                result.append(", ");
-                result.append(usage.getCommitted());
-                result.append(", ");
-                result.append(usage.getMax());
-                result.append(" ]");
-            }
-            result.append(" }");
+            reporter.logMap("jvm-mem-pool-usage",
+                nname,
+                String.format("0x%x\t0x%x\t0x%x\t0x%x",
+                    usage.getInit(),
+                    usage.getUsed(),
+                    usage.getCommitted(),
+                    usage.getMax()));
         }
-        result.append(" }");
-        return result.toString();
     }
 }

@@ -41,6 +41,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Iterator;
+import java.util.HashMap;
 
 import org.extendj.ast.Warning;
 import org.extendj.ast.CFGRoot;
@@ -276,9 +277,9 @@ public class IntraJ extends Frontend {
      * Clear frontend profilers
      */
     protected static void resetFrontendCounters(IntraJ intraj) {
-        frontendResources = new ResourceTracker.TH("frontend-").setProgram(intraj.program);
-        frontendCheckResources = new ResourceTracker.TH("frontend-check-").setProgram(intraj.program);
-        iterTracker = (new ResourceTracker.Full("iter-")).setProgram(intraj.program);
+        frontendResources = new ResourceTracker.TH("frontend").setProgram(intraj.program);
+        frontendCheckResources = new ResourceTracker.TH("frontend-check").setProgram(intraj.program);
+        iterTracker = (new ResourceTracker.Full("iter")).setProgram(intraj.program);
         iterState = iterTracker.start();
     }
 
@@ -383,7 +384,7 @@ public class IntraJ extends Frontend {
         final String fileName = unit.getClassSource().sourceName();
         for (StaticAnalysis analysis: analysesActive) {
             if (!analysisResources.containsKey(analysis)) {
-                analysisResources.put(analysis, new ResourceTracker.TH("analysis-").setProgram(this.program));
+                analysisResources.put(analysis, new ResourceTracker.TH(analysis.name()).setProgram(this.program));
             }
             ResourceTracker.TH tracker = analysisResources.get(analysis);
             ResourceTracker.THState start = tracker.start();
@@ -592,42 +593,51 @@ public class IntraJ extends Frontend {
     /**
      * Action: Benchmark analysis execution
      */
-    static class BenchmarkAction extends AnalysisAction implements BenchReporter.Raw {
+    static class BenchmarkAction extends AnalysisAction {
         int benchRun = 0;
 
         @Override
         public int exec() {
+            BenchReporter.RUN.log("gc-explicit-reset", runGCBetweenIterations? 1 : 0);
+            BenchReporter.RUN.log("reset", resetIntraJ.toString());
+            ResourceTracker.logMemoryManagersSpec(BenchReporter.RUN);
+            HashMap<String, BenchReporter.Iterated> analysisReporters = new HashMap<>();
+            for (StaticAnalysis analysis: analysesActive) {
+                analysisReporters.put(
+                    analysis.name(),
+                    BenchReporter.iter().subReporter(analysis.name()));
+            }
+
+            BenchReporter.Iterated frontendReporter = BenchReporter.iter().subReporter("frontend");
+            BenchReporter.Iterated frontendCheckReporter = BenchReporter.iter().subReporter("frontend-check");
+            BenchReporter.Iterated resetReporter = BenchReporter.reset();
+
             IntraJ intraj = null;
             resetAnalysisCounters(warningCollector, warningCounter);
-            final String initialMemoryUsageSpec = ResourceTracker.memoryUsageSpec();
+            //final String initialMemoryUsageSpec = ResourceTracker.logMemoryUsageSpec();
             for (benchRun = 0; benchRun < benchIterNum; ++benchRun) {
-                intraj = resetIntraJ.resetAndRun(intraj);
-                iterTracker.stop(iterState);
-                for (StaticAnalysis analysis: analysesActive) {
-                    final String stopMemoryUsageSpec = ResourceTracker.memoryUsageSpec();
-                    String pfx = analysis.name();
-                    BenchReporter r = BenchReporter.fromRaw(this, pfx);
-                    r.logWallTime();
-                    r.log("gc-explicit-reset", runGCBetweenIterations? 1 : 0);
-                    r.log("reset", resetIntraJ.toString());
-                    r.log("analysis", analysis.name());
-                    r.log("sub-seq", benchRun);
+                BenchReporter.iter().nextIteration(); // count iterations
 
-                    iterTracker.report(r);
+                intraj = resetIntraJ.resetAndRun(intraj, resetReporter);
+                iterTracker.stop(iterState);
+                BenchReporter iterReporter = BenchReporter.iter();
+                ResourceTracker.logMemoryUsageSpec(iterReporter);
+
+                iterReporter.logWallTime();
+                iterTracker.report(iterReporter);
+                frontendResources.report(frontendReporter);
+                frontendCheckResources.report(frontendCheckReporter);
+                if (resetProfiler != null) {
+                    resetProfiler.report(resetReporter);
+                }
+
+                for (StaticAnalysis analysis: analysesActive) {
+                    BenchReporter r = analysisReporters.get(analysis.name());
 
                     ResourceTracker.TH aRes = analysisResources.get(analysis);
                     if (aRes != null) {
                         aRes.report(r);
                     }
-                    frontendResources.report(r);
-                    frontendCheckResources.report(r);
-                    if (resetProfiler != null) {
-                        resetProfiler.report(r);
-                    }
-                    r.log("jvm-memory-managers", ResourceTracker.memoryManagersSpec());
-                    r.log("jvm-memory-usage-start", memoryUsageSpecAfterLastGC == null ?
-                        initialMemoryUsageSpec : memoryUsageSpecAfterLastGC);
-                    r.log("jvm-memory-usage-stop", stopMemoryUsageSpec);
                     r.log("warnings-num", warningCounter.get());
                     r.log("warnings-md5", warningCollector.md5().toString());
                 }
@@ -639,10 +649,10 @@ public class IntraJ extends Frontend {
             return 0;
         }
 
-        @Override
-        public void benchLog(String subId, String property, String value) {
-            System.out.println("L " + benchRun + "-" + subId + "\t" + property + "\t" + value);
-        }
+        // @Override
+        // public void benchLog(String subId, String property, String value) {
+
+        // }
 
         @Override
         protected void printExtraStats(IntraJ intraj) {
@@ -653,7 +663,6 @@ public class IntraJ extends Frontend {
     // ---- IntraJ benchmarking reset strategies
 
     // ResourceTracker.memoryUsageSpec at the point of the last runGCIfRequested invocation (after GC, if triggered)
-    static String memoryUsageSpecAfterLastGC = null;
     static ResourceTracker.Full resetProfiler = null;
 
     /**
@@ -661,20 +670,19 @@ public class IntraJ extends Frontend {
      *
      * @return <tt>true</tt> iff gc was run
      */
-    static boolean runGCIfRequested() {
-        ResourceTracker.Full profiler = new ResourceTracker.Full("reset-");
+    static boolean runGCIfRequested(BenchReporter resetReporter) {
+        ResourceTracker.Full profiler = new ResourceTracker.Full("reset");
         ResourceTracker.FullState state = profiler.start();
         boolean result;
 
         if (runGCBetweenIterations) {
             System.gc();
-            memoryUsageSpecAfterLastGC = ResourceTracker.memoryUsageSpec();
             result = true;
         } else {
-            memoryUsageSpecAfterLastGC = null;
             result = false;
         }
         profiler.stop(state);
+        ResourceTracker.logMemoryUsageSpec(resetReporter);
         resetProfiler = profiler;
         return result;
     }
@@ -707,22 +715,22 @@ public class IntraJ extends Frontend {
         /**
          * Reset IntraJ instrance
          */
-        public abstract IntraJ resetAndRun(IntraJ intraj);
+        public abstract IntraJ resetAndRun(IntraJ intraj, BenchReporter reporter);
         public abstract void visitCompilationUnit(IntraJ intraj, CompilationUnit cu);
     }
 
     static final IntraJResetStrategy INTRAJ_RESET_REPARSE = new IntraJResetStrategy("REPARSE") {
 
         @Override
-        public IntraJ resetAndRun(IntraJ intraj) {
-            clearOldIntraJ(intraj);
+        public IntraJ resetAndRun(IntraJ intraj, BenchReporter reporter) {
+            clearOldIntraJ(intraj, reporter);
             intraj = new IntraJ();
             resetFrontendCounters(intraj);
             intraj.runFrontendWithConfig();
             return intraj;
         }
 
-        void clearOldIntraJ(IntraJ intraj) {
+        void clearOldIntraJ(IntraJ intraj, BenchReporter reporter) {
             if (intraj == null) {
                 return;
             }
@@ -731,7 +739,7 @@ public class IntraJ extends Frontend {
             }
             WeakReference<Program> tracker = new WeakReference<Program>(intraj.program);
             intraj.clearEntrypoint();
-            if (runGCIfRequested()) { // true iff GC actually ran
+            if (runGCIfRequested(reporter)) { // true iff GC actually ran
                 if (tracker.get() != null) {
                     throw new RuntimeException("Memory leak: old IntraJ program object was not collected");
                 }
@@ -749,15 +757,15 @@ public class IntraJ extends Frontend {
         IntraJ intraj;
 
         @Override
-        public IntraJ resetAndRun(IntraJ intraj) {
+        public IntraJ resetAndRun(IntraJ intraj, BenchReporter reporter) {
             if (intraj == null) {
                 intraj = new IntraJ();
-                runGCIfRequested();
+                runGCIfRequested(reporter);
                 resetFrontendCounters(intraj);
                 intraj.runFrontendWithConfig();
             } else {
                 intraj.getEntryPoint().flushTreeCache();
-                runGCIfRequested();
+                runGCIfRequested(reporter);
                 resetFrontendCounters(intraj);
             }
             this.intraj = intraj;

@@ -32,8 +32,7 @@
 package org.extendj;
 
 import java.util.OptionalLong;
-
-//import java.util.Calendar;
+import java.util.HashSet;
 
 /**
  * Benchmarking result reporter
@@ -43,6 +42,10 @@ public interface BenchReporter {
      * Report a benchmarking result
      */
     public void log(String property, String value);
+
+    default public void logMap(String property, String key, String value) {
+        log(property, key + "\t" + value);
+    }
 
     default public void log(String property, long value) {
         log(property, Long.toString(value));
@@ -65,30 +68,81 @@ public interface BenchReporter {
 
     default public void logWallTime() {
         logDouble("wall-time", System.currentTimeMillis() / 1_000.0, 3);
-        //log("wall-time", (new Calendar()).getTimeInMillis() / 1_000.0);
     }
 
-    public interface Raw {
-        /**
-         * Report a benchmarking result for the current sub-experiment
-         */
-        public void benchLog(String subId, String property, String value);
+    static void $log(String subId, String property, String value) {
+        System.out.println("L " + subId + "\t" + property + "\t" + value);
     }
 
-    public static BenchReporter fromRaw(final Raw raw, final String subId) {
-        return new BenchReporter() {
+    /**
+     * Per-iteration reporter
+     */
+    public abstract static class Iterated implements BenchReporter {
+
+        protected static int iteration = 0;
+        protected String activity;
+        protected static HashSet<String> registeredIteratedReporters = new HashSet<String>();
+
+        private Iterated(String activity) {
+            this.activity = activity;
+        }
+
+        public int nextIteration() {
+            return ++iteration;
+        }
+
+        public Iterated subReporter(String name) {
+            if (iteration > 0) {
+                throw new RuntimeException("Must not create new subReporter after iteration started");
+            }
+            if (registeredIteratedReporters.contains(name)) {
+                throw new RuntimeException("BenchReporter.Iterated: subReporter("+name+") already registered");
+            }
+            registeredIteratedReporters.add(name);
+            RUN.log("sub-activity", activity + "\t" +  name);
+            return new Iterated(name) {};
+        }
+
+        @Override
+        public void log(String property, String value) {
+            $log(iteration + "-" + activity, property, value);
+        }
+
+
+        static Iterated _ITER = null;
+        static Iterated _RESET = null;
+        static Iterated _RUN = new Iterated(":RUN:") {
+            @Override
             public void log(String property, String value) {
-                raw.benchLog(subId, property, value);
+                // Don't report iteration count
+                $log(":RUN:", property, value);
             }
         };
     }
 
-    public static BenchReporter withPrefix(final BenchReporter base, final String prefix) {
-        return new BenchReporter() {
-            public void log(String property, String value) {
-                base.log(prefix + property, value);
-            }
-        };
+    /**
+     * Global run reporter (header)
+     */
+    public static BenchReporter RUN = Iterated._RUN;
+
+    /**
+     * Per-iteration reporter
+     */
+    public static Iterated iter() {
+        if (Iterated._ITER == null) {
+            Iterated._ITER = Iterated._RUN.subReporter("iter");
+        }
+        return Iterated._ITER;
+    }
+
+    /**
+     * Reset reporter (not part of iter, but runs between iterations)
+     */
+    public static Iterated reset() {
+        if (Iterated._RESET == null) {
+            Iterated._RESET = Iterated._RUN.subReporter("reset");
+        }
+        return Iterated._RESET;
     }
 }
 
