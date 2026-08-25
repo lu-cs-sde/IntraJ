@@ -491,12 +491,11 @@ public abstract class ResourceTracker<STATE> {
             MemoryUsage usage = bean.getUsage();
 
             if (usage == null) {
-                reporter.log("jvm-mem-pool-usage", "U");
+                reporter.logMap("jvm-mem-pool-usage", nname, "U");
             } else {
                 reporter.logMap("jvm-mem-pool-usage",
                     nname,
-                    "1"
-                    + "\t" + liftedLongHex(usage.getInit())
+                    liftedLongHex(usage.getInit())
                     + "\t" + liftedLongHex(usage.getUsed())
                     + "\t" + liftedLongHex(usage.getCommitted())
                     + "\t" + liftedLongHex(usage.getMax()));

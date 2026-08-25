@@ -640,15 +640,17 @@ public class IntraJ extends Frontend {
                 intraj = resetIntraJ.resetAndRun(intraj, resetReporter);
                 iterTracker.stop(iterState);
                 BenchReporter iterReporter = BenchReporter.iter();
+                if (resetProfiler != null) {
+                    resetProfiler.report(resetReporter);
+                }
                 ResourceTracker.logMemoryUsageSpec(iterReporter);
 
                 iterReporter.logWallTime();
                 iterTracker.report(iterReporter);
+                iterReporter.log("warnings-num", warningCounter.get());
+                iterReporter.log("warnings-md5", warningCollector.md5().toString());
                 frontendResources.report(frontendReporter);
                 frontendCheckResources.report(frontendCheckReporter);
-                if (resetProfiler != null) {
-                    resetProfiler.report(resetReporter);
-                }
 
                 for (StaticAnalysis analysis: analysesActive) {
                     BenchReporter r = analysisReporters.get(analysis.name());
@@ -657,8 +659,6 @@ public class IntraJ extends Frontend {
                     if (aRes != null) {
                         aRes.report(r);
                     }
-                    r.log("warnings-num", warningCounter.get());
-                    r.log("warnings-md5", warningCollector.md5().toString());
                 }
                 resetAnalysisCounters(warningCollector, warningCounter);
             }
