@@ -42,7 +42,7 @@ aspect ReachingDefinitions {
   eq UnaryIncDec.RDkill() = getVarDecl();
 
   /* --- Out sets --- */
-  syn Set<CFGNode> CFGNode.RDin() {
+  syn Set<CFGNode> CFGNode.RDin() circular [java.util.Collections.EMPTY_SET] {
     Set<CFGNode> res = new HashSet<CFGNode>();
     for (CFGNode e : pred()) {
       res.addAll(e.RDout());
