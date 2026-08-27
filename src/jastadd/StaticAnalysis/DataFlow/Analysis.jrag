@@ -43,7 +43,7 @@ aspect Analysis {
   coll Set<Warning> CompilationUnit.NPA()[new TreeSet<Warning>()] with add root
       CompilationUnit;
 
-  coll Set<Warning> CompilationUnit.IMPDAA()[new TreeSet<Warning>()] with add
+  coll Set<Warning> CompilationUnit.FAA()[new TreeSet<Warning>()] with add
       root CompilationUnit;
 
   coll Set<Warning> CompilationUnit.EMPTYIF()[new TreeSet<Warning>()] with add

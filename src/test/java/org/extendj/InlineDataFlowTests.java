@@ -44,7 +44,7 @@ import org.junit.runners.Parameterized.Parameters;
  * under {@code testfiles/DataFlow/} and verifies warnings against
  * inline {@code // @ANALYSIS} annotations.
  *
- * <p>Each subdirectory name (NPA, DAA, IMPDAA, ...) serves as the
+ * <p>Each subdirectory name (NPA, DAA, FAA, ...) serves as the
  * default analysis type. Expected warnings are declared directly in
  * the test source files using end-of-line comments:
  * <pre>

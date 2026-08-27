@@ -1,4 +1,4 @@
-public class IMPDAA02 {
+public class FAA02 {
   void foo(Boolean b) {
     String y = "Test";
     String x = y; // @DAA

@@ -1,4 +1,4 @@
-public class IMPDAA09 {
+public class FAA09 {
     void testBasicSelfAssignment() {
         int x;
         x = 5;
@@ -22,9 +22,9 @@ public class IMPDAA09 {
     }
     
     void testComplexSelfAssignment() {
-        int m = 0, n = 0; // @IMPDAA
+        int m = 0, n = 0; // @FAA
         m = n;
-        n = n; // @IMPDAA
+        n = n; // @FAA
         m = n;
     }
     

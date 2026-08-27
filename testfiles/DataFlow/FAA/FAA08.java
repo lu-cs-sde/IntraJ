@@ -1,9 +1,9 @@
-public class IMPDAA08 {
+public class FAA08 {
     void testIfElseCircular(boolean condition) {
-        int x = 0, y = 0; // @IMPDAA
+        int x = 0, y = 0; // @FAA
         
         if (condition) {
-            x = y; // @IMPDAA
+            x = y; // @FAA
             y = x;
         } else {
             x = 5;
@@ -12,15 +12,15 @@ public class IMPDAA08 {
     }
     
     void testSwitchCircular(int value) {
-        int a = 0, b = 0, c = 0; // @IMPDAA @IMPDAA
+        int a = 0, b = 0, c = 0; // @FAA @FAA
         
         switch (value) {
             case 1:
-                a = b; // @IMPDAA
+                a = b; // @FAA
                 b = a;
                 break;
             case 2:
-                b = c; // @IMPDAA
+                b = c; // @FAA
                 c = b;
                 break;
             default:
@@ -30,22 +30,22 @@ public class IMPDAA08 {
     }
     
     void testConditionalInLoop() {
-        int m = 0, n = 0; // @IMPDAA
+        int m = 0, n = 0; // @FAA
         
         for (int i = 0; i < 10; i++) {
             if (i % 2 == 0) {
-                m = n; // @IMPDAA
-                n = m; // @IMPDAA
+                m = n; // @FAA
+                n = m; // @FAA
             }
         }
     }
     
     void testNestedConditionalCircular(boolean outer, boolean inner) {
-        int p = 0, q = 0, r = 0; // @IMPDAA @IMPDAA
+        int p = 0, q = 0, r = 0; // @FAA @FAA
         
         if (outer) {
             if (inner) {
-                p = q; // @IMPDAA
+                p = q; // @FAA
                 q = r;
                 r = p;
             } else {
@@ -55,16 +55,16 @@ public class IMPDAA08 {
     }
     
     void testTernaryCircular(boolean condition) {
-        int x = 0, y = 0, temp = 0; // @IMPDAA @IMPDAA
+        int x = 0, y = 0, temp = 0; // @FAA @FAA
         
         temp = condition ? (x = y) : (y = x);
     }
     
     void testTryCatchCircular() {
-        int a = 0, b = 0; // @IMPDAA
+        int a = 0, b = 0; // @FAA
         
         try {
-            a = b; // @IMPDAA
+            a = b; // @FAA
             b = a;
             throw new RuntimeException("test");
         } catch (Exception e) {
