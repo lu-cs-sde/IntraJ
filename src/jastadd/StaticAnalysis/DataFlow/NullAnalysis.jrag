@@ -53,8 +53,8 @@ public
   VariableDeclarator implements Assign;
 
   /* --- TRFunction --- */
-  syn Gamma CFGNode.trFun(Gamma gamma) { return gamma; }
-  eq Assign.trFun(Gamma gamma) {
+  syn Gamma CFGNode.NA_trFun(Gamma gamma) { return gamma; }
+  eq Assign.NA_trFun(Gamma gamma) {
     Variable decl = getDeclaration();
     if (NA_getMayBeNull())
       gamma._put(decl, AbsDomain.NULL);
@@ -63,7 +63,7 @@ public
     return gamma;
   }
 
-  eq VarAccess.trFun(Gamma gamma) {
+  eq VarAccess.NA_trFun(Gamma gamma) {
     Variable decl = varDecl();
     if (NA_in().get(decl) == AbsDomain.NULL && isDereferencing())
       gamma._put(decl, AbsDomain.NOTNULL);
@@ -74,12 +74,12 @@ public
 
   coll Gamma TryStmt.NA_out() with join; // TryStmt is not a CFGNode
 
-  CFGNode contributes  trFun(NA_out())
+  CFGNode contributes  NA_trFun(NA_out())
    when getEnclosingTry()!=null to TryStmt.NA_out()  for getEnclosingTry();
 
   syn Gamma CFGNode.NA_out() circular[new Gamma()] {
     Gamma res = new Gamma(NA_in());
-    res = trFun(res);
+    res = NA_trFun(res);
     return res;
   }
 
@@ -93,7 +93,7 @@ public
   eq Entry.NA_in() = new Gamma();
 
   /* --- Error Predicate / isNullable --- */
-  syn Boolean VarAccess.isNullable() {
+  syn Boolean VarAccess.NA_isNullable() {
     AbsDomain res = NA_in().get(varDecl());
     return isDereferencing() && (res == AbsDomain.NULL);
   }
@@ -104,22 +104,9 @@ public
       "A 'NullPointerException' could be thrown;'" + name() + "' is nullable.",
       StaticAnalysis.NPA,
       null, null) when
-  isNullable() to CompilationUnit.NPA();
+  NA_isNullable() to CompilationUnit.NPA();
 
   /* --- Helpers --- */
-  syn Variable ReachedLVal.getDeclaration();
-  eq VariableDeclarator.getDeclaration() = singletonValue();
-  eq FieldDeclarator.getDeclaration() = singletonValue();
-  eq ParameterDeclaration.getDeclaration() = singletonValue();
-  eq AssignExpr.getDeclaration() = getDest().varDecl();
-  eq PostfixExpr.getDeclaration() = getOperand().varDecl();
-  eq PreIncExpr.getDeclaration() = getOperand().varDecl();
-  eq PreDecExpr.getDeclaration() = getOperand().varDecl();
-
-  inh boolean VarAccess.isDereferencing();
-  eq Dot.getLeft().isDereferencing() = getLeft().isVarAccess();
-  eq EnhancedForStmt.getExpr().isDereferencing() = true;
-  eq CompilationUnit.getChild().isDereferencing() = false;
 
   syn boolean Expr.NA_getMayBeNull() = false;
   syn boolean Assign.NA_getMayBeNull() = getMayBeNull();
@@ -131,97 +118,4 @@ public
   syn boolean VariableDeclarator.NA_getMayBeNull() =
       hasInit() ? getInit().NA_getMayBeNull() : false;
 
-  eq CastExpr.varDecl() = getExpr().varDecl();
-
-  /* --- Improving Analysis / Extending the CFGs / Generating Facts --- */
-
-public
-  interface FactGenerator {}
-  NEExpr implements FactGenerator;
-  EQExpr implements FactGenerator;
-  ImplicitAssignment implements CFGNode;
-
-public
-  ImplicitAssignment.ImplicitAssignment(Boolean p0, Variable p1, int start,
-                                        int end) {
-    setMayBeNull(p0);
-    setDeclaration(p1);
-    setStart(start);
-    setEnd(end);
-  }
-
-  syn nta ImplicitAssignment EQExpr.assignTrue() = new ImplicitAssignment(
-      true, getFact(), getParent().getStart(), getParent().getEnd());
-
-  syn nta ImplicitAssignment EQExpr.assignFalse() = new ImplicitAssignment(
-      false, getFact(), getParent().getStart(), getParent().getEnd());
-
-  syn nta ImplicitAssignment NEExpr.assignTrue() = new ImplicitAssignment(
-      false, getFact(), getParent().getStart(), getParent().getEnd());
-
-  syn nta ImplicitAssignment NEExpr.assignFalse() = new ImplicitAssignment(
-      true, getFact(), getParent().getStart(), getParent().getEnd());
-
-  inh boolean FactGenerator.shouldHaveFacts();
-  eq IfStmt.getCondition().shouldHaveFacts() = true;
-  eq WhileStmt.getCondition().shouldHaveFacts() = true;
-  eq ConditionalExpr.getCondition().shouldHaveFacts() = true;
-  eq CompilationUnit.getChild().shouldHaveFacts() = false;
-  syn boolean FactGenerator.hasFact() = getFact() != null && shouldHaveFacts();
-  syn Variable FactGenerator.getFact() {
-    Variable kill = null;
-    if (getLeftOperand().isNullLiteral() &&
-        getRightOperand().varDecl() != null) {
-      kill = getRightOperand().varDecl();
-    } else if (getRightOperand().isNullLiteral() &&
-               getLeftOperand().varDecl() != null) {
-      kill = getLeftOperand().varDecl();
-    }
-    return kill;
-  }
-
-  eq EQExpr.succ() {
-    SmallSet<CFGNode> res = SmallSet.<CFGNode>empty().mutable();
-    if (hasFact()) {
-      res.add(assignTrue());
-      res.add(assignFalse());
-      return res;
-    }
-    return nextNodes();
-  }
-  eq NEExpr.succ() {
-    SmallSet<CFGNode> res = SmallSet.<CFGNode>empty().mutable();
-    if (hasFact()) {
-      res.add(assignTrue());
-      res.add(assignFalse());
-    } else {
-      return nextNodes();
-    }
-    return res;
-  }
-
-  eq EQExpr.assignTrue().nextNodes() = nextNodesTT();
-  eq EQExpr.assignFalse().nextNodes() = nextNodesFF();
-  eq NEExpr.assignTrue().nextNodes() = nextNodesTT();
-  eq NEExpr.assignFalse().nextNodes() = nextNodesFF();
-
-  EQExpr contributes {
-    if (hasFact()) {
-      assignTrue().collectContributions();
-      assignFalse().collectContributions();
-    }
-    super.collectContributions();
-  }
-  to CFGNode.predColl();
-
-  NEExpr contributes {
-    if (hasFact()) {
-      assignTrue().collectContributions();
-      assignFalse().collectContributions();
-    }
-    super.collectContributions();
-  }
-  to CFGNode.predColl();
-
- 
 }
