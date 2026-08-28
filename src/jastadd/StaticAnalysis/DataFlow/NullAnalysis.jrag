@@ -37,21 +37,6 @@ aspect NPA {
                             (CompilationUnit cu) -> cu.NPA())
       .implementsAnalysis("NPA");
 
-public
-  interface ReachedLVal {}
-  VariableDeclarator implements ReachedLVal;
-  ParameterDeclaration implements ReachedLVal;
-  FieldDeclarator implements ReachedLVal;
-  AssignExpr implements ReachedLVal;
-  PostfixExpr implements ReachedLVal;
-  PreIncExpr implements ReachedLVal;
-  PreDecExpr implements ReachedLVal;
-
-  interface Assign extends CFGNode{}
-  AssignExpr implements Assign;
-  ImplicitAssignment implements Assign;
-  VariableDeclarator implements Assign;
-
   /* --- TRFunction --- */
   syn Gamma CFGNode.NA_trFun(Gamma gamma) { return gamma; }
   eq Assign.NA_trFun(Gamma gamma) {

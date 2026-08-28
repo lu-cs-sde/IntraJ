@@ -31,6 +31,21 @@
 // General-purpose data flow helper definitions
 aspect DataFlow {
 
+  public interface ReachedLVal {}
+  VariableDeclarator implements ReachedLVal;
+  ParameterDeclaration implements ReachedLVal;
+  FieldDeclarator implements ReachedLVal;
+  AssignExpr implements ReachedLVal;
+  PostfixExpr implements ReachedLVal;
+  PreIncExpr implements ReachedLVal;
+  PreDecExpr implements ReachedLVal;
+
+  public interface Assign extends CFGNode{}
+  AssignExpr implements Assign;
+  ImplicitAssignment implements Assign;
+  VariableDeclarator implements Assign;
+
+
   eq CastExpr.varDecl() = getExpr().varDecl();
 
   syn Variable ReachedLVal.getDeclaration();
@@ -136,4 +151,20 @@ public
     super.collectContributions();
   }
   to CFGNode.predColl();
+
+  /* --- Helpers formerly from DAA --- */
+
+  syn boolean Expr.isUsualDefaultValue()  = false;
+  eq MinusExpr.isUsualDefaultValue() = getOperand().isUsualDefaultValue();
+  eq PlusExpr.isUsualDefaultValue() = getOperand().isUsualDefaultValue();
+  eq StringLiteral.isUsualDefaultValue() = getLITERAL().equals("");
+  eq NullLiteral.isUsualDefaultValue() = true;
+  eq BooleanLiteral.isUsualDefaultValue() = true;
+  eq ParExpr.isUsualDefaultValue() = getExpr().isUsualDefaultValue();
+  eq IntegerLiteral.isUsualDefaultValue() {
+    String lit = getLITERAL();
+    return (lit.equals("0") || lit.equals("1") || lit.equals("-1"));
+  }
+
+  syn Boolean CFGNode.inTryCatch() = getEnclosingTry() != null;
 }
