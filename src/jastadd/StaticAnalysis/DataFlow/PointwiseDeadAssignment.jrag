@@ -53,8 +53,10 @@ aspect PwDAA {
            isPwDead(getDeclaration());                             // Is dead
   }
   eq AssignExpr.PwDAA_isDeadAssign() {
-    return PwLVA_def(getDeclaration()) &&           // The assignment is a definition
-           !getDest().varDecl().isFinal() && // The L-value is not final
+    Variable v = getDest().varDecl();
+    return v != null
+        && PwLVA_def(v) &&           // The assignment is a definition
+           !v.isFinal() && // The L-value is not final
            (getDeclaration().isLocalVariable() || // The def is a local vriable
             (getDeclaration().isMethodParameter() &&
              getDeclaration().type().isPrimitiveType())) &&
