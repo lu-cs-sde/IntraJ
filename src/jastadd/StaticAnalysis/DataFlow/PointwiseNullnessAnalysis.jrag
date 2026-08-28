@@ -1,0 +1,105 @@
+/* Copyright (c) 2021, Idriss Riouak <idriss.riouak@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+import org.extendj.flow.utils.Gamma;
+import org.extendj.ast.SmallSet;
+aspect PointwiseNPA {
+  // Add analysis to the StaticAnalysis registry:
+  public static StaticAnalysis StaticAnalysis.PwNPA =
+    StaticAnalysis.dataFlow("Null Pointer Dereference (pointwise)",
+                            (CompilationUnit cu) -> cu.PwNPA())
+      .implementsAnalysis("NPA");
+
+  // MAY-NULL analysis
+  // Encode NULL    = true
+  //        NOTNULL = false
+  syn boolean CFGNode.PwNA_out(Variable v) circular [false] { return PwNA_in(v); }
+  eq Assign.PwNA_out(Variable v) {
+    if (v == getDeclaration()) {
+      return PwNA_getMayBeNull();
+    } else {
+      return PwNA_in(v);
+    }
+  }
+
+  eq VarAccess.PwNA_out(Variable v) {
+    if (v == varDecl()) {
+      return !isDereferencing() && PwNA_in(v);
+    } else {
+      return PwNA_in(v);
+    }
+  }
+
+  /* --- Out Environment --- */
+
+  /* -- This doesn't seem to ever get used-- disabled -- */
+
+  // coll Boolean TryStmt.PwNA_out(Variable v) with logicalOr; // TryStmt is not a CFGNode
+
+  // CFGNode contributes  PwNA_out(Variable v)
+  //  when getEnclosingTry() !=null to TryStmt.PwNA_out(v)  for getEnclosingTry();
+
+  /* --- In Environment --- */
+  syn boolean CFGNode.PwNA_in(Variable v) circular[false] {
+    for (CFGNode p: pred()) {
+        if (p.PwNA_out(v)) {
+            return true;
+        }
+    }
+    return false;
+  }
+  eq Entry.PwNA_in(Variable v) = false;
+
+  /* --- Error Predicate / isNullable --- */
+  syn boolean VarAccess.PwNA_isNullable() {
+    return isDereferencing() && PwNA_in(varDecl());
+  }
+
+  /* --- Error Collection --- */
+  VarAccess contributes warning(
+      getCompilationUnit().pathName(),
+      "A 'NullPointerException' could be thrown;'" + name() + "' is nullable.",
+      StaticAnalysis.PwNPA,
+      null, null) when
+  PwNA_isNullable() to CompilationUnit.PwNPA();
+
+  /* --- Helpers --- */
+
+  syn boolean Expr.PwNA_getMayBeNull() = false;
+  syn boolean Assign.PwNA_getMayBeNull() = getMayBeNull();
+  eq NullLiteral.PwNA_getMayBeNull() = true;
+  eq VarAccess.PwNA_getMayBeNull() = PwNA_in(varDecl());
+  eq AssignExpr.PwNA_getMayBeNull() = getSource().PwNA_getMayBeNull();
+  eq ConditionalExpr.PwNA_getMayBeNull() =
+      getTrueExpr().PwNA_getMayBeNull() || getFalseExpr().PwNA_getMayBeNull();
+  syn boolean VariableDeclarator.PwNA_getMayBeNull() =
+      hasInit() ? getInit().PwNA_getMayBeNull() : false;
+
+}
