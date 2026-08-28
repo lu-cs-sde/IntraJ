@@ -34,7 +34,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.extendj.ast.Variable;
 
-public class Gamma extends HashMap<Variable, AbsDomain> {
+public final class Gamma extends HashMap<Variable, AbsDomain> {
 
   public Gamma() {}
 
@@ -72,5 +72,5 @@ public class Gamma extends HashMap<Variable, AbsDomain> {
     return this;
   }
 
-  public static Gamma EMPTY = new Gamma();
+  public static final Gamma EMPTY = new Gamma();
 }
