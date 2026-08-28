@@ -71,10 +71,10 @@ aspect PointwiseLiveVariableAnalysis {
 
   /* --- In sets --- */
   syn boolean CFGNode.PwLVA_in(Variable v) circular[false] = PwLVA_out(v);
-  eq VariableDeclarator.PwLVA_in(Variable v) = !PwLVA_def(v) && (PwLVA_use(v) || PwLVA_out(v));
-  eq AssignExpr.PwLVA_in(Variable v) =         !PwLVA_def(v) && (PwLVA_use(v) || PwLVA_out(v));
-  eq UnaryIncDec.PwLVA_in(Variable v) =        !PwLVA_def(v) && (PwLVA_use(v) || PwLVA_out(v));
-  eq VarAccess.PwLVA_in(Variable v) =          !PwLVA_def(v) && (PwLVA_use(v) || PwLVA_out(v));
+  eq VariableDeclarator.PwLVA_in(Variable v) = PwLVA_use(v) || (!PwLVA_def(v) && PwLVA_out(v));
+  eq AssignExpr.PwLVA_in(Variable v) =         PwLVA_use(v) || (!PwLVA_def(v) && PwLVA_out(v));
+  eq UnaryIncDec.PwLVA_in(Variable v) =        PwLVA_use(v) || (!PwLVA_def(v) && PwLVA_out(v));
+  eq VarAccess.PwLVA_in(Variable v) =          PwLVA_use(v) || (!PwLVA_def(v) && PwLVA_out(v));
 
 
 

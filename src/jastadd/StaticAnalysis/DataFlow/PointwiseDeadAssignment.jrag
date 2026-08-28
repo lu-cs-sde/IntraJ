@@ -39,7 +39,7 @@ aspect PwDAA {
   // True <==> LVA_def() ∩  LVA_out() = emptyset
   syn boolean CFGNode.isPwDead(Variable v) // = !LVA_def().compl(LVA_out()).isEmpty();
   {
-    return PwLVA_out(v);
+    return !PwLVA_out(v);
   }
 
   syn Boolean CFGNode.PwDAA_isDeadAssign() = false;
