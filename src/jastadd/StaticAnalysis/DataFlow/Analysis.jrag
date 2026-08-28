@@ -40,6 +40,9 @@ aspect Analysis {
   coll TreeSet<Warning> CompilationUnit.DAA()[new TreeSet<Warning>()] with add
       root CompilationUnit;
 
+  coll TreeSet<Warning> CompilationUnit.PwDAA()[new TreeSet<Warning>()] with add
+      root CompilationUnit;
+
   coll Set<Warning> CompilationUnit.NPA()[new TreeSet<Warning>()] with add root
       CompilationUnit;
 
