@@ -72,20 +72,20 @@ aspect PwDAA {
   AssignExpr contributes warning(
       getCompilationUnit().pathName(),
       "The value stored in '" + getDest().varDecl().name() + "' is never read.",
-      StaticAnalysis.DAA, null, null) when
+      StaticAnalysis.PwDAA, null, null) when
   PwDAA_isDeadAssign() to CompilationUnit.PwDAA();
 
   VariableDeclarator contributes warning(
       getCompilationUnit().pathName(),
       "The value stored in '" + singletonValue().name() + "' is never read.",
-      StaticAnalysis.DAA, null, null) when
+      StaticAnalysis.PwDAA, null, null) when
   PwDAA_isDeadAssign() to CompilationUnit.PwDAA();
 
   UnaryIncDec contributes warning(
       getCompilationUnit().pathName(),
       "The value stored in '" + getOperand().varDecl().name() +
           "' is never read.",
-      StaticAnalysis.DAA, null, null) when
+      StaticAnalysis.PwDAA, null, null) when
   PwDAA_isDeadAssign() to CompilationUnit.PwDAA();
 
   /* --- Helpers --- */
