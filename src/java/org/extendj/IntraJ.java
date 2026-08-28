@@ -101,8 +101,11 @@ public class IntraJ extends Frontend {
                 v -> { frontendErrorScan = true; })
             .option("-iter-gc",     "Benchmarking: run GC between iterations (0 or 1, default 1)",
                 v -> { runGCBetweenIterations = Integer.parseInt(v) != 0; })
-            .flag("-Wall",          "Enables all analyses (variant implementations only via -W<analysis>)",
-                v -> { analysisAction(); analysesActive.addAll(StaticAnalysis.analyses()); })
+            // [CR] Nobody ever uses -Wall, but half the time I query Claude to double-check my changes,
+            //      it finds something that is wrong with it.
+            //      Disabled until we have a reason to care about this flag again.
+            // .flag("-Wall",          "Enables all analyses",
+            //     v -> { analysisAction(); analysesActive.addAll(StaticAnalysis.analyses()); })
             .option("-niter",       "Number of iterations for benchmarking (default " + benchIterNum + ")",
                 v -> { benchIterNum = Integer.parseInt(v); })
             ;
