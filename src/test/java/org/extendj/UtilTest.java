@@ -133,35 +133,28 @@ public class UtilTest {
 
   private static int computeAnalysis(Program program,
                                      StaticAnalysis analysis) {
-    Integer nbrWrn = 0;
-    try {
-      for (CompilationUnit cu : program.getCompilationUnits()) {
-        TreeSet<Warning> wmgs = (TreeSet<Warning>)cu.getClass()
-                                    .getDeclaredMethod(analysis.toString())
-                                    .invoke(cu);
-        for (Warning wm : wmgs) {
-          if (analysis.equals(wm.getAnalysisType())) {
-            wm.print(System.out);
-            nbrWrn++;
-          }
-        }
-      }
-    } catch (Throwable t) {
+    List<Warning> warnings = collectWarnings(program, analysis);
+    for (Warning wm : warnings) {
+      wm.print(System.out);
     }
-    return nbrWrn;
+    return warnings.size();
   }
 
+  /**
+   * Runs one analysis over every compilation unit and returns its warnings.
+   *
+   * <p>Dispatch goes through the scanner that the analysis registered with
+   * {@link StaticAnalysis}, so no reflection and no coupling between the
+   * analysis' name and the name of its collection attribute.
+   */
   private static List<Warning> collectWarnings(
       Program program, StaticAnalysis analysis) {
     List<Warning> result = new ArrayList<>();
     try {
       for (CompilationUnit cu : program.getCompilationUnits()) {
-        @SuppressWarnings("unchecked")
-        Set<Warning> wmgs = (Set<Warning>) cu.getClass()
-            .getDeclaredMethod(analysis.toString())
-            .invoke(cu);
-        for (Warning wm : wmgs) {
-          if (analysis.equals(wm.getAnalysisType())) {
+        for (Warning wm : analysis.scan(cu)) {
+          // Variant implementations tag their warnings with their own name.
+          if (analysis.sameAnalysisAs(wm.getAnalysisType())) {
             result.add(wm);
           }
         }
@@ -214,6 +207,8 @@ public class UtilTest {
    * match the {@code // @ANALYSIS} inline annotations in the file.
    * If the file has no annotations, the default analysis (inferred
    * from the parent directory) is checked for zero warnings.
+   *
+   * <p>Checks every registered implementation of an annotated analysis.
    */
   public static void checkWarningsInline(File javaFile,
                                          String defaultAnalysis) {
@@ -227,22 +222,27 @@ public class UtilTest {
     Program program = genAST(javaFile);
 
     for (Map.Entry<String, List<Integer>> entry : expected.entrySet()) {
-      StaticAnalysis analysis =
-          StaticAnalysis.fromString(entry.getKey());
+      String analysis = entry.getKey();
       List<Integer> expectedLines = entry.getValue();
 
-      List<Warning> warnings = collectWarnings(program, analysis);
-      List<Integer> actualLines = new ArrayList<>();
-      for (Warning w : warnings) {
-        actualLines.add(w.getLineStart());
-      }
-      Collections.sort(actualLines);
+      for (StaticAnalysis impl : StaticAnalysis.implementationsOf(analysis)) {
+        List<Warning> warnings = collectWarnings(program, impl);
+        List<Integer> actualLines = new ArrayList<>();
+        for (Warning w : warnings) {
+          actualLines.add(w.getLineStart());
+        }
+        Collections.sort(actualLines);
 
-      assertEquals(
-          analysis.name() + " warnings in " + javaFile.getName()
-              + "\n  Expected lines: " + expectedLines
-              + "\n  Actual lines:   " + actualLines,
-          expectedLines, actualLines);
+        assertEquals(
+            impl.name()
+                + (impl.isCanonical()
+                   ? ""
+                   : " (variant of " + impl.canonicalName() + ")")
+                + " warnings in " + javaFile.getName()
+                + "\n  Expected lines: " + expectedLines
+                + "\n  Actual lines:   " + actualLines,
+            expectedLines, actualLines);
+      }
     }
   }
 }

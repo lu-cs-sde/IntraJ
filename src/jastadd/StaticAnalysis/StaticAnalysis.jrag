@@ -38,7 +38,6 @@ import java.util.Collections;
 
 
 import java.io.PrintStream;
-//import magpiebridge.util.SourceCodeReader;
 import org.extendj.flow.utils.Utils;
 import org.extendj.flow.utils.IJPosition;
 import org.extendj.ast.StaticAnalysis;
@@ -57,6 +56,9 @@ aspect StaticAnalysis {
         protected String category;
         protected Function<CompilationUnit, Collection<Warning>> scanner;
         private String name = "<name not set>";
+
+        // Variant implementations: see #implementsAnalysis(String).
+        private String implementedAnalysis = null;
 
         protected StaticAnalysis(String description, String category,
                                  Function<CompilationUnit, Collection<Warning>> scanner) {
@@ -77,12 +79,66 @@ aspect StaticAnalysis {
                                       scanner);
         }
 
+        /**
+         * Declare this analysis to implement an analysis concept.
+         *
+         * Useful if multiple analyses are variants of each other and produce the same results
+         * through different means.
+         *
+         * @param conceptualAnalysis Short name of the conceptual analysis.  Can be the same as the
+         *   analysis name if we consider that analysis to be the default implementation.
+         * @return <tt>this</tt>, for use in a field initialiser
+         */
+        public StaticAnalysis implementsAnalysis(String conceptualAnalysis) {
+            if (this.implementedAnalysis != null) {
+                throw new RuntimeException(this + " implements multiple analyses: [" + this.implementedAnalysis
+                                           + ", " + conceptualAnalysis + "].  Not currently supported, please add support if really needed");
+            }
+            this.implementedAnalysis = conceptualAnalysis.replace('_', '-').intern();
+            return this;
+        }
+
+        /**
+         * Are the two analyses implementations of the same analysis?
+         *
+         * True for an analysis and itself, and for any two variants implementing the same conceptual analsis
+         */
+        public boolean sameAnalysisAs(StaticAnalysis other) {
+            return other == this
+                || (other != null && this.implementedAnalysis != null && this.implementedAnalysis == other.implementedAnalysis);
+        }
+
         public String description() {
             return description;
         }
 
         public String name() {
             return name;
+        }
+
+        /**
+         * The canonical (possibly abstract) name of the analysis
+         *
+         * This can be the same as {@link name()}.  For analysis variants, this is the name of the
+         * base analysis,
+         */
+        public String canonicalName() {
+            if (this.implementedAnalysis != null) {
+                return this.implementedAnalysis;
+            }
+            return name();
+        }
+
+        /**
+         * All implemented abstract analyses
+         *
+         * May be empty
+         */
+        public Collection<? extends String> implementedAnalyses() {
+            if (this.implementedAnalysis == null) {
+                return Collections.emptyList();
+            }
+            return Collections.singletonList(this.implementedAnalysis);
         }
 
         public String category() {
@@ -95,6 +151,10 @@ aspect StaticAnalysis {
 
         public Collection<? extends Warning> scan(CompilationUnit unit) {
             return scanner.apply(unit);
+        }
+
+        public boolean isCanonical() {
+            return this.name().equals(this.canonicalName());
         }
 
         private static Map<String, StaticAnalysis> computeAnalyses() {
@@ -119,6 +179,7 @@ aspect StaticAnalysis {
             } catch (IllegalAccessException exn) {
                 exn.printStackTrace();
             }
+
             // Now sort first by category and then by short name of the analysis
             final ArrayList<String> categories = new ArrayList<String>(categoriesMap.keySet());
             final Map<String, StaticAnalysis> results = new LinkedHashMap<String, StaticAnalysis>();
@@ -168,6 +229,30 @@ aspect StaticAnalysis {
             return analysisMap().get(name);
         }
 
+        /**
+         * All implementations of the given analysis
+         *
+         * All analyses that either match exactly by name or declare <tt>conceptualAnalysis</tt> as
+         * its {@link implementedAnalysis}.
+         *
+         * Ordered, read-only
+         */
+        public static Collection<? extends StaticAnalysis> implementationsOf(String conceptualAnalysis) {
+            Map<? extends String, ? extends StaticAnalysis> amap = analysisMap();
+            final ArrayList<StaticAnalysis> results = new ArrayList<StaticAnalysis>();
+            if (amap.containsKey(conceptualAnalysis)) {
+                results.add(amap.get(conceptualAnalysis));
+            }
+
+            for (StaticAnalysis other: amap.values()) {
+                if (!other.name.equals(conceptualAnalysis) // already included
+                    && conceptualAnalysis.equals(other.implementedAnalysis)) {
+                    results.add(other);
+                }
+            }
+            return Collections.unmodifiableList(results);
+        }
+
         public static int analysisNameMaxLength() {
             int max = 0;
             for (StaticAnalysis a: analyses()) {
@@ -182,13 +267,30 @@ aspect StaticAnalysis {
         public static void printAnalyses(java.io.PrintStream out) {
             int maxNameLen = analysisNameMaxLength();
             String lastCategory = "";
+            ArrayList<String> abstractAnalyses = new ArrayList<>();
             for (StaticAnalysis analysis: analyses()) {
                 if (!analysis.category().equals(lastCategory)) {
                     lastCategory = analysis.category();
                     out.println("  -- " + analysis.category() + " --");
                 }
-                out.println(String.format("    %-" + maxNameLen + "s  %s",
-                                          analysis.name(), analysis.description()));
+                if (!analysis.implementedAnalyses().isEmpty()) {
+                    for (String abstractAnalysis: analysis.implementedAnalyses()) {
+                        if (!abstractAnalyses.contains(abstractAnalysis)) {
+                            abstractAnalyses.add(abstractAnalysis);
+                            out.println(String.format("    %s provided by:", abstractAnalysis));
+                            for (StaticAnalysis impl: implementationsOf(abstractAnalysis)) {
+                                out.println(String.format("      %-" + maxNameLen + "s  %s",
+                                                          impl.name(), impl.description()));
+                            }
+                        }
+                    }
+                } else {
+                    out.println(String.format("    %-" + maxNameLen + "s    %s%s",
+                                              analysis.name(), analysis.description(),
+                                              analysis.implementedAnalysis == null
+                                              ? ""
+                                              : " [implements " + analysis.implementedAnalysis + "]"));
+                }
             }
         }
 
@@ -288,8 +390,19 @@ aspect StaticAnalysis {
         public String getSourceFilePath() { return sourceFilePath; }
 
         public void print(PrintStream out) {
+            print(out, false);
+        }
+
+        /**
+         * Print this warning
+         *
+         * @param canonicalName Report the abstract analysis name (e.g., "DAA") insttead of
+         *   the variant analysis implementation name (e.g. "PwDAA").
+         */
+        public void print(PrintStream out, boolean canonicalName) {
+            final String reportedAnalysis = canonicalName ? analysis.canonicalName() : analysis.name();
             Utils.printWarning(out,
-                               analysis.name() + " - " + sourceFilePath + ":" +
+                               reportedAnalysis + " - " + sourceFilePath + ":" +
                                lineStart + "," + columnStart,
                                errMsg);
         }

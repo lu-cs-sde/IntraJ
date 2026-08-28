@@ -101,7 +101,7 @@ public class IntraJ extends Frontend {
                 v -> { frontendErrorScan = true; })
             .option("-iter-gc",     "Benchmarking: run GC between iterations (0 or 1, default 1)",
                 v -> { runGCBetweenIterations = Integer.parseInt(v) != 0; })
-            .flag("-Wall",          "Enables all analyses",
+            .flag("-Wall",          "Enables all analyses (variant implementations only via -W<analysis>)",
                 v -> { analysisAction(); analysesActive.addAll(StaticAnalysis.analyses()); })
             .option("-niter",       "Number of iterations for benchmarking (default " + benchIterNum + ")",
                 v -> { benchIterNum = Integer.parseInt(v); })
@@ -512,7 +512,12 @@ public class IntraJ extends Frontend {
                     category = "local-pattern";
                 }
                 category = category.replace(' ', '-');
-                System.out.println(analysis.name() + "\t" + category + "\t" + analysis.description());
+                // Fourth column: the analysis that this one implements.  Equal to the
+                // first column for canonical analyses, so consumers that only read the
+                // first three columns are unaffected.
+                System.out.println(analysis.name() + "\t" + category + "\t"
+                                   + analysis.description() + "\t"
+                                   + analysis.canonicalName());
             }
             return 0;
         }
@@ -640,6 +645,13 @@ public class IntraJ extends Frontend {
             BenchReporter.RUN.log("gc-explicit-reset", runGCBetweenIterations? 1 : 0);
             BenchReporter.RUN.log("reset", resetIntraJ.toString());
             BenchReporter.RUN.log("analyses", analysesString());
+
+            for (StaticAnalysis analysis: analysesActive) {
+                for (String abstractAnalysis: analysis.implementedAnalyses()) {
+                    BenchReporter.RUN.logMap("analysis-variant", analysis.name(), abstractAnalysis);
+                }
+            }
+
             ResourceTracker.logMemoryManagersSpec(BenchReporter.RUN);
             HashMap<String, BenchReporter.Iterated> analysisReporters = new HashMap<>();
             for (StaticAnalysis analysis: analysesActive) {

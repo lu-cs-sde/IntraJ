@@ -81,6 +81,12 @@ interface WarningHandler {
      * Collects all warnings in an ordered map
      *
      * Provides facilities for computing an sha256 hash over the warnings
+     *
+     * Warnings are recorded under the name of their *base* analysis, so that a
+     * variant implementation (e.g. PwDAA) digests to the same value as the
+     * analysis it implements (DAA).  A digest mismatch between two
+     * implementations of the same analysis is then a real divergence, not an
+     * artefact of the analysis name appearing in the output.
      */
     public static class Collect implements WarningHandler {
         TreeMap<String, PerFileCollector> fileMap;
@@ -91,7 +97,7 @@ interface WarningHandler {
             if (!fileMap.containsKey(sourceFile)) {
                 fileMap.put(sourceFile, new PerFileCollector());
             }
-            warning.print(fileMap.get(sourceFile).writer);
+            warning.print(fileMap.get(sourceFile).writer, true);
         }
 
         public void reset() {
