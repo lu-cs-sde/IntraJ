@@ -29,4 +29,8 @@
  */
 
 package org.extendj.flow.utils;
-public enum AbsDomain { NULL, NOTNULL, BOTTOM }
+
+// Abstract domain for NPA
+public enum AbsDomain {
+    NULL, NOTNULL//, BOTTOM  // BOTTOM = NOTNULL was never used
+}

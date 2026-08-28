@@ -61,10 +61,12 @@ aspect TsNPA {
 
   /* --- Out Environment --- */
 
-  coll Gamma TryStmt.TsNA_out() with join; // TryStmt is not a CFGNode
+  /* -- This doesn't seem to ever get used-- disabled -- */
 
-  CFGNode contributes  TsNA_out()
-   when getEnclosingTry()!=null to TryStmt.TsNA_out()  for getEnclosingTry();
+  // coll Gamma TryStmt.TsNA_out() with join; // TryStmt is not a CFGNode
+
+  // CFGNode contributes  TsNA_out()
+  //  when getEnclosingTry()!=null to TryStmt.TsNA_out()  for getEnclosingTry();
 
   /* --- In Environment --- */
   syn Gamma CFGNode.TsNA_in() circular[Gamma.EMPTY] {
@@ -89,7 +91,7 @@ aspect TsNPA {
   eq Entry.TsNA_in() = Gamma.EMPTY;
 
   /* --- Error Predicate / isNullable --- */
-  syn Boolean VarAccess.TsNA_isNullable() {
+  syn boolean VarAccess.TsNA_isNullable() {
     AbsDomain res = TsNA_in().get(varDecl());
     return isDereferencing() && (res == AbsDomain.NULL);
   }

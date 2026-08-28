@@ -72,10 +72,12 @@ public
 
   /* --- Out Environment --- */
 
-  coll Gamma TryStmt.NA_out() with join; // TryStmt is not a CFGNode
+  /* -- This doesn't seem to ever get used-- disabled -- */
 
-  CFGNode contributes  NA_trFun(NA_out())
-   when getEnclosingTry()!=null to TryStmt.NA_out()  for getEnclosingTry();
+  // coll Gamma TryStmt.NA_out() with join; // TryStmt is not a CFGNode
+
+  // CFGNode contributes  NA_trFun(NA_out())
+  //  when getEnclosingTry()!=null to TryStmt.NA_out()  for getEnclosingTry();
 
   syn Gamma CFGNode.NA_out() circular[new Gamma()] {
     Gamma res = new Gamma(NA_in());
