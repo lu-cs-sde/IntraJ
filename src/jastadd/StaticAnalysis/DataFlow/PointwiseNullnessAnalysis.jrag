@@ -40,7 +40,12 @@ aspect PointwiseNPA {
   // MAY-NULL analysis
   // Encode NULL    = true
   //        NOTNULL = false
-  syn boolean CFGNode.PwNA_out(Variable v) circular [false] { return PwNA_in(v); }
+  syn boolean CFGNode.PwNA_out(Variable v)  // circular [false] // [CR] DAA doesn't use a second circular[false]
+  {
+      return PwNA_in(v);
+  }
+
+
   eq Assign.PwNA_out(Variable v) {
     if (v == getDeclaration()) {
       return PwNA_getMayBeNull();

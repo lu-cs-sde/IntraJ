@@ -37,36 +37,36 @@ aspect PwDAA {
                             (CompilationUnit cu) -> cu.PwDAA())
       .implementsAnalysis("DAA");
 
-  // True <==> LVA_def() ∩  LVA_out() = emptyset
-  syn boolean CFGNode.isPwDead(Variable v) // = !LVA_def().compl(LVA_out()).isEmpty();
+  syn boolean CFGNode.PwDAA_isDead(Variable v) // = !LVA_def().compl(LVA_out()).isEmpty();
   {
     return !PwLVA_out(v);
   }
 
   syn Boolean CFGNode.PwDAA_isDeadAssign() = false;
   eq VariableDeclarator.PwDAA_isDeadAssign() {
-    return hasInit() &&             // The RHS is not null
-           !type().isArrayDecl() && // Is not an array declaration
+    Variable v = getDeclaration();
+    return v != null
+        && !type().isArrayDecl() && // Is not an array declaration
            !isFinal() &&            // Is not declared final
            (!IntraJ.excludeLiteralsAndNull ||
             !getInit().isUsualDefaultValue()) && // Is not a default value
-           getDeclaration().isLocalVariable() && // Is a local variable
-           isPwDead(getDeclaration());                             // Is dead
+           v.isLocalVariable() && // Is a local variable
+           PwDAA_isDead(v);                             // Is dead
   }
   eq AssignExpr.PwDAA_isDeadAssign() {
     Variable v = getDest().varDecl();
     return v != null
         && PwLVA_def(v) &&           // The assignment is a definition
            !v.isFinal() && // The L-value is not final
-           (getDeclaration().isLocalVariable() || // The def is a local vriable
-            (getDeclaration().isMethodParameter() &&
-             getDeclaration().type().isPrimitiveType())) &&
-            isPwDead(getDeclaration());
+           (v.isLocalVariable() || // The def is a local vriable
+            (v.isMethodParameter() &&
+             v.type().isPrimitiveType())) &&
+            PwDAA_isDead(v);
   }
 
   eq UnaryIncDec.PwDAA_isDeadAssign() =
       getDeclaration() != null && exprAsStmt() &&
-      getDeclaration().isLocalVariable() && isPwDead(getDeclaration());
+      getDeclaration().isLocalVariable() && PwDAA_isDead(getDeclaration());
 
   /* --- Error Collection --- */
 
