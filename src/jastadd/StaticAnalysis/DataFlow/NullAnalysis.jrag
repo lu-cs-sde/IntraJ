@@ -33,8 +33,9 @@ import org.extendj.ast.SmallSet;
 aspect NPA {
   // Add analysis to the StaticAnalysis registry:
   public static StaticAnalysis StaticAnalysis.NPA =
-    StaticAnalysis.dataFlow("Null Pointer Dereference",
-                            (CompilationUnit cu) -> cu.NPA());
+    StaticAnalysis.dataFlow("Null Pointer Dereference (product lattice)",
+                            (CompilationUnit cu) -> cu.NPA())
+      .implementsAnalysis("NPA");
 
 public
   interface ReachedLVal {}
@@ -55,7 +56,7 @@ public
   syn Gamma CFGNode.trFun(Gamma gamma) { return gamma; }
   eq Assign.trFun(Gamma gamma) {
     Variable decl = getDeclaration();
-    if (getMayBeNull())
+    if (NA_getMayBeNull())
       gamma._put(decl, AbsDomain.NULL);
     else
       gamma._put(decl, AbsDomain.NOTNULL);
@@ -120,14 +121,15 @@ public
   eq EnhancedForStmt.getExpr().isDereferencing() = true;
   eq CompilationUnit.getChild().isDereferencing() = false;
 
-  syn boolean Expr.getMayBeNull() = false;
-  eq NullLiteral.getMayBeNull() = true;
-  eq VarAccess.getMayBeNull() = NA_in().get(varDecl()) == AbsDomain.NULL;
-  eq AssignExpr.getMayBeNull() = getSource().getMayBeNull();
-  eq ConditionalExpr.getMayBeNull() =
-      getTrueExpr().getMayBeNull() || getFalseExpr().getMayBeNull();
-  syn boolean VariableDeclarator.getMayBeNull() =
-      hasInit() ? getInit().getMayBeNull() : false;
+  syn boolean Expr.NA_getMayBeNull() = false;
+  syn boolean Assign.NA_getMayBeNull() = getMayBeNull();
+  eq NullLiteral.NA_getMayBeNull() = true;
+  eq VarAccess.NA_getMayBeNull() = NA_in().get(varDecl()) == AbsDomain.NULL;
+  eq AssignExpr.NA_getMayBeNull() = getSource().NA_getMayBeNull();
+  eq ConditionalExpr.NA_getMayBeNull() =
+      getTrueExpr().NA_getMayBeNull() || getFalseExpr().NA_getMayBeNull();
+  syn boolean VariableDeclarator.NA_getMayBeNull() =
+      hasInit() ? getInit().NA_getMayBeNull() : false;
 
   eq CastExpr.varDecl() = getExpr().varDecl();
 

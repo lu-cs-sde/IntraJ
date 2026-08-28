@@ -71,4 +71,6 @@ public class Gamma extends HashMap<Variable, AbsDomain> {
       put(var, abs);
     return this;
   }
+
+  public static Gamma EMPTY = new Gamma();
 }

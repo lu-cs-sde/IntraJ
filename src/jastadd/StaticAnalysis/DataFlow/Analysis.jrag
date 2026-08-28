@@ -29,13 +29,24 @@
  */
 
 import com.ibm.wala.cast.tree.CAstSourcePositionMap.Position;
-import com.ibm.wala.util.collections.Pair;
+//import com.ibm.wala.util.collections.Pair;
 import org.extendj.flow.utils.IJPosition;
 
 aspect Analysis {
 
-  coll TreeSet<Warning> CompilationUnit.STREQ()[new TreeSet<Warning>()] with add
-      root CompilationUnit;
+
+  /**
+   * Minimal Pair class, to eliminate dependency on WALA
+   */
+  public class Pair<A, B> {
+    A a;
+    B b;
+    public Pair(A a, B b) {
+      this.a = a;
+      this.b = b;
+    }
+  }
+
 
   coll TreeSet<Warning> CompilationUnit.DAA()[new TreeSet<Warning>()] with add
       root CompilationUnit;
@@ -43,10 +54,22 @@ aspect Analysis {
   coll TreeSet<Warning> CompilationUnit.PwDAA()[new TreeSet<Warning>()] with add
       root CompilationUnit;
 
+
   coll Set<Warning> CompilationUnit.NPA()[new TreeSet<Warning>()] with add root
       CompilationUnit;
 
+  coll Set<Warning> CompilationUnit.TsNPA()[new TreeSet<Warning>()] with add root
+      CompilationUnit;
+
+  coll Set<Warning> CompilationUnit.PwNPA()[new TreeSet<Warning>()] with add root
+      CompilationUnit;
+
+
   coll Set<Warning> CompilationUnit.FAA()[new TreeSet<Warning>()] with add
+      root CompilationUnit;
+
+
+  coll TreeSet<Warning> CompilationUnit.STREQ()[new TreeSet<Warning>()] with add
       root CompilationUnit;
 
   coll Set<Warning> CompilationUnit.EMPTYIF()[new TreeSet<Warning>()] with add

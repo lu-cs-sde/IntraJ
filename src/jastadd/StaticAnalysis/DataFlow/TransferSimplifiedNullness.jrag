@@ -1,0 +1,237 @@
+/* Copyright (c) 2021, Idriss Riouak <idriss.riouak@cs.lth.se>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+import org.extendj.flow.utils.Gamma;
+import org.extendj.ast.SmallSet;
+aspect TsNPA {
+  // Add analysis to the StaticAnalysis registry:
+  public static StaticAnalysis StaticAnalysis.TsNPA =
+    StaticAnalysis.dataFlow("Null Pointer Dereference (transfer-simplified)",
+                            (CompilationUnit cu) -> cu.TsNPA())
+      .implementsAnalysis("NPA");
+
+  //public
+  // interface ReachedLVal {}
+  // VariableDeclarator implements ReachedLVal;
+  // ParameterDeclaration implements ReachedLVal;
+  // FieldDeclarator implements ReachedLVal;
+  // AssignExpr implements ReachedLVal;
+  // PostfixExpr implements ReachedLVal;
+  // PreIncExpr implements ReachedLVal;
+  // PreDecExpr implements ReachedLVal;
+
+  // interface Assign extends CFGNode{}
+  // AssignExpr implements Assign;
+  // ImplicitAssignment implements Assign;
+  // VariableDeclarator implements Assign;
+
+  /* --- TRFunction --- */
+  syn Gamma CFGNode.TsNA_out() circular [Gamma.EMPTY] { return TsNA_in(); }
+  eq Assign.TsNA_out() {
+    Gamma gamma = new Gamma(TsNA_in());
+    Variable decl = getDeclaration();
+    if (TsNA_getMayBeNull()) {
+      gamma._put(decl, AbsDomain.NULL);
+    } else {
+      gamma._put(decl, AbsDomain.NOTNULL);
+    } return gamma;
+  }
+
+  eq VarAccess.TsNA_out() {
+    Gamma gamma = TsNA_in();
+    Variable decl = varDecl();
+    if (TsNA_in().get(decl) == AbsDomain.NULL && isDereferencing()) {
+      gamma = new Gamma(gamma);
+      gamma._put(decl, AbsDomain.NOTNULL);
+    }
+    return gamma;
+  }
+
+  /* --- Out Environment --- */
+
+  coll Gamma TryStmt.TsNA_out() with join; // TryStmt is not a CFGNode
+
+  CFGNode contributes  TsNA_out()
+   when getEnclosingTry()!=null to TryStmt.TsNA_out()  for getEnclosingTry();
+
+  /* --- In Environment --- */
+  syn Gamma CFGNode.TsNA_in() circular[Gamma.EMPTY] {
+    Iterator<CFGNode> iter = pred().iterator();
+    if (!iter.hasNext()) {
+        return Gamma.EMPTY;
+    }
+
+    Gamma res = iter.next().TsNA_out();
+    if (!iter.hasNext()) {
+        return res;
+    }
+
+    // must join
+    res = new Gamma(res);
+
+    while (iter.hasNext()) {
+      res.join(iter.next().TsNA_out());
+    }
+    return res;
+  }
+  eq Entry.TsNA_in() = Gamma.EMPTY;
+
+  /* --- Error Predicate / isNullable --- */
+  syn Boolean VarAccess.TsNA_isNullable() {
+    AbsDomain res = TsNA_in().get(varDecl());
+    return isDereferencing() && (res == AbsDomain.NULL);
+  }
+
+  /* --- Error Collection --- */
+  VarAccess contributes warning(
+      getCompilationUnit().pathName(),
+      "A 'NullPointerException' could be thrown;'" + name() + "' is nullable.",
+      StaticAnalysis.TsNPA,
+      null, null) when
+  TsNA_isNullable() to CompilationUnit.TsNPA();
+
+  /* --- Helpers --- */
+  // syn Variable ReachedLVal.getDeclaration();
+  // eq VariableDeclarator.getDeclaration() = singletonValue();
+  // eq FieldDeclarator.getDeclaration() = singletonValue();
+  // eq ParameterDeclaration.getDeclaration() = singletonValue();
+  // eq AssignExpr.getDeclaration() = getDest().varDecl();
+  // eq PostfixExpr.getDeclaration() = getOperand().varDecl();
+  // eq PreIncExpr.getDeclaration() = getOperand().varDecl();
+  // eq PreDecExpr.getDeclaration() = getOperand().varDecl();
+
+  // inh boolean VarAccess.isDereferencing();
+  // eq Dot.getLeft().isDereferencing() = getLeft().isVarAccess();
+  // eq EnhancedForStmt.getExpr().isDereferencing() = true;
+  // eq CompilationUnit.getChild().isDereferencing() = false;
+
+  //syn boolean ImplicitAssignment.TsNA_getMayBeNull() = false;
+  syn boolean Expr.TsNA_getMayBeNull() = false;
+  syn boolean Assign.TsNA_getMayBeNull() = getMayBeNull();
+  eq NullLiteral.TsNA_getMayBeNull() = true;
+  eq VarAccess.TsNA_getMayBeNull() = TsNA_in().get(varDecl()) == AbsDomain.NULL;
+  eq AssignExpr.TsNA_getMayBeNull() = getSource().TsNA_getMayBeNull();
+  eq ConditionalExpr.TsNA_getMayBeNull() =
+      getTrueExpr().TsNA_getMayBeNull() || getFalseExpr().TsNA_getMayBeNull();
+  syn boolean VariableDeclarator.TsNA_getMayBeNull() =
+      hasInit() ? getInit().TsNA_getMayBeNull() : false;
+
+  // eq CastExpr.varDecl() = getExpr().varDecl();
+
+  /* --- Improving Analysis / Extending the CFGs / Generating Facts --- */
+
+// public
+//   interface FactGenerator {}
+//   NEExpr implements FactGenerator;
+//   EQExpr implements FactGenerator;
+//   ImplicitAssignment implements CFGNode;
+
+// public
+//   ImplicitAssignment.ImplicitAssignment(Boolean p0, Variable p1, int start,
+//                                         int end) {
+//     setMayBeNull(p0);
+//     setDeclaration(p1);
+//     setStart(start);
+//     setEnd(end);
+//   }
+
+//   syn nta ImplicitAssignment EQExpr.assignTrue() = new ImplicitAssignment(
+//       true, getFact(), getParent().getStart(), getParent().getEnd());
+
+//   syn nta ImplicitAssignment EQExpr.assignFalse() = new ImplicitAssignment(
+//       false, getFact(), getParent().getStart(), getParent().getEnd());
+
+//   syn nta ImplicitAssignment NEExpr.assignTrue() = new ImplicitAssignment(
+//       false, getFact(), getParent().getStart(), getParent().getEnd());
+
+//   syn nta ImplicitAssignment NEExpr.assignFalse() = new ImplicitAssignment(
+//       true, getFact(), getParent().getStart(), getParent().getEnd());
+
+//   inh boolean FactGenerator.shouldHaveFacts();
+//   eq IfStmt.getCondition().shouldHaveFacts() = true;
+//   eq WhileStmt.getCondition().shouldHaveFacts() = true;
+//   eq ConditionalExpr.getCondition().shouldHaveFacts() = true;
+//   eq CompilationUnit.getChild().shouldHaveFacts() = false;
+//   syn boolean FactGenerator.hasFact() = getFact() != null && shouldHaveFacts();
+//   syn Variable FactGenerator.getFact() {
+//     Variable kill = null;
+//     if (getLeftOperand().isNullLiteral() &&
+//         getRightOperand().varDecl() != null) {
+//       kill = getRightOperand().varDecl();
+//     } else if (getRightOperand().isNullLiteral() &&
+//                getLeftOperand().varDecl() != null) {
+//       kill = getLeftOperand().varDecl();
+//     }
+//     return kill;
+//   }
+
+//   eq EQExpr.succ() {
+//     SmallSet<CFGNode> res = SmallSet.<CFGNode>empty().mutable();
+//     if (hasFact()) {
+//       res.add(assignTrue());
+//       res.add(assignFalse());
+//       return res;
+//     }
+//     return nextNodes();
+//   }
+//   eq NEExpr.succ() {
+//     SmallSet<CFGNode> res = SmallSet.<CFGNode>empty().mutable();
+//     if (hasFact()) {
+//       res.add(assignTrue());
+//       res.add(assignFalse());
+//     } else {
+//       return nextNodes();
+//     }
+//     return res;
+//   }
+
+//   eq EQExpr.assignTrue().nextNodes() = nextNodesTT();
+//   eq EQExpr.assignFalse().nextNodes() = nextNodesFF();
+//   eq NEExpr.assignTrue().nextNodes() = nextNodesTT();
+//   eq NEExpr.assignFalse().nextNodes() = nextNodesFF();
+
+//   EQExpr contributes {
+//     if (hasFact()) {
+//       assignTrue().collectContributions();
+//       assignFalse().collectContributions();
+//     }
+//     super.collectContributions();
+//   }
+//   to CFGNode.predColl();
+
+//   NEExpr contributes {
+//     if (hasFact()) {
+//       assignTrue().collectContributions();
+//       assignFalse().collectContributions();
+//     }
+//     super.collectContributions();
+//   }
+//   to CFGNode.predColl();
+}
