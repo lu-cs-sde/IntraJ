@@ -84,8 +84,8 @@ aspect StaticAnalysis {
             DATA_FLOW("data flow"),
             LOCAL_PATTERN("");
             String sortLabel;
-            Kind(String name) {
-                this.sortLabel = sortLabel;
+            Kind(String label) {
+                this.sortLabel = label;
             }
         }
 
@@ -165,10 +165,6 @@ aspect StaticAnalysis {
 
         private void setName(String newName) {
             this.name = newName;
-        }
-
-        public Collection<? extends Warning> scan(CompilationUnit unit) {
-            return run(unit);
         }
 
         public boolean isCanonical() {

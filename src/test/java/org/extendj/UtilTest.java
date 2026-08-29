@@ -152,7 +152,7 @@ public class UtilTest {
     List<Warning> result = new ArrayList<>();
     try {
       for (CompilationUnit cu : program.getCompilationUnits()) {
-        for (Warning wm : analysis.scan(cu)) {
+        for (Warning wm : analysis.run(cu)) {
           // Variant implementations tag their warnings with their own name.
           if (analysis.sameAnalysisAs(wm.getAnalysisType())) {
             result.add(wm);

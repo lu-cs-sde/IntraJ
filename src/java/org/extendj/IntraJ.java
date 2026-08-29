@@ -410,7 +410,7 @@ public class IntraJ extends Frontend {
             WarningHandlers warningHandler = warningHandlers.get(analysis);
             ResourceTracker.TH tracker = analysisResources.get(analysis);
             ResourceTracker.THState start = tracker.start();
-            Collection<? extends Warning> warnings = analysis.scan(unit);
+            Collection<? extends Warning> warnings = analysis.run(unit);
             tracker.stop(start);
             for (Warning w: warnings) {
                 warningHandler.joint.handle(fileName, w);
