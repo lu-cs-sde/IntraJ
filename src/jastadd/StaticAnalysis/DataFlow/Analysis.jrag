@@ -65,10 +65,6 @@ aspect Analysis {
       CompilationUnit;
 
 
-  coll Set<Warning> CompilationUnit.FAA()[new TreeSet<Warning>()] with add
-      root CompilationUnit;
-
-
   coll TreeSet<Warning> CompilationUnit.STREQ()[new TreeSet<Warning>()] with add
       root CompilationUnit;
 
