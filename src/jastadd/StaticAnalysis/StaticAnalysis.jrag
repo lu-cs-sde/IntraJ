@@ -29,7 +29,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-import java.util.function.Function;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.Map;
@@ -43,40 +42,59 @@ import org.extendj.flow.utils.IJPosition;
 import org.extendj.ast.StaticAnalysis;
 
 aspect StaticAnalysis {
+
+    /**
+     * Functional interface for running static analyses
+     *
+     * [CR] This is WORKAROUND for an unsound limitation in CAT
+     * (<tt>cat.jar</tt>), the static call graph analysis tool, which
+     * we hereby trick into conservatively assuming that
+     * {@link StaticAnalysisRunner::run} can execute any of the registered
+     * static analyses.  (The code is now refactored to fold this into
+     * StaticAnalysis, but I am preserving the interface for clarity.)
+     *
+     * As of 2026-08-29, CAT does not handle <tt>LambdaExpr</tt>
+     * correctly, but it does seem to handle anonymous classes
+     * sufficiently conservatively.
+     */
+    interface StaticAnalysisRunner {
+        /**
+         * Apply the static analysis to the given compilation unit and obtain all warnings for that unit
+         */
+        public Collection<? extends Warning> run(CompilationUnit cu);
+    }
+
     /**
      * Registry for static analyses that are run once per compilation unit
      *
      * To register a new analysis, declare a static field and initialise it with
-     * the result of {@link #dataFlow(String, String, Function)},
-     * {@link #localPattern(String, String, Function)} etc.
+     * the result of {@link #dataFlow(String, String, StaticAnalysisRunner)},
+     * {@link #localPattern(String, String, StaticAnalysisRunner)} etc.
      * The name of the static field is then the short name of the analysis.
      */
-    public class StaticAnalysis implements Comparable<StaticAnalysis> {
+    public abstract class StaticAnalysis implements Comparable<StaticAnalysis>, StaticAnalysisRunner {
         protected String description;
         protected String category;
-        protected Function<CompilationUnit, Collection<Warning>> scanner;
         private String name = "<name not set>";
 
         // Variant implementations: see #implementsAnalysis(String).
         private String implementedAnalysis = null;
 
-        protected StaticAnalysis(String description, String category,
-                                 Function<CompilationUnit, Collection<Warning>> scanner) {
+        public static enum Kind {
+            DATA_FLOW("data flow"),
+            LOCAL_PATTERN("");
+            String sortLabel;
+            Kind(String name) {
+                this.sortLabel = sortLabel;
+            }
+        }
+
+        static final String DATA_FLOW = "data flow";
+        static final String LOCAL_PATTERN = "";
+
+        protected StaticAnalysis(Kind kind, String description) {
             this.description = description;
-            this.category = category;
-            this.scanner = scanner;
-        }
-
-        public static StaticAnalysis dataFlow(String description,
-                                              Function<CompilationUnit, Collection<Warning>> scanner) {
-            return new StaticAnalysis(description, "data flow",
-                                      scanner);
-        }
-
-        public static StaticAnalysis localPattern(String description,
-                                                  Function<CompilationUnit, Collection<Warning>> scanner) {
-            return new StaticAnalysis(description, "",
-                                      scanner);
+            this.category = kind.sortLabel;
         }
 
         /**
@@ -150,7 +168,7 @@ aspect StaticAnalysis {
         }
 
         public Collection<? extends Warning> scan(CompilationUnit unit) {
-            return scanner.apply(unit);
+            return run(unit);
         }
 
         public boolean isCanonical() {
@@ -162,7 +180,7 @@ aspect StaticAnalysis {
             Map<String, ArrayList<String>> categoriesMap = new HashMap<String, ArrayList<String>>();
             try {
                 for (java.lang.reflect.Field field: StaticAnalysis.class.getFields()) {
-                    if (field.getType().equals(StaticAnalysis.class)
+                    if (StaticAnalysis.class.isAssignableFrom(field.getType())
                         && (field.getModifiers() & java.lang.reflect.Modifier.STATIC) > 0) {
                         final String name = field.getName().replace('_', '-');
                         final StaticAnalysis analysis =

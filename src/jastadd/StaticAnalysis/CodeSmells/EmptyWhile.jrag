@@ -1,8 +1,12 @@
 aspect EmptyWhile{
     // Add analysis to the StaticAnalysis registry:
     public static StaticAnalysis StaticAnalysis.EMPTYWHILE =
-        StaticAnalysis.localPattern("While statement with empty body",
-                                    (CompilationUnit cu) -> cu.EMPTYWHILE());
+      new StaticAnalysis(StaticAnalysis.Kind.LOCAL_PATTERN,
+                         "While statement with empty body") {
+          @Override
+          public Collection<? extends Warning> run(CompilationUnit cu) {
+              return cu.EMPTYWHILE();
+          }};
 
 	WhileStmt contributes warning(
 	  getCompilationUnit().pathName(),

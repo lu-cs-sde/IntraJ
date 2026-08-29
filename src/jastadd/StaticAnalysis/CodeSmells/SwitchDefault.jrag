@@ -1,8 +1,12 @@
 aspect SwitchDefault {
     // Add analysis to the StaticAnalysis registry:
     public static StaticAnalysis StaticAnalysis.SWITCHDEFAULT =
-        StaticAnalysis.localPattern("Switch statement without default",
-                                    (CompilationUnit cu) -> cu.SWITCHDEFAULT());
+        new StaticAnalysis(StaticAnalysis.Kind.LOCAL_PATTERN,
+                           "Switch statement without default") {
+            @Override
+            public Collection<? extends Warning> run(CompilationUnit cu) {
+                return cu.SWITCHDEFAULT();
+            }};
 
     SwitchStmt contributes warning(
         getCompilationUnit().pathName(),

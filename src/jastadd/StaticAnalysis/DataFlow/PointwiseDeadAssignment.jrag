@@ -33,9 +33,12 @@ import org.extendj.IntraJ;
 aspect PwDAA {
   // Add analysis to the StaticAnalysis registry:
   public static StaticAnalysis StaticAnalysis.PwDAA =
-    StaticAnalysis.dataFlow("Dead Assignment (pointwise)",
-                            (CompilationUnit cu) -> cu.PwDAA())
-      .implementsAnalysis("DAA");
+      new StaticAnalysis(StaticAnalysis.Kind.DATA_FLOW,
+                         "Dead Assignment (pointwise)") {
+          @Override
+          public Collection<? extends Warning> run(CompilationUnit cu) {
+              return cu.PwDAA();
+          }}.implementsAnalysis("DAA");
 
   syn boolean CFGNode.PwDAA_isDead(Variable v) // = !LVA_def().compl(LVA_out()).isEmpty();
   {

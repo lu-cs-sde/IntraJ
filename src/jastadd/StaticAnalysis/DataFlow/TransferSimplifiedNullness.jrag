@@ -33,9 +33,12 @@ import org.extendj.ast.SmallSet;
 aspect TsNPA {
   // Add analysis to the StaticAnalysis registry:
   public static StaticAnalysis StaticAnalysis.TsNPA =
-    StaticAnalysis.dataFlow("Null Pointer Dereference (transfer-simplified)",
-                            (CompilationUnit cu) -> cu.TsNPA())
-      .implementsAnalysis("NPA");
+      new StaticAnalysis(StaticAnalysis.Kind.DATA_FLOW,
+                         "Null Pointer Dereference (transfer-simplified)") {
+          @Override
+          public Collection<? extends Warning> run(CompilationUnit cu) {
+              return cu.TsNPA();
+          }}.implementsAnalysis("NPA");
 
   /* --- TRFunction --- */
   syn Gamma CFGNode.TsNA_out() circular [Gamma.EMPTY] { return TsNA_in(); }

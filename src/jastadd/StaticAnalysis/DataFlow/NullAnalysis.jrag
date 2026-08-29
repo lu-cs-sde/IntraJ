@@ -33,9 +33,12 @@ import org.extendj.ast.SmallSet;
 aspect NPA {
   // Add analysis to the StaticAnalysis registry:
   public static StaticAnalysis StaticAnalysis.NPA =
-    StaticAnalysis.dataFlow("Null Pointer Dereference (product lattice)",
-                            (CompilationUnit cu) -> cu.NPA())
-      .implementsAnalysis("NPA");
+      new StaticAnalysis(StaticAnalysis.Kind.DATA_FLOW,
+                         "Null Pointer Dereference (product lattice)") {
+          @Override
+          public Collection<? extends Warning> run(CompilationUnit cu) {
+              return cu.NPA();
+          }}.implementsAnalysis("NPA");
 
   /* --- TRFunction --- */
   syn Gamma CFGNode.NA_trFun(Gamma gamma) { return gamma; }

@@ -1,8 +1,12 @@
 aspect AvoidUsingMagicNumbers{
     // Add analysis to the StaticAnalysis registry:
-    public static StaticAnalysis StaticAnalysis.AUMG =
-        StaticAnalysis.localPattern("Avoid using magic numbers",
-                                    (CompilationUnit cu) -> cu.AUMG());
+  public static StaticAnalysis StaticAnalysis.AUMG =
+      new StaticAnalysis(StaticAnalysis.Kind.LOCAL_PATTERN,
+                         "Avoid using magic numbers") {
+          @Override
+          public Collection<? extends Warning> run(CompilationUnit cu) {
+              return cu.AUMG();
+          }};
 
 	syn lazy Set<Integer> Program.notMagicNumbers(){
 		Set<Integer> res = new HashSet<>();

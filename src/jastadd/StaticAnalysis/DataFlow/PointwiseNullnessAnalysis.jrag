@@ -33,9 +33,12 @@ import org.extendj.ast.SmallSet;
 aspect PointwiseNPA {
   // Add analysis to the StaticAnalysis registry:
   public static StaticAnalysis StaticAnalysis.PwNPA =
-    StaticAnalysis.dataFlow("Null Pointer Dereference (pointwise)",
-                            (CompilationUnit cu) -> cu.PwNPA())
-      .implementsAnalysis("NPA");
+      new StaticAnalysis(StaticAnalysis.Kind.DATA_FLOW,
+                         "Null Pointer Dereference (pointwise)") {
+          @Override
+          public Collection<? extends Warning> run(CompilationUnit cu) {
+              return cu.PwNPA();
+          }}.implementsAnalysis("NPA");
 
   // MAY-NULL analysis
   // Encode NULL    = true

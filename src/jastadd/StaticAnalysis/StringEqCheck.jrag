@@ -1,8 +1,12 @@
 aspect STREQ {
   // Add analysis to the StaticAnalysis registry:
   public static StaticAnalysis StaticAnalysis.STREQ =
-    StaticAnalysis.localPattern("String reference equality check",
-                                (CompilationUnit cu) -> cu.STREQ());
+      new StaticAnalysis(StaticAnalysis.Kind.LOCAL_PATTERN,
+                         "String reference equality check") {
+          @Override
+          public Collection<? extends Warning> run(CompilationUnit cu) {
+              return cu.STREQ();
+          }};
 
   EQExpr contributes warning(
       getCompilationUnit().pathName(),

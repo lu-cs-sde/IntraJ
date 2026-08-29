@@ -1,8 +1,12 @@
 aspect EmptyIf {
     // Add analysis to the StaticAnalysis registry:
     public static StaticAnalysis StaticAnalysis.EMPTYIF =
-        StaticAnalysis.localPattern("If statement with empty branch body",
-                                    (CompilationUnit cu) -> cu.EMPTYIF());
+      new StaticAnalysis(StaticAnalysis.Kind.LOCAL_PATTERN,
+                         "If statement with empty branch body") {
+          @Override
+          public Collection<? extends Warning> run(CompilationUnit cu) {
+              return cu.EMPTYIF();
+          }};
 
 	IfStmt contributes warning(
       getCompilationUnit().pathName(),

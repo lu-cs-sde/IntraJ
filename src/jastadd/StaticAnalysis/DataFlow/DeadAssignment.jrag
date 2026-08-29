@@ -33,9 +33,12 @@ import org.extendj.IntraJ;
 aspect DAA {
   // Add analysis to the StaticAnalysis registry:
   public static StaticAnalysis StaticAnalysis.DAA =
-    StaticAnalysis.dataFlow("Dead Assignment (product lattice)",
-                            (CompilationUnit cu) -> cu.DAA())
-      .implementsAnalysis("DAA");
+      new StaticAnalysis(StaticAnalysis.Kind.DATA_FLOW,
+                         "Dead Assignment (product lattice)") {
+          @Override
+          public Collection<? extends Warning> run(CompilationUnit cu) {
+              return cu.DAA();
+          }}.implementsAnalysis("DAA");
 
   // True <==> LVA_def() ∩  LVA_out() = emptyset
   syn boolean CFGNode.isDead() // = !LVA_def().compl(LVA_out()).isEmpty();
