@@ -9,7 +9,10 @@ def tracing    = project.hasProperty('tracing')
 def traceFlags = project.findProperty('tracing') ?: rootProject.jastaddTracingDefault
 def jarName    = tracing ? 'intraj-tracing.jar' : 'intraj.jar'
 
-def extraOpts = [ "--dncConfig=${rootProject.file(rootProject.cacheConfigFile).absolutePath}" ]
+def extraOpts = rootProject.extraOptions
+if (!project.hasProperty('evaluator') || !project.findProperty('evaluator').equals("BasicStacked")) {
+  extraOpts += "--dncConfig=${rootProject.file(rootProject.cacheConfigFile).absolutePath}"
+}
 if (tracing) {
     extraOpts += "--tracing=${traceFlags}".toString()
 }

@@ -28,6 +28,17 @@ ext {
     // I.e., this is only used if tracing is enabled with unspecified tracing level
     jastaddTracingDefault = 'all'
 
+    extraOptions = [ ]
+    if (project.hasProperty('collapseTrivialSCC')) {
+       extraOptions += [ '--collapseTrivialSCC=true' ]
+    }
+    if (project.hasProperty('evaluator')) {
+       extraOptions += [ '--evaluator=' + findProperty('evaluator') ]
+    }
+    if (project.hasProperty('cacheCycle')) {
+       extraOptions += [ '--cacheCycle=' + findProperty('cacheCycle') ]
+    }
+
     // git query command runner, returns empty string on failure
     gitQuery = { File dir, List<String> gitArgs ->
         try {
